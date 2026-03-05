@@ -1,0 +1,79 @@
+import "dotenv/config";
+import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import { rateLimit } from "express-rate-limit";
+import morgan from "morgan";
+
+import connectDB from "./src/config/db.js";
+import logger from "./src/utils/logger.js";
+import healthRoutes from "./src/routes/healthRoutes.js";
+
+const app = express();
+
+// ─── Security Middleware ────────────────────────────────────────────────────
+app.use(helmet());
+
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+  })
+);
+
+// Global rate limit: 100 requests per 15 minutes per IP
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many requests, please try again later." },
+});
+app.use(globalLimiter);
+
+// Auth-specific rate limit: 10 requests per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many authentication attempts, please try again later." },
+});
+
+// ─── Request Parsing ────────────────────────────────────────────────────────
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
+// HTTP request logging (dev only — morgan writes to stdout which we accept for HTTP logs)
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
+
+// ─── Routes ─────────────────────────────────────────────────────────────────
+app.use("/health", healthRoutes);
+
+// Stubs — will be implemented in Sprint 2+
+app.use("/api/auth", authLimiter, (req, res) => {
+  res.status(501).json({ success: false, error: "Not implemented yet" });
+});
+app.use("/api/users", (req, res) => {
+  res.status(501).json({ success: false, error: "Not implemented yet" });
+});
+
+// ─── Global Error Handler ───────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  logger.error("Unhandled error:", err);
+  res.status(500).json({ success: false, error: "Something went wrong" });
+});
+
+// ─── Start Server ───────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 5000;
+
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    logger.info(`ShopFlow backend running on port ${PORT} [${process.env.NODE_ENV}]`);
+  });
+});
+
+export default app;
