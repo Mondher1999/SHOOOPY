@@ -36,13 +36,48 @@ Use this format for each endpoint:
 
 ---
 
-## Auth (`/auth`)
+## Auth (`/api/auth`)
 
 Auth routes have a stricter rate limit: **10 requests per 15 minutes per IP**.
 
+Tokens are returned in the response body (not cookies) and stored in `localStorage`:
+- `accessToken` — short-lived (15 min), sent as `Authorization: Bearer` header
+- `refreshToken` — longer-lived (7 days), used to obtain new access tokens
+
 ---
 
-### POST /auth/login
+### POST /api/auth/register
+
+**Auth:** Public
+
+**Body:**
+```json
+{
+  "name": "string (required)",
+  "email": "string (required, unique)",
+  "password": "string (required, min 8 characters)"
+}
+```
+
+**What it does:** Creates a new customer account, sends a verification email, and returns tokens. Registration succeeds even if the verification email fails to send.
+
+**Response:** `201`
+```json
+{
+  "success": true,
+  "data": {
+    "user": { "id": "...", "name": "...", "email": "...", "role": "customer", "isVerified": false, "isActive": true, "createdAt": "...", "updatedAt": "..." },
+    "accessToken": "string",
+    "refreshToken": "string"
+  }
+}
+```
+
+**Errors:** `400` missing/invalid fields, `409` email already registered
+
+---
+
+### POST /api/auth/login
 
 **Auth:** Public
 
@@ -57,65 +92,94 @@ Auth routes have a stricter rate limit: **10 requests per 15 minutes per IP**.
 **Response:** `200`
 ```json
 {
-  "accessToken": "string",
-  "user": {
-    "id": "...", "email": "...", "name": "...", "role": "...",
-    "createdAt": "...", "updatedAt": "..."
+  "success": true,
+  "data": {
+    "user": { "id": "...", "name": "...", "email": "...", "role": "...", "isVerified": true, "isActive": true, "createdAt": "...", "updatedAt": "..." },
+    "accessToken": "string",
+    "refreshToken": "string"
   }
 }
 ```
 
-Also sets an `httpOnly` cookie named `refreshToken`.
+**Errors:** `400` missing fields, `401` invalid credentials or account deactivated
 
 ---
 
-### POST /auth/refresh
-
-**Auth:** Public (reads `refreshToken` cookie)
-
-**Body:** None (reads from `refreshToken` cookie set by `/auth/login`)
-
-**Response:** `200`
-```json
-{
-  "accessToken": "string"
-}
-```
-
-Also rotates the `refreshToken` cookie with a new value.
-
----
-
-### POST /auth/logout
-
-**Auth:** Public
-
-**Body:** None
-
-**What it does:** Clears the `refreshToken` cookie.
-
-**Response:** `200`
-```json
-{ "message": "Logged out successfully" }
-```
-
----
-
-### GET /auth/me
+### POST /api/auth/logout
 
 **Auth:** `protect`
 
-**Response:** `200` -- Returns the authenticated user object:
+**Body:** None (uses access token from Authorization header to identify user)
+
+**What it does:** Clears the stored refresh token hash from the DB — all existing sessions for that user are invalidated.
+
+**Response:** `200`
 ```json
-{
-  "id": "...", "email": "...", "name": "...", "role": "...",
-  "createdAt": "...", "updatedAt": "..."
-}
+{ "success": true, "data": null }
 ```
 
 ---
 
-### POST /auth/forgot-password
+### GET /api/auth/me
+
+**Auth:** `protect`
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": { "id": "...", "name": "...", "email": "...", "role": "...", "isVerified": true, "isActive": true, "createdAt": "...", "updatedAt": "..." }
+}
+```
+
+**Errors:** `401` not authenticated or token expired
+
+---
+
+### POST /api/auth/refresh-token
+
+**Auth:** Public
+
+**Body:**
+```json
+{ "refreshToken": "string (required)" }
+```
+
+**What it does:** Verifies the JWT refresh token, checks the stored hash in DB, rotates both tokens (old refresh token invalidated).
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "string",
+    "refreshToken": "string"
+  }
+}
+```
+
+**Errors:** `400` missing token, `401` invalid/expired/reused token
+
+---
+
+### GET /api/auth/verify-email/:token
+
+**Auth:** Public
+
+**Params:** `token` — raw verification token from email URL (64-char hex)
+
+**What it does:** SHA-256 hashes the token, finds user with matching hash and unexpired expiry, marks `isVerified: true`.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "message": "Email verified successfully" } }
+```
+
+**Errors:** `400` invalid or expired token
+
+---
+
+### POST /api/auth/forgot-password
 
 **Auth:** Public
 
@@ -124,58 +188,36 @@ Also rotates the `refreshToken` cookie with a new value.
 { "email": "string (required)" }
 ```
 
-**What it does:** Generates a password reset token, stores its SHA-256 hash in the DB, and emails the raw token as a URL to the user. Always returns success even if the email does not exist (prevents user enumeration).
+**What it does:** Generates a reset token (32 random bytes), stores SHA-256 hash with 15-min expiry, emails the raw token URL. Always returns success even if email doesn't exist — prevents user enumeration.
 
 **Response:** `200`
 ```json
-{ "message": "If this email exists, a reset link has been sent" }
+{ "success": true, "data": { "message": "If that email exists, a reset link has been sent" } }
 ```
+
+**Errors:** `400` missing/invalid email, `500` email sending failure (token rolled back)
 
 ---
 
-### POST /auth/reset-password
+### POST /api/auth/reset-password/:token
 
 **Auth:** Public
 
-**Body:**
-```json
-{
-  "token": "string (required, the raw token from the email URL)",
-  "email": "string (required)",
-  "newPassword": "string (required, min 6 characters)"
-}
-```
-
-**Response:** `200`
-```json
-{
-  "message": "Password reset successful",
-  "user": { "..." },
-  "accessToken": "string"
-}
-```
-
----
-
-### PATCH /auth/update-password
-
-**Auth:** `protect`
+**Params:** `token` — raw reset token from email URL (64-char hex)
 
 **Body:**
 ```json
-{
-  "currentPassword": "string (required)",
-  "newPassword": "string (required)"
-}
+{ "password": "string (required, min 8 characters)" }
 ```
+
+**What it does:** Hashes the token, finds user with matching hash and unexpired expiry, updates password (bcrypt 12 rounds), clears reset token, invalidates all existing refresh tokens.
 
 **Response:** `200`
 ```json
-{
-  "message": "Password updated",
-  "user": { "..." },
-  "accessToken": "string"
-}
+{ "success": true, "data": { "message": "Password reset successfully. Please log in." } }
+```
+
+**Errors:** `400` missing/invalid fields or expired token
 ```
 
 ---

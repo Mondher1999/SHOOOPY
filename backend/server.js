@@ -8,6 +8,7 @@ import morgan from "morgan";
 import connectDB from "./src/config/db.js";
 import logger from "./src/utils/logger.js";
 import healthRoutes from "./src/routes/healthRoutes.js";
+import authRoutes from "./src/routes/authRoutes.js";
 
 const app = express();
 
@@ -52,10 +53,9 @@ if (process.env.NODE_ENV === "development") {
 // ─── Routes ─────────────────────────────────────────────────────────────────
 app.use("/health", healthRoutes);
 
-// Stubs — will be implemented in Sprint 2+
-app.use("/api/auth", authLimiter, (req, res) => {
-  res.status(501).json({ success: false, error: "Not implemented yet" });
-});
+app.use("/api/auth", authLimiter, authRoutes);
+
+// Stub — will be implemented in Sprint 3
 app.use("/api/users", (req, res) => {
   res.status(501).json({ success: false, error: "Not implemented yet" });
 });

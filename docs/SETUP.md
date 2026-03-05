@@ -46,27 +46,22 @@ Create `backend/.env` with the following variables.
 
 | Variable | Required | Description | Example value |
 |---|---|---|---|
-| `PORT` | No | Port the Express server listens on | `5000` |
-| `MONGODB_URI` | Yes | MongoDB connection string | `mongodb://localhost:27017/shopflow_db` or Atlas URI |
-| `JWT_ACCESS_SECRET` | Yes | Secret used to sign access tokens (use a long random string) | `a8f3...64b2` |
-| `JWT_REFRESH_SECRET` | Yes | Secret used to sign refresh tokens (use a different long random string) | `9e1c...82a4` |
-| `JWT_ACCESS_EXPIRES` | No | Access token expiry duration | `30d` |
-| `JWT_REFRESH_EXPIRES` | No | Refresh token expiry duration | `7d` |
-| `JWT_REFRESH_MAX_AGE_MS` | No | Refresh token cookie max age in milliseconds | `604800000` (7 days) |
-| `PASSWORD_RESET_TOKEN_EXPIRES_MIN` | No | Minutes until password reset token expires | `15` |
-| `SMTP_HOST` | Yes | SMTP server hostname | `smtp.example.com` |
-| `SMTP_PORT` | Yes | SMTP server port | `465` |
-| `SMTP_USER` | Yes | SMTP authentication username | `noreply@shopflow.com` |
-| `SMTP_PASS` | Yes | SMTP authentication password | `your-smtp-password` |
-| `EMAIL_FROM` | Yes | Sender address/name for outgoing emails | `"ShopFlow <noreply@shopflow.com>"` |
-| `FRONTEND_URL` | Yes | Base URL of the frontend -- used in email links | `http://localhost:3000` |
+| `PORT` | No | Express server port | `5000` |
+| `MONGODB_URI` | Yes | MongoDB connection string | `mongodb://localhost:27017/shopflow_db` |
 | `NODE_ENV` | No | Environment flag | `development` or `production` |
-| `ADMIN_EMAIL` | No | Email address to receive admin notifications | `admin@shopflow.com` |
-| `JWT_SECRET` | See note | Secret used by the secondary `authMiddleware.js` | same value as JWT_ACCESS_SECRET or different |
+| `FRONTEND_URL` | Yes | Frontend base URL — used in email links | `http://localhost:3000` |
+| `JWT_ACCESS_SECRET` | Yes | Secret for signing access tokens (15 min TTL). Use a long random string. | `openssl rand -hex 32` |
+| `JWT_REFRESH_SECRET` | Yes | Secret for signing refresh tokens (7d TTL). Must be different from access secret. | `openssl rand -hex 32` |
+| `SMTP_HOST` | No* | SMTP server hostname | `smtp.mailtrap.io` |
+| `SMTP_PORT` | No* | SMTP port | `587` |
+| `SMTP_SECURE` | No | Use TLS (`true`) or STARTTLS (`false`) | `false` |
+| `SMTP_USER` | No* | SMTP auth username | `your-mailtrap-user` |
+| `SMTP_PASS` | No* | SMTP auth password | `your-mailtrap-pass` |
+| `SMTP_FROM` | No | Sender address | `noreply@shopflow.com` |
 
-<!-- Add any project-specific environment variables here -->
+*SMTP vars are optional in development. When not set, emails are logged to the console instead of sent. **Configure SMTP before production.**
 
-**Note on `JWT_SECRET` vs `JWT_ACCESS_SECRET`:** Two auth middleware files exist. The primary `auth.js` uses `JWT_ACCESS_SECRET`. The secondary `authMiddleware.js` (used only on routes that need populated user data) uses `JWT_SECRET`. Both variables must be set. In practice you can use the same value for both.
+**Dev email services:** [Mailtrap](https://mailtrap.io) (recommended) or [Ethereal](https://ethereal.email) (auto-generates test credentials).
 
 ### Example `backend/.env`
 
