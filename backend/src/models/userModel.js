@@ -9,6 +9,7 @@ const userSchema = new Schema(
     role: { type: String, enum: ["customer", "admin"], default: "customer" },
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    avatar: { type: String, default: null },
 
     // Auth tokens (hashed, never returned in queries)
     refreshToken: { type: String, select: false },

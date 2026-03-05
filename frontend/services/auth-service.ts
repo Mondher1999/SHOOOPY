@@ -7,6 +7,7 @@ export interface AuthUser {
   role: "customer" | "admin";
   isVerified: boolean;
   isActive: boolean;
+  avatar: string | null;
   createdAt: string;
   updatedAt: string;
 }

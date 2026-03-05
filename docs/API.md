@@ -396,6 +396,156 @@ All upload routes require authentication.
 
 ---
 
+## Users (`/api/users`)
+
+**Implemented:** Sprint 3
+
+Avatar images are served as static files at `GET /uploads/avatars/<filename>`.
+
+---
+
+### GET /api/users/profile
+
+**Auth:** `protect`
+
+**What it does:** Returns the authenticated user's profile.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "id": "...", "name": "...", "email": "...", "role": "customer", "avatar": "/uploads/avatars/file.jpg", "isVerified": true, "isActive": true, "createdAt": "...", "updatedAt": "..." } }
+```
+
+**Errors:** `401` unauthenticated
+
+---
+
+### PUT /api/users/profile
+
+**Auth:** `protect`
+
+**Body:** `multipart/form-data`
+```
+name    (string, optional)
+email   (string, optional)
+avatar  (file, optional — JPEG/PNG/WebP/GIF, max 5 MB)
+```
+
+**What it does:** Updates name, email, and/or avatar. At least one field required.
+
+**Response:** `200` — updated User object
+
+**Errors:** `400` no fields provided, `409` email already taken, `400` invalid file type/size
+
+---
+
+### PUT /api/users/change-password
+
+**Auth:** `protect`
+
+**Body:**
+```json
+{ "currentPassword": "string (required)", "newPassword": "string (required, min 8 chars)" }
+```
+
+**What it does:** Verifies current password, sets new bcrypt-hashed password. Invalidates existing tokens via `passwordChangedAt`.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "message": "Password changed successfully" } }
+```
+
+**Errors:** `400` missing fields, `400` wrong current password, `400` same as old password
+
+---
+
+### DELETE /api/users/account
+
+**Auth:** `protect`
+
+**What it does:** Soft-deletes the account (`isActive: false`), invalidates refresh token.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "message": "Account deleted successfully" } }
+```
+
+---
+
+### GET /api/users
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:**
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | number | 1 | Page number |
+| `limit` | number | 10 | Results per page (max 50) |
+| `search` | string | — | Search name or email (case-insensitive) |
+
+**What it does:** Returns paginated, searchable list of all users.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "users": [ { "id": "...", "name": "...", "email": "...", "role": "...", "isActive": true, "avatar": null, "createdAt": "..." } ],
+    "pagination": { "page": 1, "limit": 10, "total": 42, "pages": 5 }
+  }
+}
+```
+
+**Errors:** `401` unauthenticated, `403` not admin
+
+---
+
+### GET /api/users/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` — MongoDB ObjectId
+
+**What it does:** Returns a single user's full profile.
+
+**Response:** `200` — User object
+
+**Errors:** `400` invalid ObjectId, `401`, `403`, `404` not found
+
+---
+
+### PUT /api/users/:id/role
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` — MongoDB ObjectId
+
+**Body:**
+```json
+{ "role": "customer" | "admin" }
+```
+
+**What it does:** Changes a user's role.
+
+**Response:** `200` — updated User object
+
+**Errors:** `400` invalid role value, `401`, `403`, `404`
+
+---
+
+### PUT /api/users/:id/ban
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` — MongoDB ObjectId
+
+**What it does:** Toggles `isActive`. When banning, also clears `refreshToken` to force logout. Admin cannot ban themselves.
+
+**Response:** `200` — updated User object (isActive reflects new state)
+
+**Errors:** `400` self-ban attempt, `401`, `403`, `404`
+
+---
+
 ## Document your endpoints here
 
 <!-- Copy the CRUD pattern above for each resource in your API. Suggested sections: -->

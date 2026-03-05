@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 
 import en_auth from "./locales/en/auth.json";
 import en_common from "./locales/en/common.json";
+import en_dashboard from "./locales/en/dashboard.json";
 
 // Guard against re-initialization in Next.js hot reload
 if (!i18n.isInitialized) {
@@ -11,6 +12,7 @@ if (!i18n.isInitialized) {
       en: {
         auth: en_auth,
         common: en_common,
+        dashboard: en_dashboard,
       },
     },
     lng: "en",

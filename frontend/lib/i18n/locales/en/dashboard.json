@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "profile": "Profile",
+    "security": "Security",
+    "users": "Users"
+  },
+  "profile": {
+    "title": "My Profile",
+    "subtitle": "Manage your account information",
+    "nameLabel": "Full name",
+    "emailLabel": "Email address",
+    "avatarLabel": "Profile photo",
+    "avatarChange": "Change photo",
+    "avatarHint": "JPG, PNG, WebP or GIF · Max 5 MB",
+    "submitButton": "Save changes",
+    "submitting": "Saving...",
+    "successMessage": "Profile updated successfully",
+    "errorEmailTaken": "This email is already in use"
+  },
+  "changePassword": {
+    "title": "Change Password",
+    "subtitle": "Update your password to keep your account secure",
+    "currentPasswordLabel": "Current password",
+    "newPasswordLabel": "New password",
+    "confirmPasswordLabel": "Confirm new password",
+    "submitButton": "Update password",
+    "submitting": "Updating...",
+    "successMessage": "Password changed successfully",
+    "errorCurrentPassword": "Current password is incorrect"
+  },
+  "admin": {
+    "users": {
+      "title": "User Management",
+      "subtitle": "View and manage all platform users",
+      "searchPlaceholder": "Search by name or email...",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "joined": "Joined",
+        "actions": "Actions"
+      },
+      "roles": {
+        "customer": "Customer",
+        "admin": "Admin"
+      },
+      "status": {
+        "active": "Active",
+        "banned": "Banned"
+      },
+      "actions": {
+        "changeRole": "Change role",
+        "ban": "Ban user",
+        "unban": "Unban user"
+      },
+      "empty": "No users found",
+      "confirmBan": "Ban this user?",
+      "confirmUnban": "Unban this user?",
+      "successRoleChanged": "User role updated",
+      "successBanned": "User banned",
+      "successUnbanned": "User unbanned"
+    }
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Please enter a valid email address",
+    "currentPasswordRequired": "Current password is required",
+    "newPasswordRequired": "New password is required",
+    "newPasswordMinLength": "New password must be at least 8 characters",
+    "confirmPasswordRequired": "Please confirm your password",
+    "passwordsMustMatch": "Passwords do not match"
+  }
+}

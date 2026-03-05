@@ -26,7 +26,7 @@ export function middleware(request: NextRequest) {
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Next.js dev mode
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
+      "img-src 'self' data: blob: http://localhost:5000",
       "font-src 'self'",
       "connect-src 'self' http://localhost:5000",
       "frame-ancestors 'none'",

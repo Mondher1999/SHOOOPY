@@ -4,11 +4,16 @@ import helmet from "helmet";
 import cors from "cors";
 import { rateLimit } from "express-rate-limit";
 import morgan from "morgan";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import connectDB from "./src/config/db.js";
 import logger from "./src/utils/logger.js";
 import healthRoutes from "./src/routes/healthRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
+import userRoutes from "./src/routes/userRoutes.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
@@ -50,15 +55,13 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
+// ─── Static Files — uploaded avatars ────────────────────────────────────────
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // ─── Routes ─────────────────────────────────────────────────────────────────
 app.use("/health", healthRoutes);
-
 app.use("/api/auth", authLimiter, authRoutes);
-
-// Stub — will be implemented in Sprint 3
-app.use("/api/users", (req, res) => {
-  res.status(501).json({ success: false, error: "Not implemented yet" });
-});
+app.use("/api/users", userRoutes);
 
 // ─── Global Error Handler ───────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars

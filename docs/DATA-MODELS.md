@@ -45,6 +45,7 @@ Use this format for each model:
 | `role` | String | No | `"customer"` | Enum: `customer`, `admin` |
 | `isVerified` | Boolean | No | `false` | Set to `true` after email verification |
 | `isActive` | Boolean | No | `true` | Soft-disable accounts without deletion |
+| `avatar` | String | No | `null` | Relative URL to uploaded avatar e.g. `/uploads/avatars/avatar-123.jpg` |
 | `refreshToken` | String | No | -- | SHA-256 hash of the issued refresh JWT; `select: false` |
 | `emailVerificationToken` | String | No | -- | SHA-256 hash of raw verification token; `select: false` |
 | `emailVerificationExpiresAt` | Date | No | -- | 24h after registration; `select: false` |
@@ -79,8 +80,11 @@ Adds `id` from `_id`. Removes `_id`, `__v`, and all sensitive fields: `password`
 
 ### Relationships
 
-- Sprint 3: One-to-one with Profile (avatar, address fields)
 - Sprint 7+: One-to-many with Order, Cart
+
+### Sprint 3 additions
+
+Avatar upload stored as relative URL in `avatar` field. Served via `GET /uploads/avatars/<filename>`. Old avatar file deleted from disk on profile update. Admin-only user management endpoints added in `userController.js`.
 
 ---
 
