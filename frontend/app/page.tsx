@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -18,11 +19,11 @@ export default function Home() {
           No credit card required.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button size="lg" className="min-w-[160px]">
-            Shop Now
+          <Button size="lg" className="min-w-[160px]" asChild>
+            <Link href="/products">Shop Now</Link>
           </Button>
-          <Button variant="outline" size="lg" className="min-w-[160px]">
-            Learn More
+          <Button variant="outline" size="lg" className="min-w-[160px]" asChild>
+            <Link href="/categories">Browse Categories</Link>
           </Button>
         </div>
       </section>

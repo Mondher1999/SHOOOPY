@@ -45,5 +45,12 @@
   "tree": {
     "rootLabel": "Root categories",
     "subcategoriesLabel": "Subcategories"
+  },
+  "catalog": {
+    "title": "Shop by Category",
+    "errorLoading": "Failed to load categories. Please try again.",
+    "notFound": "Category not found.",
+    "subcategoriesLabel": "Subcategories",
+    "backToCategories": "Back to categories"
   }
 }

@@ -35,6 +35,33 @@ export async function getProductByIdAPI(id: string): Promise<{ success: true; da
   return response.data;
 }
 
+export interface SlimProduct {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  images: string[];
+  ratings: { average: number; count: number };
+}
+
+export async function searchProductsAPI(
+  q: string,
+  limit = 5
+): Promise<{ success: true; data: { products: SlimProduct[] } }> {
+  const query = new URLSearchParams({ q, limit: String(limit) });
+  const response = await axiosInstance.get<{ success: true; data: { products: SlimProduct[] } }>(
+    `/api/products/search?${query.toString()}`
+  );
+  return response.data;
+}
+
+export async function getProductBySlugAPI(slug: string): Promise<{ success: true; data: Product }> {
+  const response = await axiosInstance.get<{ success: true; data: Product }>(
+    `/api/products/slug/${encodeURIComponent(slug)}`
+  );
+  return response.data;
+}
+
 // ─── Protected ────────────────────────────────────────────────────────────────
 
 export interface ProductFormData {

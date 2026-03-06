@@ -5,6 +5,12 @@ import cache from "../utils/cache.js";
 
 const VALID_OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 const CATEGORY_TREE_CACHE_KEY = "category:tree";
+
+// lean() bypasses toJSON transform; add id manually for frontend compatibility
+function withId(doc) {
+  if (!doc) return doc;
+  return { ...doc, id: doc._id?.toString() };
+}
 const CATEGORY_TREE_TTL = 300; // 5 minutes
 
 // ─── Public: Get all categories (flat list) ──────────────────────────────────
@@ -13,7 +19,7 @@ export const getAllCategories = async (req, res) => {
     const categories = await Category.find({ isActive: true })
       .sort({ name: 1 })
       .lean();
-    res.status(200).json({ success: true, data: categories });
+    res.status(200).json({ success: true, data: categories.map(withId) });
   } catch (error) {
     logger.error("getAllCategories error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -65,7 +71,7 @@ export const getCategoryById = async (req, res) => {
     const category = await Category.findById(id).populate("parent", "name slug").lean();
     if (!category) return res.status(404).json({ success: false, error: "Category not found" });
 
-    res.status(200).json({ success: true, data: category });
+    res.status(200).json({ success: true, data: withId(category) });
   } catch (error) {
     logger.error("getCategoryById error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });

@@ -15,7 +15,11 @@ All frontend code lives in `{FRONTEND_DIR}/`. It is a Next.js 14 App Router appl
 | `/dashboard` | `app/dashboard/page.tsx` | Authenticated + role-dependent | Main application dashboard |
 | `/reset-password` | `app/reset-password/page.tsx` | No | Password reset form -- reads `token` and `email` from URL query params |
 | `/change-password` | `app/change-password/page.tsx` | Authenticated | Form to change password while logged in |
-| <!-- Add pages --> | | | |
+| `/products` | `app/(store)/products/page.tsx` | No | Public product catalog with filters, sort, pagination, grid/list toggle |
+| `/products/search` | `app/(store)/products/search/page.tsx` | No | Full-text search results page |
+| `/products/[slug]` | `app/(store)/products/[slug]/page.tsx` | No | Product detail with image gallery, related products, breadcrumbs |
+| `/categories` | `app/(store)/categories/page.tsx` | No | Category grid (top-level categories only) |
+| `/categories/[slug]` | `app/(store)/categories/[slug]/page.tsx` | No | Category-filtered product listing with subcategory sidebar |
 
 The root layout (`app/layout.tsx`) wraps the entire app with `ClientProviders`, which includes `AuthProvider` and `LoadingProvider`.
 
@@ -323,3 +327,128 @@ interface Resource {
 }
 ```
 -->
+
+---
+
+## Sprint 5 — Product Catalog & Search Components
+
+### ProductCard (`components/products/ProductCard.tsx`)
+
+**Props:**
+```ts
+interface ProductCardProps {
+  product: Product
+  view: "grid" | "list"
+  className?: string
+}
+```
+
+**Description:** Renders a product in either grid or list layout. Shows image (lazy-loaded), name, rating stars, price, compare-at price with discount %, stock badge, and an "Add to Cart" stub button (disabled — wired in Sprint 7). Exports `ProductCardSkeleton` for loading states.
+
+**States:** Skeleton via `ProductCardSkeleton`, Success via product data.
+
+**i18n:** Uses `useTranslation("products")` — keys under `catalog.card.*`.
+
+---
+
+### ProductFilters (`components/products/ProductFilters.tsx`)
+
+**Props:**
+```ts
+interface ProductFiltersProps {
+  categories: CategoryNode[]
+  filters: { category?: string; minPrice?: number; maxPrice?: number; inStock?: boolean; rating?: number }
+  onFiltersChange: (filters: ProductFiltersProps["filters"]) => void
+}
+```
+
+**Description:** Sidebar filter panel with: recursive `CategoryTreeItem` (expandable subcategories), dual-thumb price range Slider (0–10000), radio-group star rating buttons, in-stock Checkbox. Active filter count badge + clear-all button.
+
+**i18n:** Uses `useTranslation("products")` — keys under `catalog.filters.*`.
+
+---
+
+### ProductSort (`components/products/ProductSort.tsx`)
+
+**Props:**
+```ts
+interface ProductSortProps {
+  value: "newest" | "price_asc" | "price_desc" | "rating" | undefined
+  onChange: (value: SortValue) => void
+}
+```
+
+**Description:** shadcn Select dropdown with 4 sort options. Defaults to "newest" label when no value selected.
+
+**i18n:** Uses `useTranslation("products")` — keys under `catalog.sort.*`.
+
+---
+
+### ImageGallery (`components/products/ImageGallery.tsx`)
+
+**Props:**
+```ts
+interface ImageGalleryProps {
+  images: string[]
+  productName: string
+  className?: string
+}
+```
+
+**Description:** Main image (large) + thumbnail strip (`role="tablist"`). Prev/Next navigation buttons. Error fallback renders `ImageOff` icon. Exports `ImageGallerySkeleton` for loading.
+
+**i18n:** Uses `useTranslation("products")` — keys under `catalog.images.*`.
+
+---
+
+### RelatedProducts (`components/products/RelatedProducts.tsx`)
+
+**Props:**
+```ts
+interface RelatedProductsProps {
+  categoryId: string
+  currentProductId: string
+}
+```
+
+**Description:** Client component. Fetches up to 5 products in the same category, filters out the current product, displays up to 4 in a 2-col/4-col responsive grid using `ProductCard`.
+
+**i18n:** Uses `useTranslation("products")` — key `catalog.related.*`.
+
+---
+
+### SearchBar (`components/layout/SearchBar.tsx`)
+
+**Props:** None (self-contained; reads search query from the input and navigates to `/products/search?q=`)
+
+**Description:** Debounced (300ms) search input with suggestions dropdown. Uses `searchProductsAPI` for typeahead. Keyboard-accessible (Escape closes dropdown, ArrowDown/Up navigates suggestions). `role="search"`, `aria-expanded`, `aria-autocomplete="list"`.
+
+**i18n:** Uses `useTranslation("common")` — keys under `search.*`.
+
+---
+
+### Header (`components/layout/Header.tsx`)
+
+**Props:** None (reads `useAuth` internally)
+
+**Description:** Sticky site header with logo, desktop nav (Products, Categories), SearchBar, Cart icon stub, Sign In or user avatar (from `useAuth`). Responsive — shows hamburger on mobile.
+
+**i18n:** Uses `useTranslation("common")` — keys under `nav.*`.
+
+---
+
+### Breadcrumb (`components/ui/breadcrumb.tsx`)
+
+**Props:**
+```ts
+interface BreadcrumbItem {
+  label: string
+  href?: string
+}
+interface BreadcrumbProps {
+  items: BreadcrumbItem[]
+  className?: string
+}
+```
+
+**Description:** Semantic `<nav aria-label="Breadcrumb">` + `<ol>`. Home icon on first item, ChevronRight separators, `aria-current="page"` on the last item. Current item is not a link.

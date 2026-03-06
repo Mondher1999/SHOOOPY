@@ -714,6 +714,48 @@ Common HTTP status codes:
 
 ---
 
+### GET /api/products/search
+
+**Auth:** Public
+
+**Query:**
+- `q` — search term (required; capped at 200 chars internally); uses MongoDB full-text index on `name + description`
+- `limit` — max results to return (default: 5, max: 10)
+
+**What it does:** Returns slim product results scored by text relevance. Intended for typeahead/suggestion use. Returns empty array when `q` is empty.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "products": [{ "id": "...", "name": "...", "slug": "...", "price": 29.99, "images": [], "ratings": { "average": 0, "count": 0 } }]
+  }
+}
+```
+
+---
+
+### GET /api/products/slug/:slug
+
+**Auth:** Public
+
+**Params:** `slug` — URL-friendly string (lowercase alphanumeric + hyphens only)
+
+**What it does:** Returns a single active product by its slug with populated category (including parent) and vendor.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": { "id": "...", "name": "...", "slug": "...", "price": 29.99, "category": { "name": "...", "slug": "...", "parent": "..." }, "vendor": { "name": "...", "email": "..." } }
+}
+```
+
+**Errors:** 400 (invalid slug format — must be `[a-z0-9-]+`), 404 (not found or soft-deleted)
+
+---
+
 ### GET /api/products/:id
 
 **Auth:** Public

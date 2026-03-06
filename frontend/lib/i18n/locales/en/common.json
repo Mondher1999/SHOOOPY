@@ -18,9 +18,21 @@
   "nav": {
     "home": "Home",
     "products": "Products",
+    "categories": "Categories",
     "cart": "Cart",
     "account": "Account",
     "signIn": "Sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "mainNav": "Main navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "search": {
+    "placeholder": "Search products...",
+    "ariaLabel": "Product search",
+    "clear": "Clear search",
+    "suggestionsLabel": "Search suggestions",
+    "noResults": "No results for \"{{query}}\"",
+    "viewAll": "View all results for \"{{query}}\""
   }
 }

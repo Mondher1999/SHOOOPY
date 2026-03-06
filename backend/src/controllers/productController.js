@@ -4,6 +4,13 @@ import logger from "../utils/logger.js";
 import cache from "../utils/cache.js";
 const VALID_OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 
+// lean() bypasses the Mongoose toJSON transform that adds `id`.
+// This helper adds it back so the frontend can rely on doc.id.
+function withId(doc) {
+  if (!doc) return doc;
+  return { ...doc, id: doc._id?.toString() };
+}
+
 // Invalidate all product-related cache keys on any write
 function invalidateProductCache() {
   cache.del("products:list");
@@ -74,7 +81,7 @@ export const getAllProducts = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        products,
+        products: products.map(withId),
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       },
     });
@@ -98,7 +105,7 @@ export const getProductById = async (req, res) => {
 
     if (!product) return res.status(404).json({ success: false, error: "Product not found" });
 
-    res.status(200).json({ success: true, data: product });
+    res.status(200).json({ success: true, data: withId(product) });
   } catch (error) {
     logger.error("getProductById error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -150,7 +157,7 @@ export const createProduct = async (req, res) => {
 
     invalidateProductCache();
 
-    res.status(201).json({ success: true, data: populated });
+    res.status(201).json({ success: true, data: withId(populated) });
   } catch (error) {
     if (error.code === 11000)
       return res.status(409).json({ success: false, error: "A product with this SKU already exists" });
@@ -226,7 +233,7 @@ export const updateProduct = async (req, res) => {
 // ─── Public: Search products (slim results for suggestions) ─────────────────
 export const searchProducts = async (req, res) => {
   try {
-    const q = req.query.q?.trim();
+    const q = req.query.q?.trim().slice(0, 200); // cap at 200 chars to prevent over-long queries
     if (!q) return res.status(200).json({ success: true, data: { products: [] } });
 
     const limit = Math.min(10, Math.max(1, parseInt(req.query.limit) || 5));
@@ -241,7 +248,7 @@ export const searchProducts = async (req, res) => {
       .select("name slug price images ratings")
       .lean();
 
-    res.status(200).json({ success: true, data: { products } });
+    res.status(200).json({ success: true, data: { products: products.map(withId) } });
   } catch (error) {
     logger.error("searchProducts error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -263,7 +270,7 @@ export const getProductBySlug = async (req, res) => {
 
     if (!product) return res.status(404).json({ success: false, error: "Product not found" });
 
-    res.status(200).json({ success: true, data: product });
+    res.status(200).json({ success: true, data: withId(product) });
   } catch (error) {
     logger.error("getProductBySlug error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });

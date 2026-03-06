@@ -213,6 +213,88 @@ describe("PUT /api/products/:id", () => {
   });
 });
 
+// ── GET /api/products/search ───────────────────────────────────────────────────
+describe("GET /api/products/search", () => {
+  it("returns empty array for missing query param", async () => {
+    const res = await request(app).get("/api/products/search");
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.products).toEqual([]);
+  });
+
+  it("returns empty array for blank query string", async () => {
+    const res = await request(app).get("/api/products/search?q=");
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.products).toEqual([]);
+  });
+
+  it("returns slim product shape (no full description)", async () => {
+    const res = await request(app).get("/api/products/search?q=Test");
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data.products)).toBe(true);
+    // Each result should have id, name, slug, price — no raw _id-only shape
+    if (res.body.data.products.length > 0) {
+      const p = res.body.data.products[0];
+      expect(p).toHaveProperty("id");
+      expect(p).toHaveProperty("name");
+      expect(p).toHaveProperty("slug");
+      expect(p).toHaveProperty("price");
+    }
+  });
+
+  it("respects the limit param (max 10)", async () => {
+    const res = await request(app).get("/api/products/search?q=Test&limit=2");
+    expect(res.status).toBe(200);
+    expect(res.body.data.products.length).toBeLessThanOrEqual(2);
+  });
+
+  it("is public — no auth required", async () => {
+    const res = await request(app).get("/api/products/search?q=alpha");
+    expect(res.status).toBe(200);
+  });
+});
+
+// ── GET /api/products/slug/:slug ───────────────────────────────────────────────
+describe("GET /api/products/slug/:slug", () => {
+  it("returns 400 for invalid slug format", async () => {
+    const res = await request(app).get("/api/products/slug/INVALID_SLUG!");
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("returns 404 for non-existent slug", async () => {
+    const res = await request(app).get("/api/products/slug/does-not-exist-99999");
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("returns product by slug with populated fields", async () => {
+    // Create a product to look up by slug
+    const createRes = await request(app)
+      .post("/api/products")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Test Product Slug Lookup", price: 15.0, stock: 10 });
+    expect(createRes.status).toBe(201);
+    const slug = createRes.body.data.slug;
+
+    const res = await request(app).get(`/api/products/slug/${slug}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.slug).toBe(slug);
+    expect(res.body.data.id).toBeDefined();
+    expect(res.body.data.vendor).toHaveProperty("name");
+    expect(res.body.data.vendor).not.toHaveProperty("password");
+  });
+
+  it("is public — no auth required", async () => {
+    const res = await request(app).get("/api/products/slug/test-product-alpha");
+    // 404 is fine (product may be soft-deleted), but should NOT be 401
+    expect(res.status).not.toBe(401);
+  });
+});
+
 // ── DELETE /api/products/:id ───────────────────────────────────────────────────
 describe("DELETE /api/products/:id", () => {
   it("returns 401 without auth", async () => {
