@@ -15,6 +15,7 @@ import userRoutes from "./src/routes/userRoutes.js";
 import categoryRoutes from "./src/routes/categoryRoutes.js";
 import productRoutes from "./src/routes/productRoutes.js";
 import uploadRoutes from "./src/routes/uploadRoutes.js";
+import cartRoutes from "./src/routes/cartRoutes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -68,6 +69,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/cart", cartRoutes);
 
 // ─── Global Error Handler ───────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars

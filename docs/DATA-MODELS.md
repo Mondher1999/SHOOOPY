@@ -228,3 +228,38 @@ Adds `id`, removes `_id` and `__v`.
 
 ### toJSON transform
 Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Cart
+
+**File:** `src/models/cartModel.js`
+**Collection:** `carts`
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `user` | ObjectId (ref: User) | Yes | — | Unique — one cart per user |
+| `items` | Array of CartItem | No | `[]` | Embedded sub-documents |
+| `items[].product` | ObjectId (ref: Product) | Yes | — | No `_id` on sub-doc |
+| `items[].quantity` | Number | Yes | — | min: 1 |
+| `items[].price` | Number | Yes | — | min: 0 — snapshot at add time |
+| `createdAt` | Date | — | auto | Timestamps |
+| `updatedAt` | Date | — | auto | Timestamps |
+
+### Virtuals
+
+| Virtual | Returns | Notes |
+|---|---|---|
+| `totalPrice` | Number | Sum of `price × quantity` across all items |
+
+### Indexes
+
+| Index | Type | Notes |
+|---|---|---|
+| `{ user: 1 }` | Unique | Enforced by schema `unique: true` |
+| `{ "items.product": 1 }` | Standard | Product-based cart lookups |
+
+### toJSON transform
+Adds `id`, removes `_id` and `__v`. Includes `totalPrice` virtual.

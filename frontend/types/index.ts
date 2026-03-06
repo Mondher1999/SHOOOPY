@@ -67,6 +67,33 @@ export interface Product {
   updatedAt: string;
 }
 
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+
+export interface CartProduct {
+  id: string;
+  name: string;
+  slug: string;
+  images: ProductImage[];
+  stock: number;
+  price: number;
+  isActive: boolean;
+}
+
+export interface CartItem {
+  product: CartProduct;
+  quantity: number;
+  /** Price snapshot at the time the item was added */
+  price: number;
+}
+
+export interface Cart {
+  id: string;
+  user: string;
+  items: CartItem[];
+  totalPrice: number;
+  updatedAt: string;
+}
+
 // ─── Pagination ───────────────────────────────────────────────────────────────
 
 export interface PaginationInfo {

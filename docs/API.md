@@ -909,3 +909,79 @@ All upload routes require `protect + restrictTo("admin")`.
 ```
 
 **Errors:** 400 (invalid productId, missing images), 403 (not owner or admin), 404 (product not found)
+
+
+---
+
+## Cart
+
+### GET /api/cart
+
+**Auth:** `protect`
+
+**What it does:** Returns the current user's cart with populated product details. Returns `{ items: [], totalPrice: 0 }` if no cart exists yet.
+
+**Response:**
+```json
+{ "success": true, "data": { "id": "...", "items": [{ "product": { "id": "...", "name": "...", "slug": "...", "images": [], "stock": 10, "price": 29.99, "isActive": true }, "quantity": 2, "price": 29.99 }], "totalPrice": 59.98 } }
+```
+
+---
+
+### POST /api/cart/items
+
+**Auth:** `protect`
+
+**Body:** `{ "productId": "string (ObjectId)", "quantity": "number (integer ≥ 1, default 1)" }`
+
+**What it does:** Adds a product to the cart. If already present, increments quantity. Validates stock availability.
+
+**Errors:** 400 (missing/invalid productId, invalid quantity, exceeds stock), 404 (product not found or inactive)
+
+---
+
+### PUT /api/cart/items/:productId
+
+**Auth:** `protect`
+
+**Params:** `productId` — product ObjectId
+
+**Body:** `{ "quantity": "number (integer ≥ 1)" }`
+
+**What it does:** Sets the exact quantity for a cart item. Validates stock.
+
+**Errors:** 400 (missing/invalid quantity, exceeds stock), 404 (cart not found, item not in cart, product not found)
+
+---
+
+### DELETE /api/cart/items/:productId
+
+**Auth:** `protect`
+
+**Params:** `productId` — product ObjectId
+
+**What it does:** Removes a specific item from the cart.
+
+**Errors:** 400 (invalid productId), 404 (cart not found, item not in cart)
+
+---
+
+### DELETE /api/cart
+
+**Auth:** `protect`
+
+**What it does:** Clears all items from the cart.
+
+**Response:** `{ "success": true, "data": { "message": "Cart cleared" } }`
+
+---
+
+### POST /api/cart/merge
+
+**Auth:** `protect`
+
+**Body:** `{ "items": [{ "productId": "string", "quantity": "number" }] }`
+
+**What it does:** Merges a guest localStorage cart with the server cart on login. Server cart wins on quantity conflicts (higher quantity, capped at stock).
+
+**Errors:** 400 (items not array, invalid productId, invalid quantity)

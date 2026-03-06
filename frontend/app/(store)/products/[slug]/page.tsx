@@ -14,6 +14,8 @@ import { Breadcrumb, BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { ImageGallery, ImageGallerySkeleton } from "@/components/products/ImageGallery";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { getProductBySlugAPI } from "@/services/product-service";
+import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/hooks/use-toast";
 import logger from "@/lib/logger";
 import type { Product } from "@/types";
 
@@ -38,10 +40,14 @@ function ProductDetailSkeleton() {
 
 export default function ProductDetailPage() {
   const { t } = useTranslation("products");
+  const { t: tCart } = useTranslation("cart");
   const { slug } = useParams<{ slug: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const { addItem, openDrawer } = useCart();
+  const { toast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -195,12 +201,26 @@ export default function ProductDetailPage() {
 
           <Separator />
 
-          {/* Add to Cart (stub — Sprint 7) */}
+          {/* Add to Cart */}
           <Button
             size="lg"
-            disabled={!inStock}
+            disabled={!inStock || adding}
             className="w-full"
             aria-label={t("catalog.addToCartAriaLabel", { name: product.name })}
+            onClick={async () => {
+              setAdding(true);
+              try {
+                await addItem(product.id, 1);
+                toast({ description: tCart("addedToCartDesc", { name: product.name }) });
+                openDrawer();
+              } catch (err) {
+                logger.error("Product detail addToCart error:", err);
+                const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+                toast({ title: tCart("errorAdding"), description: msg ?? undefined, variant: "destructive" });
+              } finally {
+                setAdding(false);
+              }
+            }}
           >
             <ShoppingCart className="h-5 w-5 mr-2" aria-hidden="true" />
             {inStock ? t("catalog.addToCart") : t("status.outOfStock")}

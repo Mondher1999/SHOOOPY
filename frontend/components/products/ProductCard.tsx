@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { ShoppingCart, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/hooks/use-toast";
+import logger from "@/lib/logger";
 import type { Product } from "@/types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -64,11 +68,33 @@ export function ProductCardSkeleton({ view = "grid" }: { view?: "grid" | "list" 
 
 export function ProductCard({ product, view = "grid", className }: ProductCardProps) {
   const { t } = useTranslation("products");
+  const { t: tCart } = useTranslation("cart");
+  const { addItem, openDrawer } = useCart();
+  const { toast } = useToast();
+  const [adding, setAdding] = useState(false);
 
   const inStock = product.stock > 0;
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
-  // Use medium for list view, thumbnail for grid cards
   const primaryImage = product.images[0] ?? null;
+
+  const handleAddToCart = async () => {
+    setAdding(true);
+    try {
+      await addItem(product.id, 1);
+      toast({ description: tCart("addedToCartDesc", { name: product.name }) });
+      openDrawer();
+    } catch (err) {
+      logger.error("ProductCard addToCart error:", err);
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      toast({
+        title: tCart("errorAdding"),
+        description: msg ?? undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setAdding(false);
+    }
+  };
 
   if (view === "list") {
     return (
@@ -129,7 +155,8 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
               <Button
                 size="sm"
                 variant={inStock ? "default" : "secondary"}
-                disabled={!inStock}
+                disabled={!inStock || adding}
+                onClick={handleAddToCart}
                 aria-label={t("catalog.addToCartAriaLabel", { name: product.name })}
               >
                 <ShoppingCart className="h-4 w-4 mr-1" aria-hidden="true" />
@@ -198,8 +225,9 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
           <Button
             size="sm"
             variant={inStock ? "default" : "secondary"}
-            disabled={!inStock}
+            disabled={!inStock || adding}
             className="h-8 text-xs px-2"
+            onClick={handleAddToCart}
             aria-label={t("catalog.addToCartAriaLabel", { name: product.name })}
           >
             <ShoppingCart className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
