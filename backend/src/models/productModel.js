@@ -8,7 +8,14 @@ const productSchema = new Schema(
     price: { type: Number, required: true, min: 0 },
     compareAtPrice: { type: Number, default: null, min: 0 },
     category: { type: Schema.Types.ObjectId, ref: "Category", default: null },
-    images: [{ type: String }],
+    images: [
+      {
+        original:  { type: String, required: true },
+        thumbnail: { type: String, required: true },
+        medium:    { type: String, required: true },
+        large:     { type: String, required: true },
+      },
+    ],
     stock: { type: Number, default: 0, min: 0 },
     sku: { type: String, default: null, trim: true },
     vendor: { type: Schema.Types.ObjectId, ref: "User", required: true },

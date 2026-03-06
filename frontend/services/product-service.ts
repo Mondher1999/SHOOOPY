@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/axiosInstance";
-import type { Product, PaginationInfo, ProductQueryParams } from "@/types";
+import type { Product, ProductImage, PaginationInfo, ProductQueryParams } from "@/types";
 
 export interface ProductsListResponse {
   products: Product[];
@@ -40,7 +40,7 @@ export interface SlimProduct {
   name: string;
   slug: string;
   price: number;
-  images: string[];
+  images: ProductImage[];
   ratings: { average: number; count: number };
 }
 
@@ -70,7 +70,8 @@ export interface ProductFormData {
   price: number;
   compareAtPrice?: number | null;
   category?: string | null;
-  images?: string[];
+  /** Structured image objects — set by the image upload pipeline, not manual URL entry */
+  images?: ProductImage[];
   stock?: number;
   sku?: string | null;
   attributes?: Record<string, string>;

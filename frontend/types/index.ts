@@ -36,6 +36,18 @@ export interface ProductRatings {
   count: number;
 }
 
+/** Structured image object produced by the image processing pipeline */
+export interface ProductImage {
+  /** Original uploaded file URL (served from /uploads/products/{id}/) */
+  original: string;
+  /** 150×150 webp thumbnail */
+  thumbnail: string;
+  /** 600×600 webp medium */
+  medium: string;
+  /** 1200×1200 webp large */
+  large: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -44,7 +56,7 @@ export interface Product {
   price: number;
   compareAtPrice: number | null;
   category: ProductCategory | null;
-  images: string[];
+  images: ProductImage[];
   stock: number;
   sku: string | null;
   vendor: ProductVendor;

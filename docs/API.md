@@ -823,3 +823,89 @@ Common HTTP status codes:
 ```
 
 **Errors:** 400 (invalid ID), 403 (not owner or admin), 404 (not found)
+
+
+---
+
+## Uploads (`/api/uploads`)
+
+All upload routes require `protect + restrictTo("admin")`.
+
+---
+
+### POST /api/uploads/product-images
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:** `multipart/form-data`
+- `productId` — MongoDB ObjectId (required)
+- `files` — image files, up to 10 (required)
+
+**What it does:** Uploads up to 10 product images, processes each into 3 optimised sizes (thumbnail 150×150, medium 600×600, large 1200×1200) as webp, preserves the original. Appends new image objects to `product.images`.
+
+**Response:** `201`
+```json
+{
+  "success": true,
+  "data": {
+    "images": [
+      {
+        "original": "/uploads/products/{productId}/img-original.jpg",
+        "thumbnail": "/uploads/products/{productId}/img-thumbnail.webp",
+        "medium": "/uploads/products/{productId}/img-medium.webp",
+        "large": "/uploads/products/{productId}/img-large.webp"
+      }
+    ]
+  }
+}
+```
+
+**Errors:** 400 (missing productId, invalid productId, no files, wrong file type, file > 5MB, > 10 files), 403 (not owner or admin), 404 (product not found)
+
+---
+
+### DELETE /api/uploads/product-images/:fileId
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `fileId` — format `{productId}:{originalFilename}` (URL-encoded)
+
+**What it does:** Deletes all 4 image variants (original + thumbnail + medium + large) from disk and removes the image object from `product.images`.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "message": "Image deleted successfully" } }
+```
+
+**Errors:** 400 (invalid fileId format), 403 (not owner or admin), 404 (product not found, image not found in product)
+
+---
+
+### PATCH /api/uploads/product-images/:productId/reorder
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `productId` — MongoDB ObjectId
+
+**Body:**
+```json
+{
+  "images": [
+    {
+      "original": "string",
+      "thumbnail": "string",
+      "medium": "string",
+      "large": "string"
+    }
+  ]
+}
+```
+
+**What it does:** Replaces the product's `images` array with the provided ordered array. Used to persist drag-and-drop reordering from the admin UI.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "message": "Images reordered successfully" } }
+```
+
+**Errors:** 400 (invalid productId, missing images), 403 (not owner or admin), 404 (product not found)

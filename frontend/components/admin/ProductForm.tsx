@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { getAllCategoriesAPI } from "@/services/category-service";
 import { createProductAPI, updateProductAPI } from "@/services/product-service";
-import type { Category, Product } from "@/types";
+import ImageUploader from "@/components/admin/ImageUploader";
+import ImageSortable from "@/components/admin/ImageSortable";
+import type { Category, Product, ProductImage } from "@/types";
 import { cn } from "@/lib/utils";
 import logger from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
@@ -29,9 +31,6 @@ const productSchema = z.object({
   category: z.string().optional(),
   stock: z.coerce.number().int().min(0, "products:validation.stockMin").default(0),
   sku: z.string().optional(),
-  images: z.array(z.object({ url: z.string() })).optional(),
-  attributeKeys: z.array(z.string()).optional(),
-  attributeValues: z.array(z.string()).optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -50,6 +49,17 @@ export default function ProductForm({ product, isEdit = false }: ProductFormProp
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Images are managed independently of the Zod schema
+  const [images, setImages] = useState<ProductImage[]>(product?.images ?? []);
+
+  // Attributes as parallel arrays
+  const [attrKeys, setAttrKeys] = useState<string[]>(
+    product ? Object.keys(product.attributes) : []
+  );
+  const [attrValues, setAttrValues] = useState<string[]>(
+    product ? Object.values(product.attributes) : []
+  );
+
   const defaultValues: ProductFormValues = product
     ? {
         name: product.name,
@@ -59,9 +69,6 @@ export default function ProductForm({ product, isEdit = false }: ProductFormProp
         category: product.category?.id ?? "",
         stock: product.stock,
         sku: product.sku ?? "",
-        images: product.images.map((url) => ({ url })),
-        attributeKeys: Object.keys(product.attributes),
-        attributeValues: Object.values(product.attributes),
       }
     : {
         name: "",
@@ -71,31 +78,16 @@ export default function ProductForm({ product, isEdit = false }: ProductFormProp
         category: "",
         stock: 0,
         sku: "",
-        images: [],
-        attributeKeys: [],
-        attributeValues: [],
       };
 
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues,
   });
-
-  const { fields: imageFields, append: appendImage, remove: removeImage } =
-    useFieldArray({ control, name: "images" });
-
-  // We manage attributes as parallel arrays for simplicity
-  const [attrKeys, setAttrKeys] = useState<string[]>(
-    product ? Object.keys(product.attributes) : []
-  );
-  const [attrValues, setAttrValues] = useState<string[]>(
-    product ? Object.values(product.attributes) : []
-  );
 
   useEffect(() => {
     getAllCategoriesAPI()
@@ -107,7 +99,6 @@ export default function ProductForm({ product, isEdit = false }: ProductFormProp
   const onSubmit = async (values: ProductFormValues) => {
     setSubmitError(null);
     try {
-      // Build attributes map from parallel arrays
       const attributes: Record<string, string> = {};
       attrKeys.forEach((key, i) => {
         if (key.trim()) attributes[key.trim()] = attrValues[i]?.trim() ?? "";
@@ -121,7 +112,7 @@ export default function ProductForm({ product, isEdit = false }: ProductFormProp
         category: values.category || null,
         stock: values.stock,
         sku: values.sku || null,
-        images: (values.images ?? []).map((img) => img.url).filter(Boolean),
+        images,
         attributes,
       };
 
@@ -138,6 +129,10 @@ export default function ProductForm({ product, isEdit = false }: ProductFormProp
       setSubmitError(msg);
       logger.error("productForm submit failed:", err);
     }
+  };
+
+  const handleUploaded = (newImages: ProductImage[]) => {
+    setImages((prev) => [...prev, ...newImages]);
   };
 
   return (
@@ -304,35 +299,33 @@ export default function ProductForm({ product, isEdit = false }: ProductFormProp
           {/* Images */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("products:form.imagesLabel")}</CardTitle>
+              <CardTitle className="text-base">{t("products:form.sectionImages")}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {imageFields.map((field, index) => (
-                <div key={field.id} className="flex gap-2">
-                  <Input
-                    placeholder={t("products:form.imagesPlaceholder")}
-                    {...register(`images.${index}.url`)}
+            <CardContent className="space-y-5">
+              {isEdit && product ? (
+                <>
+                  <ImageUploader
+                    productId={product.id}
+                    onUploaded={handleUploaded}
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeImage(index)}
-                    aria-label={t("products:form.removeImageAriaLabel")}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendImage({ url: "" })}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                {t("products:form.imagesAddButton")}
-              </Button>
+                  {images.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        {t("products:upload.sortableHint")}
+                      </p>
+                      <ImageSortable
+                        productId={product.id}
+                        images={images}
+                        onChange={setImages}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t("products:upload.saveFirstHint")}
+                </p>
+              )}
             </CardContent>
           </Card>
 

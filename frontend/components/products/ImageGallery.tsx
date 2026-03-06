@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import type { ProductImage } from "@/types";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface ImageGalleryProps {
-  images: string[];
+  images: ProductImage[];
   productName: string;
   className?: string;
 }
@@ -39,14 +43,18 @@ export function ImageGallery({ images, productName, className }: ImageGalleryPro
 
   return (
     <div className={cn("space-y-3", className)}>
-      {/* Main Image */}
+      {/* Main Image — use large variant for quality */}
       <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
         {activeImage && !imgError ? (
-          <img
-            src={activeImage}
+          <Image
+            src={`${BASE_URL}${activeImage.large}`}
             alt={t("catalog.imageAlt", { name: productName, idx: activeIdx + 1 })}
-            className="h-full w-full object-cover"
+            fill
+            className="object-cover"
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            priority={activeIdx === 0}
             onError={() => setImgError(true)}
+            unoptimized
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center">
@@ -78,14 +86,14 @@ export function ImageGallery({ images, productName, className }: ImageGalleryPro
         )}
       </div>
 
-      {/* Thumbnail Strip */}
+      {/* Thumbnail Strip — use thumbnail variant */}
       {images.length > 1 && (
         <div
           className="flex gap-2 overflow-x-auto pb-1"
           role="tablist"
           aria-label={t("catalog.thumbnailsLabel")}
         >
-          {images.map((src, idx) => (
+          {images.map((img, idx) => (
             <button
               key={idx}
               role="tab"
@@ -96,16 +104,18 @@ export function ImageGallery({ images, productName, className }: ImageGalleryPro
                 setImgError(false);
               }}
               className={cn(
-                "flex-shrink-0 h-16 w-16 rounded-md overflow-hidden border-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "flex-shrink-0 h-16 w-16 rounded-md overflow-hidden border-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring relative",
                 idx === activeIdx ? "border-primary" : "border-transparent hover:border-muted-foreground"
               )}
             >
-              <img
-                src={src}
+              <Image
+                src={`${BASE_URL}${img.thumbnail}`}
                 alt=""
                 aria-hidden="true"
-                className="h-full w-full object-cover"
-                loading="lazy"
+                fill
+                className="object-cover"
+                sizes="64px"
+                unoptimized
               />
             </button>
           ))}

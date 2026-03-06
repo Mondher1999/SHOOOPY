@@ -197,7 +197,11 @@ Adds `id`, removes `_id` and `__v`.
 | `price` | Number | Yes | — | Min: 0 |
 | `compareAtPrice` | Number | No | `null` | Original/strikethrough price |
 | `category` | ObjectId | No | `null` | References: `Category` |
-| `images` | String[] | No | `[]` | Array of image URLs |
+| `images` | ProductImage[] | No | `[]` | Array of structured image objects (see Sprint 6) |
+| `images[].original` | String | Yes | — | URL of the original uploaded file |
+| `images[].thumbnail` | String | Yes | — | URL of 150×150 webp variant |
+| `images[].medium` | String | Yes | — | URL of 600×600 webp variant |
+| `images[].large` | String | Yes | — | URL of 1200×1200 webp variant |
 | `stock` | Number | No | `0` | Min: 0 |
 | `sku` | String | No | `null` | Unique (sparse — null allowed) |
 | `vendor` | ObjectId | Yes | — | References: `User` (the creator) |

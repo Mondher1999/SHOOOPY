@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface ProductCardProps {
   product: Product;
@@ -64,7 +67,8 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
 
   const inStock = product.stock > 0;
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
-  const primaryImage = product.images[0] || null;
+  // Use medium for list view, thumbnail for grid cards
+  const primaryImage = product.images[0] ?? null;
 
   if (view === "list") {
     return (
@@ -77,13 +81,15 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
               tabIndex={-1}
               aria-hidden="true"
             >
-              <div className="h-24 w-24 rounded-md overflow-hidden bg-muted">
+              <div className="relative h-24 w-24 rounded-md overflow-hidden bg-muted">
                 {primaryImage ? (
-                  <img
-                    src={primaryImage}
+                  <Image
+                    src={`${BASE_URL}${primaryImage.medium}`}
                     alt={product.name}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
+                    fill
+                    className="object-cover"
+                    sizes="96px"
+                    unoptimized
                   />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
@@ -144,13 +150,15 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
         tabIndex={-1}
         aria-hidden="true"
       >
-        <div className="aspect-square overflow-hidden bg-muted">
+        <div className="relative aspect-square overflow-hidden bg-muted">
           {primaryImage ? (
-            <img
-              src={primaryImage}
+            <Image
+              src={`${BASE_URL}${primaryImage.thumbnail}`}
               alt={product.name}
-              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              unoptimized
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
