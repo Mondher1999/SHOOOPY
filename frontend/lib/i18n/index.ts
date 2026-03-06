@@ -9,6 +9,9 @@ import en_categories from "./locales/en/categories.json";
 import en_cart from "./locales/en/cart.json";
 import en_checkout from "./locales/en/checkout.json";
 import en_orders from "./locales/en/orders.json";
+import en_reviews from "./locales/en/reviews.json";
+import en_wishlist from "./locales/en/wishlist.json";
+import en_admin from "./locales/en/admin.json";
 
 // Guard against re-initialization in Next.js hot reload
 if (!i18n.isInitialized) {
@@ -23,6 +26,9 @@ if (!i18n.isInitialized) {
         cart: en_cart,
         checkout: en_checkout,
         orders: en_orders,
+        reviews: en_reviews,
+        wishlist: en_wishlist,
+        admin: en_admin,
       },
     },
     lng: "en",

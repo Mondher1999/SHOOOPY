@@ -13,6 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Breadcrumb, BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { ImageGallery, ImageGallerySkeleton } from "@/components/products/ImageGallery";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
+import { ReviewSection } from "@/components/products/ReviewSection";
+import { WishlistButton } from "@/components/products/WishlistButton";
 import { getProductBySlugAPI } from "@/services/product-service";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
@@ -201,30 +203,33 @@ export default function ProductDetailPage() {
 
           <Separator />
 
-          {/* Add to Cart */}
-          <Button
-            size="lg"
-            disabled={!inStock || adding}
-            className="w-full"
-            aria-label={t("catalog.addToCartAriaLabel", { name: product.name })}
-            onClick={async () => {
-              setAdding(true);
-              try {
-                await addItem(product.id, 1);
-                toast({ description: tCart("addedToCartDesc", { name: product.name }) });
-                openDrawer();
-              } catch (err) {
-                logger.error("Product detail addToCart error:", err);
-                const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-                toast({ title: tCart("errorAdding"), description: msg ?? undefined, variant: "destructive" });
-              } finally {
-                setAdding(false);
-              }
-            }}
-          >
-            <ShoppingCart className="h-5 w-5 mr-2" aria-hidden="true" />
-            {inStock ? t("catalog.addToCart") : t("status.outOfStock")}
-          </Button>
+          {/* Add to Cart + Wishlist */}
+          <div className="flex gap-2">
+            <Button
+              size="lg"
+              disabled={!inStock || adding}
+              className="flex-1"
+              aria-label={t("catalog.addToCartAriaLabel", { name: product.name })}
+              onClick={async () => {
+                setAdding(true);
+                try {
+                  await addItem(product.id, 1);
+                  toast({ description: tCart("addedToCartDesc", { name: product.name }) });
+                  openDrawer();
+                } catch (err) {
+                  logger.error("Product detail addToCart error:", err);
+                  const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+                  toast({ title: tCart("errorAdding"), description: msg ?? undefined, variant: "destructive" });
+                } finally {
+                  setAdding(false);
+                }
+              }}
+            >
+              <ShoppingCart className="h-5 w-5 mr-2" aria-hidden="true" />
+              {inStock ? t("catalog.addToCart") : t("status.outOfStock")}
+            </Button>
+            <WishlistButton productId={product.id} productName={product.name} />
+          </div>
 
           {product.sku && (
             <p className="text-xs text-muted-foreground">
@@ -233,6 +238,13 @@ export default function ProductDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Reviews */}
+      <ReviewSection
+        productId={product.id}
+        averageRating={product.ratings.average}
+        reviewCount={product.ratings.count}
+      />
 
       {/* Related Products */}
       <RelatedProducts

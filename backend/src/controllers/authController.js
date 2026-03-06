@@ -11,6 +11,7 @@ import {
   passwordResetTemplate,
 } from "../utils/sendEmail.js";
 import logger from "../utils/logger.js";
+import { sendWelcomeEmail } from "../utils/notificationService.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -134,6 +135,9 @@ export const verifyEmail = async (req, res) => {
     user.emailVerificationToken = undefined;
     user.emailVerificationExpiresAt = undefined;
     await user.save({ validateBeforeSave: false });
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail({ name: user.name, email: user.email }).catch(() => {});
 
     res.status(200).json({ success: true, data: { message: "Email verified successfully" } });
   } catch (error) {

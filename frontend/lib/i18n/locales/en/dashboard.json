@@ -3,7 +3,9 @@
     "profile": "Profile",
     "security": "Security",
     "orders": "Orders",
-    "users": "Users"
+    "wishlist": "Wishlist",
+    "users": "Users",
+    "adminDashboard": "Admin Panel"
   },
   "profile": {
     "title": "My Profile",

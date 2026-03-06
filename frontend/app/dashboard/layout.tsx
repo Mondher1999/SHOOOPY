@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { User, Lock, ShoppingBag, Users, LogOut, ChevronRight } from "lucide-react";
+import { User, Lock, ShoppingBag, Heart, Users, LayoutDashboard, LogOut, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -67,12 +67,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       label: t("nav.orders"),
       icon: <ShoppingBag className="h-4 w-4" />,
     },
+    {
+      href: "/dashboard/wishlist",
+      label: t("nav.wishlist"),
+      icon: <Heart className="h-4 w-4" />,
+    },
     ...(user.role === "admin"
       ? [
           {
-            href: "/admin/users",
-            label: t("nav.users"),
-            icon: <Users className="h-4 w-4" />,
+            href: "/admin",
+            label: t("nav.adminDashboard"),
+            icon: <LayoutDashboard className="h-4 w-4" />,
             adminOnly: true,
           },
         ]

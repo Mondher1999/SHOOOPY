@@ -1313,3 +1313,304 @@ Valid transitions:
   }
 }
 ```
+
+---
+
+## Reviews (`/api/reviews`)
+
+Implemented in Sprint 10. Reviews require a delivered order to create, and are limited to one per user per product.
+
+---
+
+### GET /api/reviews/product/:productId
+
+**Auth:** Public
+
+**Params:** `productId` — Product ObjectId
+**Query:** `page` (default 1), `limit` (default 10, max 50), `sort` (`-createdAt`, `createdAt`, `-rating`, `rating`)
+
+**What it does:** Returns paginated reviews for a product with rating distribution.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "reviews": [
+      {
+        "id": "...",
+        "user": { "id": "...", "name": "John Doe", "avatar": "/uploads/avatars/..." },
+        "product": "...",
+        "order": "...",
+        "rating": 5,
+        "title": "Excellent product",
+        "comment": "Really loved this product...",
+        "isVerified": true,
+        "createdAt": "2026-03-06T...",
+        "updatedAt": "2026-03-06T..."
+      }
+    ],
+    "ratingDistribution": [
+      { "rating": 5, "count": 12 },
+      { "rating": 4, "count": 8 },
+      { "rating": 3, "count": 3 },
+      { "rating": 2, "count": 1 },
+      { "rating": 1, "count": 0 }
+    ],
+    "pagination": { "page": 1, "limit": 10, "total": 24, "pages": 3 }
+  }
+}
+```
+
+---
+
+### GET /api/reviews/eligibility/:productId
+
+**Auth:** `protect`
+
+**What it does:** Checks if the authenticated user can review a product (has delivered order + no existing review).
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "canReview": true,
+    "hasDeliveredOrder": true,
+    "existingReview": null
+  }
+}
+```
+
+---
+
+### POST /api/reviews
+
+**Auth:** `protect`
+
+**Body:**
+```json
+{
+  "product": "productId (required)",
+  "rating": "integer 1-5 (required)",
+  "title": "string 3-100 chars (required)",
+  "comment": "string 10-1000 chars (required)"
+}
+```
+
+**What it does:** Creates a review for a product. Requires a delivered order. One review per user per product. Automatically recalculates product rating aggregation.
+
+**Response:** `201`
+
+**Errors:** `400` missing/invalid fields, `403` no delivered order, `404` product not found, `409` duplicate review
+
+---
+
+### PUT /api/reviews/:id
+
+**Auth:** `protect` (owner only)
+
+**Body:** `{ rating?, title?, comment? }` — partial update
+
+**What it does:** Updates the user's own review. Recalculates product ratings.
+
+**Response:** `200`
+
+**Errors:** `400` invalid fields, `403` not owner, `404` not found
+
+---
+
+### DELETE /api/reviews/:id
+
+**Auth:** `protect` (owner or admin)
+
+**What it does:** Deletes a review. Owner can delete their own; admin can delete any. Recalculates product ratings.
+
+**Response:** `200` `{ success: true, data: null }`
+
+**Errors:** `403` not authorized, `404` not found
+
+---
+
+## Wishlist (`/api/wishlist`)
+
+Implemented in Sprint 10. All routes require authentication. One wishlist per user.
+
+---
+
+### GET /api/wishlist
+
+**Auth:** `protect`
+
+**What it does:** Returns the user's wishlist with populated product details.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "user": "...",
+    "items": [
+      {
+        "product": {
+          "id": "...",
+          "name": "Product Name",
+          "slug": "product-name",
+          "images": [...],
+          "price": 29.99,
+          "compareAtPrice": null,
+          "stock": 10,
+          "ratings": { "average": 4.5, "count": 12 },
+          "isActive": true
+        },
+        "addedAt": "2026-03-06T..."
+      }
+    ],
+    "updatedAt": "2026-03-06T..."
+  }
+}
+```
+
+---
+
+### POST /api/wishlist/:productId
+
+**Auth:** `protect`
+
+**What it does:** Adds a product to the wishlist. No duplicates allowed.
+
+**Response:** `201` (returns full populated wishlist)
+
+**Errors:** `404` product not found/inactive, `409` already in wishlist
+
+---
+
+### DELETE /api/wishlist/:productId
+
+**Auth:** `protect`
+
+**What it does:** Removes a product from the wishlist.
+
+**Response:** `200` (returns updated wishlist)
+
+**Errors:** `404` wishlist not found or product not in wishlist
+
+---
+
+### DELETE /api/wishlist
+
+**Auth:** `protect`
+
+**What it does:** Clears the entire wishlist.
+
+**Response:** `200` `{ success: true, data: null }`
+
+---
+
+## Dashboard (Admin)
+
+All dashboard endpoints require `protect + restrictTo("admin")`.
+
+### GET /api/dashboard/stats
+
+**Auth:** `protect + restrictTo("admin")`
+
+**What it does:** Returns KPI overview stats for the admin dashboard. Cached for 2 minutes.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "totalRevenue": 12500.50,
+    "totalOrders": 45,
+    "totalUsers": 120,
+    "totalProducts": 30,
+    "ordersToday": 3,
+    "revenueToday": 350.00,
+    "newUsersThisMonth": 15,
+    "ordersByStatus": { "pending": 5, "confirmed": 8, "delivered": 25 }
+  }
+}
+```
+
+---
+
+### GET /api/dashboard/revenue-chart
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:** `days` (1-365, default 30)
+
+**What it does:** Returns daily revenue data for line chart. Cached for 5 minutes.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": [
+    { "date": "2026-03-01", "revenue": 500.00, "orders": 3 }
+  ]
+}
+```
+
+---
+
+### GET /api/dashboard/top-products
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:** `limit` (1-20, default 5)
+
+**What it does:** Returns top-selling products by quantity sold. Cached for 5 minutes.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": [
+    { "productId": "...", "name": "Product Name", "image": "...", "totalSold": 25, "totalRevenue": 1250.00 }
+  ]
+}
+```
+
+---
+
+### GET /api/dashboard/recent-orders
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:** `limit` (1-50, default 10)
+
+**What it does:** Returns most recent orders with populated user info.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": [
+    { "orderNumber": "ORD-20260306-0001", "user": { "_id": "...", "name": "John", "email": "john@example.com" }, "status": "pending", "totalPrice": 150.00, "createdAt": "..." }
+  ]
+}
+```
+
+---
+
+### GET /api/dashboard/low-stock
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:** `threshold` (1-100, default 10)
+
+**What it does:** Returns active products with stock at or below the threshold. Cached for 2 minutes.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": [
+    { "_id": "...", "name": "Product Name", "slug": "product-name", "stock": 3, "images": [] }
+  ]
+}
+```

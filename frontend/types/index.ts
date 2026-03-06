@@ -187,6 +187,93 @@ export interface OrderStats {
   dailyRevenue: { date: string; revenue: number; orders: number }[];
 }
 
+// ─── Review ──────────────────────────────────────────────────────────────────
+
+export interface ReviewUser {
+  id: string;
+  name: string;
+  avatar: string | null;
+}
+
+export interface Review {
+  id: string;
+  user: ReviewUser;
+  product: string;
+  order: string;
+  rating: number;
+  title: string;
+  comment: string;
+  isVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RatingDistributionItem {
+  rating: number;
+  count: number;
+}
+
+export interface ReviewsResponse {
+  reviews: Review[];
+  ratingDistribution: RatingDistributionItem[];
+  pagination: PaginationInfo;
+}
+
+export interface ReviewEligibility {
+  canReview: boolean;
+  hasDeliveredOrder: boolean;
+  existingReview: Review | null;
+}
+
+// ─── Wishlist ────────────────────────────────────────────────────────────────
+
+export interface WishlistItem {
+  product: Product;
+  addedAt: string;
+}
+
+export interface Wishlist {
+  id: string;
+  user: string;
+  items: WishlistItem[];
+  updatedAt: string;
+}
+
+// ─── Dashboard ──────────────────────────────────────────────────────────────
+
+export interface DashboardStats {
+  totalRevenue: number;
+  totalOrders: number;
+  totalUsers: number;
+  totalProducts: number;
+  ordersToday: number;
+  revenueToday: number;
+  newUsersThisMonth: number;
+  ordersByStatus: Partial<Record<OrderStatus, number>>;
+}
+
+export interface DashboardRevenuePoint {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface DashboardTopProduct {
+  productId: string;
+  name: string;
+  image: string;
+  totalSold: number;
+  totalRevenue: number;
+}
+
+export interface DashboardLowStockProduct {
+  _id: string;
+  name: string;
+  slug: string;
+  stock: number;
+  images: { thumbnail: string }[];
+}
+
 // ─── Query params for product listing ────────────────────────────────────────
 
 export interface ProductQueryParams {

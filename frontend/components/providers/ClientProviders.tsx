@@ -5,6 +5,7 @@ import { I18nextProvider } from "react-i18next";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 import i18n from "@/lib/i18n";
 
 interface ClientProvidersProps {
@@ -16,7 +17,9 @@ export function ClientProviders({ children }: ClientProvidersProps) {
     <I18nextProvider i18n={i18n}>
       <AuthProvider>
         <CartProvider>
-          <LoadingProvider>{children}</LoadingProvider>
+          <WishlistProvider>
+            <LoadingProvider>{children}</LoadingProvider>
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </I18nextProvider>

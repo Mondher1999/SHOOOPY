@@ -1,0 +1,63 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "products": "Products",
+    "categories": "Categories",
+    "users": "Users",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "signOut": "Sign out",
+    "navLabel": "Admin navigation"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of your store performance",
+    "error": "Failed to load dashboard data. Please try again.",
+    "errorTitle": "Error",
+    "retry": "Retry",
+    "kpi": {
+      "totalRevenue": "Total Revenue",
+      "totalOrders": "Total Orders",
+      "totalUsers": "Total Users",
+      "totalProducts": "Active Products",
+      "revenueToday": "Today: {{amount}}",
+      "ordersToday": "{{count}} today",
+      "newUsersMonth": "{{count}} new this month"
+    },
+    "chart": {
+      "title": "Revenue (Last 30 Days)",
+      "revenue": "Revenue",
+      "noData": "No revenue data available for this period."
+    },
+    "recentOrders": {
+      "title": "Recent Orders",
+      "viewAll": "View all",
+      "empty": "No orders yet.",
+      "order": "Order",
+      "customer": "Customer",
+      "total": "Total",
+      "status": "Status",
+      "date": "Date"
+    },
+    "topProducts": {
+      "title": "Top Selling Products",
+      "empty": "No sales data yet.",
+      "sold": "{{count}} sold"
+    },
+    "lowStock": {
+      "title": "Low Stock Alerts",
+      "allGood": "All products are well stocked.",
+      "outOfStock": "Out of stock",
+      "remaining": "{{count}} left"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    }
+  }
+}

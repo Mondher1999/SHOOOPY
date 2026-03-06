@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { WishlistButton } from "@/components/products/WishlistButton";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import logger from "@/lib/logger";
@@ -151,7 +152,7 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
               </div>
             </div>
 
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex items-center gap-1">
               <Button
                 size="sm"
                 variant={inStock ? "default" : "secondary"}
@@ -162,6 +163,7 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
                 <ShoppingCart className="h-4 w-4 mr-1" aria-hidden="true" />
                 {t("catalog.addToCart")}
               </Button>
+              <WishlistButton productId={product.id} productName={product.name} size="sm" />
             </div>
           </div>
         </CardContent>
@@ -170,7 +172,7 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
   }
 
   return (
-    <Card className={cn("group hover:shadow-md transition-shadow overflow-hidden", className)}>
+    <Card className={cn("group relative hover:shadow-md transition-shadow overflow-hidden", className)}>
       <Link
         href={`/products/${product.slug}`}
         className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
@@ -194,6 +196,9 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
           )}
         </div>
       </Link>
+      <div className="absolute top-2 right-2 z-10">
+        <WishlistButton productId={product.id} productName={product.name} size="sm" className="bg-background/80 backdrop-blur-sm hover:bg-background" />
+      </div>
 
       <CardContent className="p-4">
         <Link

@@ -392,3 +392,76 @@ Adds `id`, removes `_id` and `__v`.
 ### toJSON transform
 
 Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Review
+
+**File:** `src/models/reviewModel.js`
+**Collection:** `reviews`
+**Implemented:** Sprint 10
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `user` | ObjectId (ref User) | Yes | -- | Who wrote the review |
+| `product` | ObjectId (ref Product) | Yes | -- | Which product |
+| `order` | ObjectId (ref Order) | Yes | -- | Proof of purchase |
+| `rating` | Number | Yes | -- | 1-5 integer |
+| `title` | String | Yes | -- | Trimmed, max 100 chars |
+| `comment` | String | Yes | -- | Trimmed, max 1000 chars |
+| `isVerified` | Boolean | No | `true` | Verified purchase badge |
+| `createdAt` | Date | Auto | -- | Mongoose timestamps |
+| `updatedAt` | Date | Auto | -- | Mongoose timestamps |
+
+### Indexes
+
+| Index | Type | Purpose |
+|---|---|---|
+| `{ user: 1, product: 1 }` | Unique compound | One review per user per product |
+| `{ product: 1, createdAt: -1 }` | Compound | Product reviews listing, sorted by newest |
+| `{ product: 1, rating: 1 }` | Compound | Rating aggregation queries |
+
+### Key patterns
+
+- **Rating aggregation**: On create/update/delete, the controller runs `recalcRatings(productId)` which uses `Review.aggregate()` to compute average and count, then updates `Product.ratings`.
+- **Ownership**: Only the review author can update; author or admin can delete.
+- **Eligibility gate**: `createReview` checks `Order.findOne({ user, status: "delivered", "items.product": productId })` before allowing review creation.
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Wishlist
+
+**File:** `src/models/wishlistModel.js`
+**Collection:** `wishlists`
+**Implemented:** Sprint 10
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `user` | ObjectId (ref User) | Yes | -- | Unique — one wishlist per user |
+| `items` | Array of subdocs | No | `[]` | Each item: `{ product: ObjectId (ref Product), addedAt: Date }` |
+| `createdAt` | Date | Auto | -- | Mongoose timestamps |
+| `updatedAt` | Date | Auto | -- | Mongoose timestamps |
+
+### Indexes
+
+| Index | Type | Purpose |
+|---|---|---|
+| `{ user: 1 }` | Unique | One wishlist per user |
+| `{ user: 1, "items.product": 1 }` | Compound | Fast duplicate check |
+
+### Key patterns
+
+- **Upsert**: `addItem` uses `findOne` + create-or-push pattern (not `findOneAndUpdate` with `$addToSet` because we need to check for duplicates and return 409).
+- **Population**: `getPopulatedWishlist` selects only display fields: `name slug images price compareAtPrice stock ratings isActive`.
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.

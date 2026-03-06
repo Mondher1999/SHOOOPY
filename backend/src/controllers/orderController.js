@@ -4,6 +4,7 @@ import Product from "../models/productModel.js";
 import Address from "../models/addressModel.js";
 import logger from "../utils/logger.js";
 import { escapeRegex } from "../utils/sanitize.js";
+import { sendOrderNotification } from "../utils/notificationService.js";
 
 const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
@@ -135,6 +136,9 @@ export const placeOrder = async (req, res) => {
     cart.items = [];
     await cart.save();
 
+    // Send order confirmation email (non-blocking)
+    sendOrderNotification("placed", order).catch(() => {});
+
     res.status(201).json({ success: true, data: order });
   } catch (error) {
     logger.error("placeOrder error:", error);
@@ -230,6 +234,9 @@ export const cancelOrder = async (req, res) => {
     });
 
     await order.save();
+
+    // Send cancellation email (non-blocking)
+    sendOrderNotification("cancelled", order, { cancelledBy: "customer" }).catch(() => {});
 
     res.status(200).json({ success: true, data: order });
   } catch (error) {
@@ -377,6 +384,12 @@ export const updateOrderStatus = async (req, res) => {
     });
 
     await order.save();
+
+    // Send status notification email (non-blocking)
+    const notificationMap = { shipped: "shipped", delivered: "delivered", cancelled: "cancelled" };
+    if (notificationMap[status]) {
+      sendOrderNotification(notificationMap[status], order, { cancelledBy: "admin" }).catch(() => {});
+    }
 
     // Re-fetch with populated user for consistent admin response
     const updated = await Order.findById(id).populate("user", "name email").lean();
