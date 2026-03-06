@@ -371,6 +371,7 @@ Adds `id`, removes `_id` and `__v`.
 | `{ status: 1 }` | Standard | Admin order filtering by status |
 | `{ createdAt: -1 }` | Standard | Global most-recent-first ordering |
 | `orderNumber` | Unique | Enforced by schema `unique: true` |
+| `{ orderNumber: 1 }` | Standard | Admin search by order number (Sprint 9) |
 
 ### Relationships
 
@@ -383,6 +384,10 @@ Adds `id`, removes `_id` and `__v`.
 - **`placeOrder`**: validates addressId → fetches populated cart → validates all stock upfront → creates Order → decrements stock (parallel) → clears cart. Stock is decremented AFTER `Order.create()` to prevent orphaned stock on creation failure.
 - **`generateOrderNumber()`**: counts today's orders via `countDocuments` with date range, formats as `ORD-YYYYMMDD-XXXX` (zero-padded to 4 digits).
 - **`cancelOrder`**: only allowed when status is `pending` or `confirmed`. Restores stock via parallel `$inc` operations, appends cancellation entry to `statusHistory`.
+- **`getAllOrdersAdmin`** (Sprint 9): paginated list with status/search/date filters, populates user name+email.
+- **`getOrderByIdAdmin`** (Sprint 9): single order with populated user, no ownership restriction.
+- **`updateOrderStatus`** (Sprint 9): validates transitions via `VALID_TRANSITIONS` map (pending→confirmed→processing→shipped→delivered, cancellation allowed from pending/confirmed). Restores stock on admin cancellation. Requires a note (max 500 chars).
+- **`getOrderStats`** (Sprint 9): aggregation pipeline returning total orders/revenue (excl. cancelled), breakdown by status, and daily revenue for configurable period.
 
 ### toJSON transform
 

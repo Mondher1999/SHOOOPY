@@ -1,0 +1,87 @@
+{
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "processing": "Processing",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  },
+  "timeline": {
+    "label": "Order status timeline",
+    "completed": "completed",
+    "current": "current step",
+    "upcoming": "upcoming",
+    "cancelled": "This order has been cancelled"
+  },
+  "myOrders": {
+    "title": "My Orders",
+    "empty": "You haven't placed any orders yet.",
+    "shopNow": "Start shopping",
+    "item": "item",
+    "items": "items",
+    "viewDetails": "View details",
+    "cancel": "Cancel order"
+  },
+  "detail": {
+    "tracking": "Order Tracking",
+    "items": "Items",
+    "history": "Status History",
+    "shippingAddress": "Shipping Address",
+    "summary": "Order Summary",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "free": "Free",
+    "total": "Total",
+    "paymentMethod": "Payment method",
+    "cod": "Cash on Delivery",
+    "notes": "Order Notes",
+    "qty": "Qty: {{count}}"
+  },
+  "cancelDialog": {
+    "title": "Cancel order?",
+    "description": "Are you sure you want to cancel order {{orderNumber}}? This action cannot be undone and your items will be returned to stock.",
+    "keep": "Keep order",
+    "confirm": "Cancel order",
+    "cancelling": "Cancelling..."
+  },
+  "cancelSuccess": "Order cancelled successfully",
+  "cancelError": "Failed to cancel order. Please try again.",
+  "errorLoading": "Failed to load order data. Please try again.",
+  "orderNotFound": "Order not found",
+  "retry": "Try again",
+  "back": "Back",
+  "pagination": {
+    "prev": "Previous page",
+    "next": "Next page",
+    "pageOf": "Page {{page}} of {{pages}}"
+  },
+  "admin": {
+    "title": "Order Management",
+    "all": "All",
+    "searchPlaceholder": "Search by order number...",
+    "empty": "No orders found",
+    "viewDetails": "View details",
+    "colOrder": "Order",
+    "colCustomer": "Customer",
+    "colDate": "Date",
+    "colItems": "Items",
+    "colTotal": "Total",
+    "colStatus": "Status",
+    "backToOrders": "Back to orders",
+    "customer": "Customer",
+    "updateStatus": "Update Status",
+    "newStatus": "New status",
+    "selectStatus": "Select a status...",
+    "note": "Note",
+    "notePlaceholder": "Add a note about this status change (required)...",
+    "submitStatus": "Update status",
+    "confirmStatusTitle": "Confirm status change",
+    "confirmStatusDesc": "Change order status from \"{{from}}\" to \"{{to}}\"?",
+    "cancelAction": "Cancel",
+    "confirmUpdate": "Confirm",
+    "updating": "Updating...",
+    "statusUpdated": "Order status updated successfully",
+    "statusUpdateError": "Failed to update order status. Please try again."
+  }
+}

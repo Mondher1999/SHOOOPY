@@ -49,7 +49,16 @@ export function StatusTimeline({
           const dateStr = statusDates.get(step);
 
           return (
-            <div key={step} className="flex flex-1 flex-col items-center relative">
+            <div
+              key={step}
+              className="flex flex-1 flex-col items-center relative"
+              role="listitem"
+              aria-label={`${t(`status.${step}`)}: ${
+                isCompleted ? t("timeline.completed") :
+                isCurrent ? t("timeline.current") :
+                t("timeline.upcoming")
+              }`}
+            >
               {/* Connector line (before this step) */}
               {idx > 0 && (
                 <div
@@ -76,12 +85,7 @@ export function StatusTimeline({
                     ? "border-destructive bg-destructive text-destructive-foreground"
                     : "border-muted bg-muted text-muted-foreground")
                 )}
-                role="listitem"
-                aria-label={`${t(`status.${step}`)}: ${
-                  isCompleted ? t("timeline.completed") :
-                  isCurrent ? t("timeline.current") :
-                  t("timeline.upcoming")
-                }`}
+                aria-hidden="true"
               >
                 {isCompleted ? (
                   <Check className="h-4 w-4" />

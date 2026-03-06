@@ -1193,3 +1193,123 @@ Order number format: `ORD-YYYYMMDD-XXXX` (e.g., `ORD-20260306-0001`).
 - `400` invalid ObjectId
 - `400` order cannot be cancelled at current status (e.g., already `shipped`)
 - `404` not found (or belongs to another user)
+
+---
+
+### GET /api/orders/admin
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Implemented:** Sprint 9
+
+**Query:** `page` (default: 1), `limit` (default: 20, max: 50), `status` (one of: pending, confirmed, processing, shipped, delivered, cancelled), `search` (order number partial match), `startDate` (ISO date), `endDate` (ISO date)
+
+**What it does:** Returns all orders with optional filtering by status, order number search, and date range. Results include populated user name and email. Sorted newest first.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "orders": [
+      {
+        "id": "...",
+        "orderNumber": "ORD-20260306-0001",
+        "user": { "_id": "...", "name": "John Doe", "email": "john@example.com" },
+        "status": "pending",
+        "totalPrice": 59.98,
+        "items": [...],
+        "createdAt": "..."
+      }
+    ],
+    "pagination": { "page": 1, "limit": 20, "total": 100, "pages": 5 }
+  }
+}
+```
+
+---
+
+### GET /api/orders/admin/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Implemented:** Sprint 9
+
+**Params:** `id` — Order ObjectId
+
+**What it does:** Returns a single order with populated user info (name, email). No ownership check — admin can view any order.
+
+**Response:** `200` — full Order object with populated `user: { _id, name, email }`
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+### PUT /api/orders/admin/:id/status
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Implemented:** Sprint 9
+
+**Params:** `id` — Order ObjectId
+
+**Body:**
+```json
+{
+  "status": "string (required — target status)",
+  "note":   "string (required — reason for status change, max 500 chars)"
+}
+```
+
+**What it does:** Updates order status with validation of allowed transitions. Appends entry to `statusHistory` array. If transitioning to `cancelled`, stock is restored for all items.
+
+Valid transitions:
+- `pending` → `confirmed` | `cancelled`
+- `confirmed` → `processing` | `cancelled`
+- `processing` → `shipped`
+- `shipped` → `delivered`
+- `delivered` → (none — terminal)
+- `cancelled` → (none — terminal)
+
+**Response:** `200` — updated Order with populated user
+
+**Errors:**
+- `400` missing `status` or `note`
+- `400` note exceeds 500 characters
+- `400` invalid status transition (includes allowed transitions in error message)
+- `404` not found
+
+---
+
+### GET /api/orders/stats
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Implemented:** Sprint 9
+
+**Query:** `days` (default: 30, max: 365) — period for daily revenue breakdown
+
+**What it does:** Returns aggregated order statistics. Total orders and revenue exclude cancelled orders. Daily revenue is broken down by day for the requested period.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "totalOrders": 150,
+    "totalRevenue": 12500.00,
+    "ordersByStatus": {
+      "pending": 10,
+      "confirmed": 5,
+      "processing": 8,
+      "shipped": 12,
+      "delivered": 100,
+      "cancelled": 15
+    },
+    "dailyRevenue": [
+      { "date": "2026-03-01", "revenue": 450.00, "orders": 5 },
+      { "date": "2026-03-02", "revenue": 320.00, "orders": 3 }
+    ]
+  }
+}
+```

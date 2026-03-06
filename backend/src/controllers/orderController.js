@@ -342,6 +342,9 @@ export const updateOrderStatus = async (req, res) => {
     if (!note || !note.trim()) {
       return res.status(400).json({ success: false, error: "Missing required field: note" });
     }
+    if (note.trim().length > 500) {
+      return res.status(400).json({ success: false, error: "Note must be 500 characters or less" });
+    }
 
     const order = await Order.findById(id);
     if (!order) {
