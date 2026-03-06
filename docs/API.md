@@ -583,3 +583,201 @@ Common HTTP status codes:
 | 409 | Conflict (email already in use, duplicate name) |
 | 429 | Too many requests (rate limit exceeded) |
 | 500 | Internal server error |
+
+---
+
+## Categories (`/api/categories`)
+
+### GET /api/categories
+
+**Auth:** Public
+
+**What it does:** Returns all active categories as a flat list.
+
+**Response:** `200`
+```json
+{ "success": true, "data": [{ "id": "...", "name": "Clothing", "slug": "clothing", "description": "...", "parent": null, "image": null, "isActive": true }] }
+```
+
+---
+
+### GET /api/categories/tree
+
+**Auth:** Public (cached 5 minutes)
+
+**What it does:** Returns active categories as a nested tree structure. Root categories have a `children` array.
+
+**Response:** `200`
+```json
+{ "success": true, "data": [{ "id": "...", "name": "Clothing", "children": [{ "id": "...", "name": "T-Shirts", "children": [] }] }] }
+```
+
+---
+
+### GET /api/categories/:id
+
+**Auth:** Public
+
+**Params:** `id` — MongoDB ObjectId
+
+**What it does:** Returns a single category by ID, with parent populated.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "id": "...", "name": "T-Shirts", "parent": { "id": "...", "name": "Clothing", "slug": "clothing" } } }
+```
+
+**Errors:** 400 (invalid ID), 404 (not found)
+
+---
+
+### POST /api/categories
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:**
+```json
+{
+  "name": "string (required)",
+  "description": "string (optional)",
+  "parent": "ObjectId (optional)",
+  "image": "string URL (optional)",
+  "isActive": "boolean (optional, default true)"
+}
+```
+
+**What it does:** Creates a new category. Slug is auto-generated from name.
+
+**Response:** `201`
+```json
+{ "success": true, "data": { "id": "...", "name": "Clothing", "slug": "clothing" } }
+```
+
+**Errors:** 400 (missing name, invalid parent ID), 404 (parent not found), 409 (duplicate name)
+
+---
+
+### PUT /api/categories/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` — MongoDB ObjectId
+
+**Body:** Same fields as POST (all optional)
+
+**What it does:** Updates a category. Re-generates slug if name changes.
+
+**Errors:** 400 (invalid ID, category is own parent), 404 (not found), 409 (duplicate name)
+
+---
+
+### DELETE /api/categories/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` — MongoDB ObjectId
+
+**What it does:** Permanently deletes a category. Blocked if any active products or subcategories reference it.
+
+**Errors:** 400 (invalid ID), 404 (not found), 409 (has products or subcategories)
+
+---
+
+## Products (`/api/products`)
+
+### GET /api/products
+
+**Auth:** Public
+
+**Query:**
+- `page` — page number (default: 1)
+- `limit` — items per page (default: 20, max: 50)
+- `category` — Category ObjectId or slug
+- `minPrice` / `maxPrice` — price range filter
+- `inStock` — `"true"` to show in-stock only
+- `rating` — minimum average rating
+- `sort` — `newest` | `price_asc` | `price_desc` | `rating` (default: newest)
+- `search` — full-text search on name + description
+
+**What it does:** Returns paginated product list with filters.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "products": [{ "id": "...", "name": "...", "price": 29.99, "category": { "name": "...", "slug": "..." }, "vendor": { "name": "...", "email": "..." } }],
+    "pagination": { "page": 1, "limit": 20, "total": 100, "pages": 5 }
+  }
+}
+```
+
+---
+
+### GET /api/products/:id
+
+**Auth:** Public
+
+**Params:** `id` — MongoDB ObjectId
+
+**What it does:** Returns a single active product with populated category and vendor.
+
+**Errors:** 400 (invalid ID), 404 (not found or soft-deleted)
+
+---
+
+### POST /api/products
+
+**Auth:** `protect` (any authenticated user acts as vendor)
+
+**Body:**
+```json
+{
+  "name": "string (required)",
+  "description": "string (optional)",
+  "price": "number (required, ≥ 0)",
+  "compareAtPrice": "number (optional)",
+  "category": "ObjectId (optional)",
+  "images": ["string URL array (optional)"],
+  "stock": "number (optional, default 0)",
+  "sku": "string (optional, unique)",
+  "attributes": { "key": "value" }
+}
+```
+
+**What it does:** Creates a product. The authenticated user becomes the vendor.
+
+**Response:** `201` with populated category and vendor
+
+**Errors:** 400 (missing name/price, invalid price, invalid category ID), 404 (category not found), 409 (duplicate SKU)
+
+---
+
+### PUT /api/products/:id
+
+**Auth:** `protect` (owner vendor or admin only)
+
+**Params:** `id` — MongoDB ObjectId
+
+**Body:** Same fields as POST (all optional) + `isActive: boolean`
+
+**What it does:** Updates product. Non-owners get 403. Soft-deleted products return 404.
+
+**Errors:** 400 (invalid ID/price), 403 (not owner or admin), 404 (not found), 409 (duplicate SKU)
+
+---
+
+### DELETE /api/products/:id
+
+**Auth:** `protect` (owner vendor or admin only)
+
+**Params:** `id` — MongoDB ObjectId
+
+**What it does:** Soft-deletes the product (sets `isActive: false`). Non-owners get 403.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "message": "Product deleted successfully" } }
+```
+
+**Errors:** 400 (invalid ID), 403 (not owner or admin), 404 (not found)

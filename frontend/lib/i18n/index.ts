@@ -4,6 +4,8 @@ import { initReactI18next } from "react-i18next";
 import en_auth from "./locales/en/auth.json";
 import en_common from "./locales/en/common.json";
 import en_dashboard from "./locales/en/dashboard.json";
+import en_products from "./locales/en/products.json";
+import en_categories from "./locales/en/categories.json";
 
 // Guard against re-initialization in Next.js hot reload
 if (!i18n.isInitialized) {
@@ -13,6 +15,8 @@ if (!i18n.isInitialized) {
         auth: en_auth,
         common: en_common,
         dashboard: en_dashboard,
+        products: en_products,
+        categories: en_categories,
       },
     },
     lng: "en",

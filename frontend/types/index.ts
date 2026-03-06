@@ -1,0 +1,79 @@
+// ─── Category ─────────────────────────────────────────────────────────────────
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  parent: string | Category | null;
+  image: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CategoryNode extends Omit<Category, "parent"> {
+  parent: string | null;
+  children: CategoryNode[];
+}
+
+// ─── Product ──────────────────────────────────────────────────────────────────
+
+export interface ProductVendor {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface ProductCategory {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface ProductRatings {
+  average: number;
+  count: number;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  compareAtPrice: number | null;
+  category: ProductCategory | null;
+  images: string[];
+  stock: number;
+  sku: string | null;
+  vendor: ProductVendor;
+  ratings: ProductRatings;
+  isActive: boolean;
+  attributes: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+// ─── Query params for product listing ────────────────────────────────────────
+
+export interface ProductQueryParams {
+  page?: number;
+  limit?: number;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  rating?: number;
+  sort?: "price_asc" | "price_desc" | "rating" | "newest";
+  search?: string;
+}

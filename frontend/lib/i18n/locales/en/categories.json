@@ -1,0 +1,49 @@
+{
+  "title": "Categories",
+  "subtitle": "Organize your product catalog with categories",
+  "addButton": "Add Category",
+  "empty": "No categories yet",
+  "noParent": "Top level (no parent)",
+  "columns": {
+    "name": "Name",
+    "parent": "Parent",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete category?",
+    "confirmDeleteMessage": "Delete \"{{name}}\"? This cannot be undone.",
+    "successDeleted": "Category deleted",
+    "successCreated": "Category created",
+    "successUpdated": "Category updated"
+  },
+  "form": {
+    "createTitle": "New Category",
+    "editTitle": "Edit Category",
+    "nameLabel": "Category name",
+    "namePlaceholder": "e.g. Clothing",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Optional description...",
+    "parentLabel": "Parent category",
+    "parentPlaceholder": "Select parent (optional)",
+    "imageLabel": "Image URL",
+    "imagePlaceholder": "https://...",
+    "isActiveLabel": "Active",
+    "submitCreate": "Create category",
+    "submitEdit": "Save changes",
+    "submitting": "Saving..."
+  },
+  "validation": {
+    "nameRequired": "Category name is required"
+  },
+  "tree": {
+    "rootLabel": "Root categories",
+    "subcategoriesLabel": "Subcategories"
+  }
+}

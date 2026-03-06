@@ -146,3 +146,81 @@ If your app tracks user progress or analytics:
 
 **Indexes:** `{ userId: 1, resourceId: 1 }` (unique)
 -->
+
+---
+
+## Category
+
+**File:** `src/models/categoryModel.js`
+**Collection:** `categories`
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `name` | String | Yes | — | Trimmed |
+| `slug` | String | No (auto) | — | Unique; auto-generated from name on save |
+| `description` | String | No | `""` | |
+| `parent` | ObjectId | No | `null` | Self-reference to `Category` (for subcategories) |
+| `image` | String | No | `null` | URL |
+| `isActive` | Boolean | No | `true` | |
+| `createdAt` | Date | auto | — | Mongoose timestamps |
+| `updatedAt` | Date | auto | — | Mongoose timestamps |
+
+### Pre-save hooks
+- Generates a URL-safe slug from `name`. Appends `-1`, `-2`, etc. if slug already exists.
+
+### Indexes
+- `{ slug: 1 }` — unique
+- `{ parent: 1 }` — tree traversal queries
+
+### Relationships
+- `parent` → `Category` (self-referencing; null for root categories)
+
+### toJSON transform
+Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Product
+
+**File:** `src/models/productModel.js`
+**Collection:** `products`
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `name` | String | Yes | — | Trimmed |
+| `slug` | String | No (auto) | — | Unique; auto-generated from name |
+| `description` | String | No | `""` | |
+| `price` | Number | Yes | — | Min: 0 |
+| `compareAtPrice` | Number | No | `null` | Original/strikethrough price |
+| `category` | ObjectId | No | `null` | References: `Category` |
+| `images` | String[] | No | `[]` | Array of image URLs |
+| `stock` | Number | No | `0` | Min: 0 |
+| `sku` | String | No | `null` | Unique (sparse — null allowed) |
+| `vendor` | ObjectId | Yes | — | References: `User` (the creator) |
+| `ratings.average` | Number | No | `0` | 0–5 |
+| `ratings.count` | Number | No | `0` | Number of ratings |
+| `isActive` | Boolean | No | `true` | False = soft-deleted |
+| `attributes` | Map (Mixed) | No | `{}` | Key-value pairs (e.g. color, size) |
+| `createdAt` | Date | auto | — | |
+| `updatedAt` | Date | auto | — | |
+
+### Pre-save hooks
+- Generates URL-safe slug from `name`, handles uniqueness conflicts with counter suffix.
+
+### Indexes
+- `{ name: "text", description: "text" }` — full-text search
+- `{ category: 1, isActive: 1, price: 1 }` — category-filtered product listing with price sort
+- `{ vendor: 1, isActive: 1 }` — vendor's own product list
+- `{ isActive: 1, createdAt: -1 }` — default listing (newest active products)
+- `{ sku: 1 }` — unique, sparse (nulls allowed)
+
+### Relationships
+- `category` → `Category`
+- `vendor` → `User`
+
+### toJSON transform
+Adds `id`, removes `_id` and `__v`.

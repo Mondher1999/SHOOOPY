@@ -1,0 +1,73 @@
+{
+  "title": "Products",
+  "subtitle": "Manage your product catalog",
+  "addButton": "Add Product",
+  "searchPlaceholder": "Search by name...",
+  "filterCategory": "All categories",
+  "empty": "No products found",
+  "columns": {
+    "name": "Name",
+    "category": "Category",
+    "price": "Price",
+    "stock": "Stock",
+    "status": "Status",
+    "vendor": "Vendor",
+    "actions": "Actions"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "inStock": "In Stock",
+    "outOfStock": "Out of Stock"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete product?",
+    "confirmDeleteMessage": "This will soft-delete \"{{name}}\". It can be restored later.",
+    "successDeleted": "Product deleted",
+    "successCreated": "Product created successfully",
+    "successUpdated": "Product updated successfully"
+  },
+  "form": {
+    "createTitle": "Create Product",
+    "editTitle": "Edit Product",
+    "nameLabel": "Product name",
+    "namePlaceholder": "e.g. Classic White T-Shirt",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Product description...",
+    "priceLabel": "Price",
+    "pricePlaceholder": "0.00",
+    "compareAtPriceLabel": "Compare-at price",
+    "compareAtPricePlaceholder": "0.00",
+    "categoryLabel": "Category",
+    "categoryPlaceholder": "Select a category",
+    "stockLabel": "Stock quantity",
+    "stockPlaceholder": "0",
+    "skuLabel": "SKU",
+    "skuPlaceholder": "e.g. TSH-WHT-M",
+    "imagesLabel": "Image URLs",
+    "imagesAddButton": "Add image URL",
+    "imagesPlaceholder": "https://...",
+    "attributesLabel": "Attributes",
+    "attributesKeyPlaceholder": "e.g. Color",
+    "attributesValuePlaceholder": "e.g. White",
+    "attributesAddButton": "Add attribute",
+    "submitCreate": "Create product",
+    "submitEdit": "Save changes",
+    "submitting": "Saving...",
+    "backToProducts": "Back to products",
+    "sectionBasic": "Basic Information",
+    "sectionPricing": "Pricing",
+    "sectionOrganization": "Organization",
+    "removeImageAriaLabel": "Remove image",
+    "removeAttributeAriaLabel": "Remove attribute"
+  },
+  "validation": {
+    "nameRequired": "Product name is required",
+    "priceRequired": "Price is required",
+    "priceMin": "Price must be 0 or greater",
+    "stockMin": "Stock must be 0 or greater",
+    "imageUrlInvalid": "Please enter a valid URL"
+  }
+}
