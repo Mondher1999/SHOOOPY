@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 
 import connectDB from "./src/config/db.js";
 import logger from "./src/utils/logger.js";
+import { correlationId } from "./src/middlewares/correlationId.js";
 import healthRoutes from "./src/routes/healthRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
@@ -25,6 +26,9 @@ import dashboardRoutes from "./src/routes/dashboardRoutes.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+
+// ─── Correlation ID — must be first for log traceability ────────────────────
+app.use(correlationId);
 
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet());
@@ -84,7 +88,7 @@ app.use("/api/dashboard", dashboardRoutes);
 // ─── Global Error Handler ───────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  logger.error("Unhandled error:", err);
+  logger.error("Unhandled error:", { correlationId: req.correlationId, error: err.message, stack: err.stack });
   res.status(500).json({ success: false, error: "Something went wrong" });
 });
 

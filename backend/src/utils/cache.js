@@ -27,8 +27,14 @@ function del(key) {
   store.delete(key);
 }
 
+function delByPrefix(prefix) {
+  for (const key of store.keys()) {
+    if (key.startsWith(prefix)) store.delete(key);
+  }
+}
+
 function clear() {
   store.clear();
 }
 
-export default { get, set, del, clear };
+export default { get, set, del, delByPrefix, clear };

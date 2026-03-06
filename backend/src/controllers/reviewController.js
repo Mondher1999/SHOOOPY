@@ -140,7 +140,8 @@ export const getProductReviews = async (req, res) => {
         .populate("user", "name avatar")
         .sort(sort)
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Review.countDocuments({ product: productId }),
       Review.aggregate([
         { $match: { product: new mongoose.Types.ObjectId(productId) } },

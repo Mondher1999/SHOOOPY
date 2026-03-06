@@ -52,6 +52,9 @@ Use this format for each model:
 | `passwordResetTokenHash` | String | No | -- | SHA-256 hash of raw reset token; `select: false` |
 | `passwordResetExpiresAt` | Date | No | -- | 15 min after forgot-password request; `select: false` |
 | `passwordChangedAt` | Date | No | -- | Set on password change (invalidates earlier tokens); `select: false` |
+| `loginAttempts` | Number | No | `0` | Failed login counter for brute-force protection; `select: false` |
+| `lockUntil` | Date | No | -- | Account lockout expiry (15 min after 5 failures); `select: false` |
+| `language` | String | No | `"en"` | User language preference |
 | `createdAt` | Date | Auto | -- | Mongoose timestamps |
 | `updatedAt` | Date | Auto | -- | Mongoose timestamps |
 
@@ -61,6 +64,7 @@ Use this format for each model:
 |---|---|---|
 | `comparePassword` | `async (candidatePassword) -> boolean` | `bcrypt.compare` against the stored hash |
 | `changedPasswordAfter` | `(jwtIat) -> boolean` | Returns `true` if password changed after JWT was issued |
+| `isLocked` | `() -> boolean` | Returns `true` if account is currently locked (`lockUntil > now`) |
 
 ### Pre-save Hook
 
@@ -68,7 +72,7 @@ If `password` is modified: hash with `bcrypt.hash(password, 12)`. If not a new d
 
 ### toJSON Transform
 
-Adds `id` from `_id`. Removes `_id`, `__v`, and all sensitive fields: `password`, `refreshToken`, `emailVerificationToken`, `emailVerificationExpiresAt`, `passwordResetTokenHash`, `passwordResetExpiresAt`, `passwordChangedAt`. This ensures NO sensitive data ever appears in API responses even if fields are present on the document (e.g. after `User.create()`).
+Adds `id` from `_id`. Removes `_id`, `__v`, and all sensitive fields: `password`, `refreshToken`, `emailVerificationToken`, `emailVerificationExpiresAt`, `passwordResetTokenHash`, `passwordResetExpiresAt`, `passwordChangedAt`, `loginAttempts`, `lockUntil`. This ensures NO sensitive data ever appears in API responses even if fields are present on the document (e.g. after `User.create()`).
 
 ### Indexes
 

@@ -24,11 +24,13 @@ export async function updateProfileAPI(data: {
   name?: string;
   email?: string;
   avatar?: File;
+  language?: string;
 }): Promise<{ success: true; data: AuthUser }> {
   const formData = new FormData();
   if (data.name) formData.append("name", data.name);
   if (data.email) formData.append("email", data.email);
   if (data.avatar) formData.append("avatar", data.avatar);
+  if (data.language) formData.append("language", data.language);
 
   // Axios automatically sets multipart/form-data boundary when body is FormData
   const response = await axiosInstance.put<{ success: true; data: AuthUser }>(

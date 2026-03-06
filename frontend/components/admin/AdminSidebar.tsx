@@ -80,7 +80,7 @@ export function AdminSidebar() {
         <div className="p-4 border-b flex items-center justify-between min-h-[57px]">
           {!collapsed && (
             <Link href="/admin" className="text-lg font-semibold text-foreground hover:text-primary">
-              ShopFlow
+              {t("sidebar.appName")}
             </Link>
           )}
           <Button
@@ -141,7 +141,7 @@ export function AdminSidebar() {
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-10 border-b bg-card px-4 h-14 flex items-center justify-between">
         <Link href="/admin" className="text-base font-semibold">
-          ShopFlow
+          {t("sidebar.appName")}
         </Link>
         <nav className="flex items-center gap-1" aria-label={t("sidebar.navLabel")}>
           {navItems.map((item) => {

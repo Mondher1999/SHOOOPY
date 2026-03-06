@@ -1,5 +1,15 @@
 {
   "appName": "ShopFlow",
+  "home": {
+    "heading": "Welcome to ShopFlow",
+    "description": "Your one-stop shop — browse products and pay Cash on Delivery when your order arrives. No credit card required.",
+    "shopNow": "Shop Now",
+    "browseCategories": "Browse Categories"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English"
+  },
   "actions": {
     "save": "Save",
     "cancel": "Cancel",

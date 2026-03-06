@@ -13,6 +13,12 @@ import en_reviews from "./locales/en/reviews.json";
 import en_wishlist from "./locales/en/wishlist.json";
 import en_admin from "./locales/en/admin.json";
 
+// Read persisted language preference from localStorage (client-side only)
+const savedLng =
+  typeof window !== "undefined"
+    ? localStorage.getItem("shopflow_language") || "en"
+    : "en";
+
 // Guard against re-initialization in Next.js hot reload
 if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
@@ -31,12 +37,20 @@ if (!i18n.isInitialized) {
         admin: en_admin,
       },
     },
-    lng: "en",
+    lng: savedLng,
     fallbackLng: "en",
     defaultNS: "common",
     interpolation: {
       escapeValue: false, // React already escapes values
     },
+  });
+
+  // Persist language changes to localStorage
+  i18n.on("languageChanged", (lng: string) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("shopflow_language", lng);
+      document.documentElement.lang = lng;
+    }
   });
 }
 

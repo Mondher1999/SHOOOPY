@@ -18,6 +18,13 @@ const userSchema = new Schema(
     passwordResetTokenHash: { type: String, select: false },
     passwordResetExpiresAt: { type: Date, select: false },
     passwordChangedAt: { type: Date, select: false },
+
+    // Account lockout (brute-force protection)
+    loginAttempts: { type: Number, default: 0, select: false },
+    lockUntil: { type: Date, select: false },
+
+    // Language preference
+    language: { type: String, default: "en" },
   },
   { timestamps: true }
 );
@@ -40,6 +47,11 @@ userSchema.pre("save", async function (next) {
 // Compare a plaintext password against the stored hash
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Check if account is currently locked
+userSchema.methods.isLocked = function () {
+  return this.lockUntil && this.lockUntil > new Date();
 };
 
 // Returns true if password was changed after the JWT was issued
@@ -67,6 +79,8 @@ userSchema.set("toJSON", {
     delete ret.passwordResetTokenHash;
     delete ret.passwordResetExpiresAt;
     delete ret.passwordChangedAt;
+    delete ret.loginAttempts;
+    delete ret.lockUntil;
   },
 });
 

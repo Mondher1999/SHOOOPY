@@ -20,6 +20,8 @@ function hashToken(token) {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 // Issue tokens and persist hashed refresh token
 async function issueTokens(userId) {
@@ -82,13 +84,41 @@ export const login = async (req, res) => {
     if (!email) return res.status(400).json({ success: false, error: "Missing required field: email" });
     if (!password) return res.status(400).json({ success: false, error: "Missing required field: password" });
 
-    // Select password explicitly (field has select: false)
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select("+password");
+    // Select password + lockout fields explicitly (fields have select: false)
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+      .select("+password +loginAttempts +lockUntil");
     if (!user) return res.status(401).json({ success: false, error: "Invalid email or password" });
     if (!user.isActive) return res.status(401).json({ success: false, error: "Account deactivated" });
 
+    // Check if account is locked
+    if (user.isLocked()) {
+      const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000);
+      return res.status(429).json({
+        success: false,
+        error: `Account locked due to too many failed attempts. Try again in ${minutesLeft} minute${minutesLeft === 1 ? "" : "s"}.`,
+      });
+    }
+
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(401).json({ success: false, error: "Invalid email or password" });
+    if (!isMatch) {
+      // Increment failed login attempts
+      const attempts = (user.loginAttempts || 0) + 1;
+      const update = { loginAttempts: attempts };
+
+      // Lock account after MAX_LOGIN_ATTEMPTS
+      if (attempts >= MAX_LOGIN_ATTEMPTS) {
+        update.lockUntil = new Date(Date.now() + LOCK_DURATION_MS);
+        logger.warn(`Account locked for ${email} after ${attempts} failed attempts`);
+      }
+
+      await User.findByIdAndUpdate(user._id, update);
+      return res.status(401).json({ success: false, error: "Invalid email or password" });
+    }
+
+    // Reset login attempts on successful login
+    if (user.loginAttempts > 0 || user.lockUntil) {
+      await User.findByIdAndUpdate(user._id, { loginAttempts: 0, lockUntil: null });
+    }
 
     const { accessToken, refreshToken } = await issueTokens(user._id);
 

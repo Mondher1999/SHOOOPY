@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { CartIcon } from "@/components/cart/CartIcon";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,7 @@ export function Header() {
               href="/"
               className="flex-shrink-0 font-bold text-xl tracking-tight text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             >
-              ShopFlow
+              {t("appName")}
             </Link>
 
             {/* Desktop Nav */}
@@ -54,6 +55,9 @@ export function Header() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2 ml-auto">
+              {/* Language switcher */}
+              <LanguageSwitcher />
+
               {/* Cart icon — opens drawer */}
               <CartIcon />
 

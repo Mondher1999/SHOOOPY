@@ -1,5 +1,6 @@
 {
   "sidebar": {
+    "appName": "ShopFlow",
     "dashboard": "Dashboard",
     "orders": "Orders",
     "products": "Products",

@@ -13,7 +13,7 @@ function withId(doc) {
 
 // Invalidate all product-related cache keys on any write
 function invalidateProductCache() {
-  cache.del("products:list");
+  cache.delByPrefix("products:list");
 }
 
 // ─── Public: Get all products (paginated, filtered, sorted, searchable) ──────
@@ -22,6 +22,13 @@ export const getAllProducts = async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const { category, minPrice, maxPrice, inStock, rating, sort, search } = req.query;
+
+    // Check cache for product listings (skip cache when searching — too many permutations)
+    if (!search?.trim()) {
+      const cacheKey = `products:list:${page}:${limit}:${category || ""}:${minPrice || ""}:${maxPrice || ""}:${inStock || ""}:${rating || ""}:${sort || ""}`;
+      const cached = cache.get(cacheKey);
+      if (cached) return res.status(200).json({ success: true, data: cached });
+    }
 
     const query = { isActive: true };
 
@@ -78,13 +85,18 @@ export const getAllProducts = async (req, res) => {
       Product.countDocuments(query),
     ]);
 
-    res.status(200).json({
-      success: true,
-      data: {
-        products: products.map(withId),
-        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-      },
-    });
+    const data = {
+      products: products.map(withId),
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
+
+    // Cache non-search results for 60 seconds
+    if (!search?.trim()) {
+      const cacheKey = `products:list:${page}:${limit}:${category || ""}:${minPrice || ""}:${maxPrice || ""}:${inStock || ""}:${rating || ""}:${sort || ""}`;
+      cache.set(cacheKey, data, 60);
+    }
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     logger.error("getAllProducts error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });

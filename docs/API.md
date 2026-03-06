@@ -94,14 +94,14 @@ Tokens are returned in the response body (not cookies) and stored in `localStora
 {
   "success": true,
   "data": {
-    "user": { "id": "...", "name": "...", "email": "...", "role": "...", "isVerified": true, "isActive": true, "createdAt": "...", "updatedAt": "..." },
+    "user": { "id": "...", "name": "...", "email": "...", "role": "...", "isVerified": true, "isActive": true, "language": "en", "createdAt": "...", "updatedAt": "..." },
     "accessToken": "string",
     "refreshToken": "string"
   }
 }
 ```
 
-**Errors:** `400` missing fields, `401` invalid credentials or account deactivated
+**Errors:** `400` missing fields, `401` invalid credentials or account deactivated, `429` account locked (5 failed attempts → 15-minute lockout)
 
 ---
 

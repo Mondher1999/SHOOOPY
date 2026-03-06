@@ -8,6 +8,7 @@ export interface AuthUser {
   isVerified: boolean;
   isActive: boolean;
   avatar: string | null;
+  language: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -7,6 +7,7 @@ import { AVATARS_DIR } from "../config/multer.js";
 
 const VALID_OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 const VALID_ROLES = ["customer", "admin"];
+const VALID_LANGUAGES = ["en"];
 
 // ─── Self: Get my profile ────────────────────────────────────────────────────
 export const getProfile = async (req, res) => {
@@ -28,6 +29,9 @@ export const updateProfile = async (req, res) => {
 
     if (req.body.name?.trim()) updates.name = req.body.name.trim();
     if (req.body.email?.trim()) updates.email = req.body.email.trim().toLowerCase();
+    if (req.body.language && VALID_LANGUAGES.includes(req.body.language)) {
+      updates.language = req.body.language;
+    }
 
     // Avatar upload handling
     if (req.file) {
@@ -137,7 +141,8 @@ export const getAllUsers = async (req, res) => {
       User.find(query)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       User.countDocuments(query),
     ]);
 
