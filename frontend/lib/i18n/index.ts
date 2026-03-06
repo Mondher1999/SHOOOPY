@@ -7,6 +7,7 @@ import en_dashboard from "./locales/en/dashboard.json";
 import en_products from "./locales/en/products.json";
 import en_categories from "./locales/en/categories.json";
 import en_cart from "./locales/en/cart.json";
+import en_checkout from "./locales/en/checkout.json";
 
 // Guard against re-initialization in Next.js hot reload
 if (!i18n.isInitialized) {
@@ -19,6 +20,7 @@ if (!i18n.isInitialized) {
         products: en_products,
         categories: en_categories,
         cart: en_cart,
+        checkout: en_checkout,
       },
     },
     lng: "en",

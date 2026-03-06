@@ -1,0 +1,84 @@
+{
+  "checkout": {
+    "title": "Checkout",
+    "stepsLabel": "Checkout steps",
+    "stepAddress": "Delivery Address",
+    "stepReview": "Order Review",
+    "stepConfirm": "Confirm & Pay",
+    "stepDone": "completed",
+    "stepCurrent": "current",
+    "continue": "Continue",
+    "back": "Back",
+    "errorPlacing": "Failed to place order. Please try again.",
+    "errorOutOfStock": "Some items are out of stock: {{names}}. Please update your cart."
+  },
+  "addressSelector": {
+    "title": "Select delivery address",
+    "default": "Default",
+    "addNew": "Add new address",
+    "newAddressTitle": "New address",
+    "noAddresses": "You have no saved addresses. Add one below to continue.",
+    "errorLoading": "Failed to load addresses. Please try again."
+  },
+  "addressForm": {
+    "fullName": "Full name",
+    "fullNameMin": "Name must be at least 2 characters",
+    "phone": "Phone number",
+    "phoneMin": "Phone must be at least 7 characters",
+    "street": "Street address",
+    "streetMin": "Street must be at least 5 characters",
+    "city": "City",
+    "cityMin": "City must be at least 2 characters",
+    "state": "State / Province",
+    "stateMin": "State must be at least 2 characters",
+    "postalCode": "Postal code",
+    "postalCodeMin": "Postal code must be at least 3 characters",
+    "country": "Country",
+    "countryMin": "Country must be at least 2 characters",
+    "label": "Address label",
+    "labelHome": "Home",
+    "labelWork": "Work",
+    "labelOther": "Other",
+    "save": "Save address",
+    "errorCreating": "Failed to save address. Please try again."
+  },
+  "orderSummary": {
+    "title": "Order summary",
+    "itemsLabel": "Items in your order",
+    "productImageAlt": "{{name}} product image",
+    "qty": "Qty: {{count}}",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "freeShipping": "Free",
+    "total": "Total"
+  },
+  "cod": {
+    "methodTitle": "Cash on Delivery",
+    "methodDesc": "Pay in cash when your order arrives",
+    "note": "Have the exact amount ready when the delivery agent arrives. No online payment is required.",
+    "amountDue": "Amount due on delivery",
+    "termsLabel": "I agree to pay the amount in cash upon delivery",
+    "termsDesc": "By checking this box, you confirm your order and agree to pay the total amount when the order is delivered.",
+    "placeOrder": "Place order",
+    "placing": "Placing order..."
+  },
+  "success": {
+    "title": "Order placed!",
+    "subtitle": "Thank you for your order. We'll process it shortly.",
+    "orderNumber": "Order number",
+    "items": "{{count}} item(s)",
+    "shippingTo": "Shipping to",
+    "total": "Total",
+    "codNote": "You will pay in cash when your order is delivered.",
+    "viewOrders": "View my orders",
+    "continueShopping": "Continue shopping",
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    }
+  }
+}

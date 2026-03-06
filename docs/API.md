@@ -985,3 +985,211 @@ All upload routes require `protect + restrictTo("admin")`.
 **What it does:** Merges a guest localStorage cart with the server cart on login. Server cart wins on quantity conflicts (higher quantity, capped at stock).
 
 **Errors:** 400 (items not array, invalid productId, invalid quantity)
+
+---
+
+## Addresses (`/api/addresses`)
+
+**Implemented:** Sprint 8
+
+All address routes require authentication. Max 5 addresses per user.
+
+---
+
+### GET /api/addresses
+
+**Auth:** `protect`
+
+**What it does:** Returns all saved delivery addresses for the authenticated user, sorted with default first.
+
+**Response:** `200`
+```json
+{ "success": true, "data": [{ "id": "...", "user": "...", "fullName": "Jane Doe", "phone": "1234567890", "street": "123 Main St", "city": "New York", "state": "NY", "postalCode": "10001", "country": "US", "isDefault": true, "label": "home", "createdAt": "...", "updatedAt": "..." }] }
+```
+
+---
+
+### POST /api/addresses
+
+**Auth:** `protect`
+
+**Body:**
+```json
+{
+  "fullName":   "string (required)",
+  "phone":      "string (required)",
+  "street":     "string (required)",
+  "city":       "string (required)",
+  "state":      "string (required)",
+  "postalCode": "string (required)",
+  "country":    "string (required)",
+  "label":      "\"home\" | \"work\" | \"other\" (optional, default: \"home\")"
+}
+```
+
+**What it does:** Creates a new address. The first address is automatically set as default. Subsequent addresses are not default unless `isDefault: true` is sent. Max 5 per user.
+
+**Response:** `201` — Address object
+
+**Errors:** `400` missing required field, `400` max 5 addresses reached
+
+---
+
+### PUT /api/addresses/:id
+
+**Auth:** `protect`
+
+**Params:** `id` — Address ObjectId
+
+**Body:** Any subset of: `fullName`, `phone`, `street`, `city`, `state`, `postalCode`, `country`, `label`
+
+**What it does:** Updates the specified address. User can only update their own addresses.
+
+**Response:** `200` — updated Address object
+
+**Errors:** `400` invalid ObjectId, `404` address not found (or belongs to another user)
+
+---
+
+### DELETE /api/addresses/:id
+
+**Auth:** `protect`
+
+**Params:** `id` — Address ObjectId
+
+**What it does:** Deletes the address. If the deleted address was the default, the next most recent address is promoted to default.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "message": "Address deleted" } }
+```
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+### PUT /api/addresses/:id/default
+
+**Auth:** `protect`
+
+**Params:** `id` — Address ObjectId
+
+**What it does:** Sets the specified address as the default, clearing the default flag from all other addresses.
+
+**Response:** `200` — updated Address object (with `isDefault: true`)
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+## Orders (`/api/orders`)
+
+**Implemented:** Sprint 8
+
+All order routes require authentication. Payment method is Cash on Delivery (COD) only.
+
+---
+
+### POST /api/orders
+
+**Auth:** `protect`
+
+**Body:**
+```json
+{
+  "addressId": "string (required — ObjectId of a saved address)",
+  "notes":     "string (optional)"
+}
+```
+
+**What it does:** Places an order from the authenticated user's current cart.
+
+Flow:
+1. Validates cart is not empty
+2. Validates address belongs to user
+3. Checks stock for all cart items — fails with list of out-of-stock items if any
+4. Creates order with embedded address + item snapshots
+5. Decrements stock for each item
+6. Clears the user's cart
+
+Order number format: `ORD-YYYYMMDD-XXXX` (e.g., `ORD-20260306-0001`).
+
+**Response:** `201`
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "orderNumber": "ORD-20260306-0001",
+    "status": "pending",
+    "paymentMethod": "COD",
+    "items": [{ "product": "...", "name": "Product Name", "quantity": 2, "price": 29.99, "image": "/uploads/..." }],
+    "shippingAddress": { "fullName": "...", "phone": "...", "street": "...", "city": "...", "state": "...", "postalCode": "...", "country": "..." },
+    "totalPrice": 59.98,
+    "shippingCost": 0,
+    "notes": "",
+    "statusHistory": [{ "status": "pending", "date": "...", "note": "Order placed" }],
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+}
+```
+
+**Errors:**
+- `400` missing `addressId`
+- `400` invalid ObjectId format
+- `400` cart is empty
+- `400` one or more items out of stock (includes `data.outOfStock` array with `{ name, available, requested }`)
+- `404` address not found (or belongs to another user)
+
+---
+
+### GET /api/orders/my-orders
+
+**Auth:** `protect`
+
+**Query:** `page` (default: 1), `limit` (default: 10, max: 50)
+
+**What it does:** Returns the authenticated user's order history, sorted newest first with pagination.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "orders": [...],
+    "pagination": { "page": 1, "limit": 10, "total": 42, "pages": 5 }
+  }
+}
+```
+
+---
+
+### GET /api/orders/:id
+
+**Auth:** `protect`
+
+**Params:** `id` — Order ObjectId
+
+**What it does:** Returns a single order by ID. Users can only access their own orders.
+
+**Response:** `200` — full Order object
+
+**Errors:** `400` invalid ObjectId, `404` not found (or belongs to another user)
+
+---
+
+### PUT /api/orders/:id/cancel
+
+**Auth:** `protect`
+
+**Params:** `id` — Order ObjectId
+
+**What it does:** Cancels an order. Only orders with status `pending` or `confirmed` can be cancelled. Cancellation restores stock for all items in the order. Adds a `cancelled` entry to `statusHistory`.
+
+**Response:** `200` — updated Order object with `status: "cancelled"`
+
+**Errors:**
+- `400` invalid ObjectId
+- `400` order cannot be cancelled at current status (e.g., already `shipped`)
+- `404` not found (or belongs to another user)

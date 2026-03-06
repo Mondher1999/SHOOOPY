@@ -263,3 +263,127 @@ Adds `id`, removes `_id` and `__v`.
 
 ### toJSON transform
 Adds `id`, removes `_id` and `__v`. Includes `totalPrice` virtual.
+
+---
+
+## Address
+
+**File:** `src/models/addressModel.js`
+**Collection:** `addresses`
+**Implemented:** Sprint 8
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `user` | ObjectId (ref: User) | Yes | — | Owner of the address |
+| `fullName` | String | Yes | — | Trimmed |
+| `phone` | String | Yes | — | Trimmed |
+| `street` | String | Yes | — | Trimmed |
+| `city` | String | Yes | — | Trimmed |
+| `state` | String | Yes | — | Trimmed |
+| `postalCode` | String | Yes | — | Trimmed |
+| `country` | String | No | `"US"` | Trimmed |
+| `isDefault` | Boolean | No | `false` | Only one address per user can be default |
+| `label` | String | No | `"home"` | Enum: `home`, `work`, `other` |
+| `createdAt` | Date | Auto | — | Mongoose timestamps |
+| `updatedAt` | Date | Auto | — | Mongoose timestamps |
+
+### Indexes
+
+| Index | Type | Notes |
+|---|---|---|
+| `{ user: 1 }` | Standard | Fast lookup of a user's addresses |
+| `{ user: 1, isDefault: 1 }` | Compound | Efficient default-address lookup |
+
+### Relationships
+
+- Belongs to **User** via `user` field (ObjectId ref)
+- Max **5 addresses** per user enforced in `addressController.js`
+- First address created is automatically set as default; deleting the default promotes the next-oldest address
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Order
+
+**File:** `src/models/orderModel.js`
+**Collection:** `orders`
+**Implemented:** Sprint 8
+
+### Sub-schemas
+
+**OrderItem** (embedded in `items[]`):
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `product` | ObjectId (ref: Product) | No | — | Nullable — product may be deleted later |
+| `name` | String | Yes | — | Snapshot of product name at order time |
+| `quantity` | Number | Yes | — | min: 1 |
+| `price` | Number | Yes | — | min: 0 — snapshot of unit price at order time |
+| `image` | String | No | — | Snapshot of product thumbnail URL |
+
+**ShippingAddress** (embedded, full snapshot):
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `fullName` | String | Yes | — | — |
+| `phone` | String | Yes | — | — |
+| `street` | String | Yes | — | — |
+| `city` | String | Yes | — | — |
+| `state` | String | Yes | — | — |
+| `postalCode` | String | Yes | — | — |
+| `country` | String | Yes | — | — |
+
+**StatusHistory** (embedded in `statusHistory[]`):
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `status` | String | Yes | — | Enum: `pending`, `confirmed`, `processing`, `shipped`, `delivered`, `cancelled` |
+| `date` | Date | No | `Date.now` | Timestamp of status change |
+| `note` | String | No | — | Optional internal note |
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `user` | ObjectId (ref: User) | Yes | — | Order owner |
+| `orderNumber` | String | Yes | — | Unique, auto-generated: `ORD-YYYYMMDD-XXXX` (e.g. `ORD-20260306-0001`) |
+| `items` | Array of OrderItem | Yes | — | Snapshot of cart items at checkout time |
+| `shippingAddress` | ShippingAddress | Yes | — | Embedded snapshot of address at checkout time |
+| `paymentMethod` | String | No | `"COD"` | Enum: `COD` (Cash on Delivery — only supported method) |
+| `status` | String | No | `"pending"` | Enum: `pending`, `confirmed`, `processing`, `shipped`, `delivered`, `cancelled` |
+| `totalPrice` | Number | Yes | — | min: 0 — sum of all item prices |
+| `shippingCost` | Number | No | `0` | min: 0 — free shipping in current implementation |
+| `notes` | String | No | — | Optional buyer notes |
+| `statusHistory` | Array of StatusHistory | No | `[]` | Audit trail; initial entry added at creation |
+| `createdAt` | Date | Auto | — | Mongoose timestamps |
+| `updatedAt` | Date | Auto | — | Mongoose timestamps |
+
+### Indexes
+
+| Index | Type | Notes |
+|---|---|---|
+| `{ user: 1, createdAt: -1 }` | Compound | Fast paginated order history per user |
+| `{ status: 1 }` | Standard | Admin order filtering by status |
+| `{ createdAt: -1 }` | Standard | Global most-recent-first ordering |
+| `orderNumber` | Unique | Enforced by schema `unique: true` |
+
+### Relationships
+
+- Belongs to **User** via `user` field (ObjectId ref)
+- References **Product** via `items[].product` (nullable — product can be deleted after ordering)
+- Address is a **snapshot** (embedded) — not a live ref to Address model — preserves shipping info even if address is later deleted
+
+### Business Logic (in `orderController.js`)
+
+- **`placeOrder`**: validates addressId → fetches populated cart → validates all stock upfront → creates Order → decrements stock (parallel) → clears cart. Stock is decremented AFTER `Order.create()` to prevent orphaned stock on creation failure.
+- **`generateOrderNumber()`**: counts today's orders via `countDocuments` with date range, formats as `ORD-YYYYMMDD-XXXX` (zero-padded to 4 digits).
+- **`cancelOrder`**: only allowed when status is `pending` or `confirmed`. Restores stock via parallel `$inc` operations, appends cancellation entry to `statusHistory`.
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.

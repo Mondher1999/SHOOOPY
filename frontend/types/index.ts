@@ -94,6 +94,77 @@ export interface Cart {
   updatedAt: string;
 }
 
+// ─── Address ──────────────────────────────────────────────────────────────────
+
+export interface Address {
+  id: string;
+  user: string;
+  fullName: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+  label: "home" | "work" | "other";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AddressFormData = Omit<Address, "id" | "user" | "isDefault" | "createdAt" | "updatedAt">;
+
+// ─── Order ────────────────────────────────────────────────────────────────────
+
+export interface OrderItem {
+  product: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
+}
+
+export interface OrderShippingAddress {
+  fullName: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  label: string;
+}
+
+export interface OrderStatusHistory {
+  status: string;
+  date: string;
+  note: string;
+}
+
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
+export interface Order {
+  id: string;
+  user: string;
+  orderNumber: string;
+  items: OrderItem[];
+  shippingAddress: OrderShippingAddress;
+  paymentMethod: "COD";
+  status: OrderStatus;
+  totalPrice: number;
+  shippingCost: number;
+  notes: string;
+  statusHistory: OrderStatusHistory[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ─── Pagination ───────────────────────────────────────────────────────────────
 
 export interface PaginationInfo {
@@ -101,6 +172,19 @@ export interface PaginationInfo {
   limit: number;
   total: number;
   pages: number;
+}
+
+// ─── Admin Order Types ───────────────────────────────────────────────────────
+
+export interface AdminOrder extends Omit<Order, "user"> {
+  user: { _id: string; name: string; email: string };
+}
+
+export interface OrderStats {
+  totalOrders: number;
+  totalRevenue: number;
+  ordersByStatus: Partial<Record<OrderStatus, number>>;
+  dailyRevenue: { date: string; revenue: number; orders: number }[];
 }
 
 // ─── Query params for product listing ────────────────────────────────────────
