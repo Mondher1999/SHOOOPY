@@ -5,11 +5,12 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt.js";
+import { sendEmail } from "../utils/sendEmail.js";
 import {
-  sendEmail,
+  getEmailConfig,
   emailVerificationTemplate,
   passwordResetTemplate,
-} from "../utils/sendEmail.js";
+} from "../utils/emailTemplates.js";
 import logger from "../utils/logger.js";
 import { sendWelcomeEmail } from "../utils/notificationService.js";
 
@@ -64,7 +65,9 @@ export const register = async (req, res) => {
 
     // Send verification email (non-blocking — don't fail registration on email error)
     const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify-email/${rawVerificationToken}`;
-    const emailTemplate = emailVerificationTemplate(user.name, verificationUrl);
+    const emailConfig = await getEmailConfig();
+    const lang = user.language || "en";
+    const emailTemplate = emailVerificationTemplate(user.name, verificationUrl, emailConfig, lang);
     sendEmail({ to: user.email, ...emailTemplate }).catch((err) => {
       logger.warn("Verification email failed:", err.message);
     });
@@ -166,8 +169,8 @@ export const verifyEmail = async (req, res) => {
     user.emailVerificationExpiresAt = undefined;
     await user.save({ validateBeforeSave: false });
 
-    // Send welcome email (non-blocking)
-    sendWelcomeEmail({ name: user.name, email: user.email }).catch(() => {});
+    // Send welcome email (non-blocking) — forward language from the verified user
+    sendWelcomeEmail({ name: user.name, email: user.email, language: user.language }).catch(() => {});
 
     res.status(200).json({ success: true, data: { message: "Email verified successfully" } });
   } catch (error) {
@@ -184,7 +187,7 @@ export const forgotPassword = async (req, res) => {
     if (!EMAIL_REGEX.test(email)) return res.status(400).json({ success: false, error: "Invalid email address" });
 
     // Always return success — don't reveal if email exists (prevents user enumeration)
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).lean();
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select("name email language").lean();
     if (!user) {
       return res.status(200).json({ success: true, data: { message: "If that email exists, a reset link has been sent" } });
     }
@@ -199,7 +202,9 @@ export const forgotPassword = async (req, res) => {
     });
 
     const resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password/${rawResetToken}`;
-    const emailTemplate = passwordResetTemplate(user.name, resetUrl);
+    const emailConfig = await getEmailConfig();
+    const lang = user.language || "en";
+    const emailTemplate = passwordResetTemplate(user.name, resetUrl, emailConfig, lang);
 
     try {
       await sendEmail({ to: user.email, ...emailTemplate });

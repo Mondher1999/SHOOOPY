@@ -1,62 +1,54 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import {
-  LayoutDashboard,
+  Home,
   ShoppingBag,
   Package,
   FolderTree,
   Users,
-  ChevronLeft,
-  ChevronRight,
+  Settings,
   LogOut,
+  X,
+  ArrowRightLeft,
+  Tag,
+  Mail,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
   href: string;
   label: string;
-  icon: React.ReactNode;
+  icon: React.ElementType;
 }
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  open?: boolean;
+  onClose?: () => void;
+}
+
+export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const { user, logout } = useAuth();
+  const { settings } = useSettings();
   const pathname = usePathname();
   const { t } = useTranslation("admin");
-  const [collapsed, setCollapsed] = useState(false);
 
   const navItems: NavItem[] = [
-    {
-      href: "/admin",
-      label: t("sidebar.dashboard"),
-      icon: <LayoutDashboard className="h-4 w-4 shrink-0" />,
-    },
-    {
-      href: "/admin/orders",
-      label: t("sidebar.orders"),
-      icon: <ShoppingBag className="h-4 w-4 shrink-0" />,
-    },
-    {
-      href: "/admin/products",
-      label: t("sidebar.products"),
-      icon: <Package className="h-4 w-4 shrink-0" />,
-    },
-    {
-      href: "/admin/categories",
-      label: t("sidebar.categories"),
-      icon: <FolderTree className="h-4 w-4 shrink-0" />,
-    },
-    {
-      href: "/admin/users",
-      label: t("sidebar.users"),
-      icon: <Users className="h-4 w-4 shrink-0" />,
-    },
+    { href: "/admin", label: t("sidebar.dashboard"), icon: Home },
+    { href: "/admin/orders", label: t("sidebar.orders"), icon: ShoppingBag },
+    { href: "/admin/products", label: t("sidebar.products"), icon: Package },
+    { href: "/admin/categories", label: t("sidebar.categories"), icon: FolderTree },
+    { href: "/admin/coupons", label: t("sidebar.coupons"), icon: Tag },
+    { href: "/admin/users", label: t("sidebar.users"), icon: Users },
+    { href: "/admin/contacts", label: t("sidebar.contacts"), icon: Mail },
+    { href: "/admin/faq", label: t("sidebar.faq"), icon: HelpCircle },
+    { href: "/admin/redirects", label: t("sidebar.redirects"), icon: ArrowRightLeft },
+    { href: "/admin/settings", label: t("sidebar.settings"), icon: Settings },
   ];
 
   const isActive = (href: string) => {
@@ -68,104 +60,95 @@ export function AdminSidebar() {
     await logout();
   };
 
+  const navContent = (
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <div className="flex items-center justify-between px-4 h-14 shrink-0">
+        <Link
+          href="/admin"
+          className="text-xl font-semibold text-white tracking-tight"
+          onClick={onClose}
+        >
+          {settings?.store?.name || t("sidebar.appName")}
+        </Link>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1 rounded text-polaris-icon-subdued hover:text-white transition-colors cursor-pointer"
+            aria-label={t("sidebar.close")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto" aria-label={t("sidebar.navLabel")}>
+        {navItems.map((item) => {
+          const active = isActive(item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 h-9 text-sm transition-colors relative",
+                active
+                  ? "bg-polaris-nav-item-active text-white font-medium"
+                  : "text-[#E3E5E7] hover:bg-polaris-nav-item-hover"
+              )}
+              aria-current={active ? "page" : undefined}
+            >
+              {active && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r bg-polaris-primary" />
+              )}
+              <Icon className={cn("h-5 w-5 shrink-0", active ? "text-white" : "text-polaris-icon-subdued")} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Footer */}
+      <div className="px-2 pb-3 space-y-1 border-t border-[#333536] pt-3 mt-auto">
+        {user && (
+          <div className="px-3 py-1.5">
+            <p className="text-xs text-[#8C9196] truncate">{user.name}</p>
+            <p className="text-[11px] text-[#636669] truncate">{user.email}</p>
+          </div>
+        )}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full rounded-md px-3 h-9 text-sm text-[#E3E5E7] hover:bg-polaris-nav-item-hover transition-colors cursor-pointer"
+        >
+          <LogOut className="h-5 w-5 shrink-0 text-polaris-icon-subdued" />
+          <span>{t("sidebar.signOut")}</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Desktop sidebar */}
-      <aside
-        className={cn(
-          "hidden lg:flex flex-col border-r bg-card transition-all duration-200",
-          collapsed ? "w-16" : "w-60"
-        )}
-      >
-        <div className="p-4 border-b flex items-center justify-between min-h-[57px]">
-          {!collapsed && (
-            <Link href="/admin" className="text-lg font-semibold text-foreground hover:text-primary">
-              {t("sidebar.appName")}
-            </Link>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("h-8 w-8 p-0", collapsed && "mx-auto")}
-            onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-        </div>
-
-        <nav className="flex-1 p-2 space-y-1" aria-label={t("sidebar.navLabel")}>
-          {navItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  collapsed && "justify-center px-2",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-                aria-current={active ? "page" : undefined}
-                title={collapsed ? item.label : undefined}
-              >
-                {item.icon}
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-2 border-t space-y-2">
-          {!collapsed && user && (
-            <div className="px-3 py-1 text-xs text-muted-foreground truncate">{user.email}</div>
-          )}
-          <Separator />
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full text-muted-foreground hover:text-destructive",
-              collapsed ? "justify-center px-2" : "justify-start gap-2"
-            )}
-            onClick={handleLogout}
-            title={collapsed ? t("sidebar.signOut") : undefined}
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>{t("sidebar.signOut")}</span>}
-          </Button>
-        </div>
+      <aside className="hidden lg:flex w-60 flex-col bg-polaris-nav-bg shrink-0 h-screen sticky top-0">
+        {navContent}
       </aside>
 
-      {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-10 border-b bg-card px-4 h-14 flex items-center justify-between">
-        <Link href="/admin" className="text-base font-semibold">
-          {t("sidebar.appName")}
-        </Link>
-        <nav className="flex items-center gap-1" aria-label={t("sidebar.navLabel")}>
-          {navItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-                aria-current={active ? "page" : undefined}
-                aria-label={item.label}
-              >
-                {item.icon}
-                <span className="hidden sm:inline">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+      {/* Mobile sidebar overlay */}
+      {open && (
+        <>
+          <div
+            className="lg:hidden fixed inset-0 z-40 bg-black/50"
+            onClick={onClose}
+            aria-hidden="true"
+          />
+          <aside className="lg:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-polaris-nav-bg">
+            {navContent}
+          </aside>
+        </>
+      )}
     </>
   );
 }

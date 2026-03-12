@@ -1,0 +1,513 @@
+{
+  "appName": "Omega Distribution",
+  "home": {
+    "heading": "Bienvenue sur Omega Distribution",
+    "description": "Votre grossiste en matériel de photographie — imprimantes, encres, papier photo et accessoires professionnels. Paiement à la livraison.",
+    "shopNow": "Acheter maintenant",
+    "browseCategories": "Parcourir les catégories"
+  },
+  "language": {
+    "label": "Langue",
+    "en": "English",
+    "fr": "Français"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "retry": "Réessayer",
+    "loading": "Chargement...",
+    "saving": "Enregistrement...",
+    "deleting": "Suppression...",
+    "remove": "Supprimer"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "network": "Erreur réseau. Vérifiez votre connexion.",
+    "unauthorized": "Veuillez vous connecter pour continuer.",
+    "forbidden": "Vous n'avez pas la permission de faire cela."
+  },
+  "nav": {
+    "home": "Accueil",
+    "shop": "Boutique",
+    "products": "Produits",
+    "categories": "Catégories",
+    "newArrivals": "Nouveautés",
+    "bestSellers": "Meilleures ventes",
+    "sale": "Soldes",
+    "allProducts": "Tous les produits",
+    "browseAll": "Tout parcourir",
+    "cart": "Panier",
+    "account": "Compte",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "mainNav": "Navigation principale",
+    "wishlist": "Liste de souhaits",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "needDelivery": "Besoin de livraison ?",
+    "seeEstimates": "Voir les estimations",
+    "more": "Plus",
+    "contact": "Contact"
+  },
+  "mega": {
+    "newSeason": "Nouvelle saison",
+    "springCollection": "Collection printemps",
+    "selectedItems": "Articles sélectionnés"
+  },
+  "search": {
+    "placeholder": "Rechercher des produits...",
+    "ariaLabel": "Recherche de produits",
+    "clear": "Effacer la recherche",
+    "suggestionsLabel": "Suggestions de recherche",
+    "noResults": "Aucun résultat pour «\u00a0{{query}}\u00a0»",
+    "viewAll": "Voir tous les résultats pour «\u00a0{{query}}\u00a0»"
+  },
+  "landing": {
+    "announcement": "Livraison offerte sur toutes les commandes — Paiement à la livraison",
+    "announcementClose": "Fermer l'annonce",
+    "hero": {
+      "ariaLabel": "Diaporama des collections vedettes",
+      "slide1": {
+        "heading": "Conçu pour les exigeants",
+        "sub": "Une collection d'essentiels intemporels"
+      },
+      "slide2": {
+        "heading": "Créé avec intention",
+        "sub": "Là où la qualité rencontre l'élégance discrète"
+      },
+      "slide3": {
+        "heading": "Sublimez votre quotidien",
+        "sub": "Découvrez des pièces qui définissent votre style"
+      },
+      "cta": "Explorer la collection",
+      "goToSlide": "Aller à la diapositive",
+      "prevSlide": "Diapositive précédente",
+      "nextSlide": "Diapositive suivante",
+      "pause": "Mettre en pause le diaporama",
+      "play": "Lancer le diaporama"
+    },
+    "collections": {
+      "heading": "Collections",
+      "empty": "Aucune collection disponible pour l'instant."
+    },
+    "brandStory": {
+      "heading": "L'art de la curation réfléchie",
+      "body": "Chaque pièce de notre collection est choisie avec soin — alliant forme et fonction, beauté et durabilité. Nous croyons que le shopping doit être une expérience, pas une corvée. Parcourez à votre rythme et payez uniquement à la livraison.",
+      "cta": "En savoir plus"
+    },
+    "featured": {
+      "heading": "Nouveautés",
+      "empty": "De nouveaux produits arrivent bientôt.",
+      "viewAll": "Voir tous les produits",
+      "sale": "Soldes"
+    },
+    "promo": {
+      "label": "Offre à durée limitée",
+      "heading": "Jusqu'à -40 %",
+      "sub": "Profitez de notre plus grande vente de la saison. Ne manquez pas ces offres exclusives.",
+      "days": "Jours",
+      "hours": "Hrs",
+      "mins": "Min",
+      "secs": "Sec",
+      "cta": "Voir les promotions"
+    },
+    "trust": {
+      "ariaLabel": "Pourquoi acheter chez nous",
+      "shipping": "Livraison gratuite",
+      "shippingDesc": "Livraison offerte sur chaque commande, sans minimum requis.",
+      "payment": "Paiement sécurisé",
+      "paymentDesc": "Paiement à la livraison — payez uniquement à la réception.",
+      "returns": "Retours sous 30 jours",
+      "returnsDesc": "Vous avez changé d'avis ? Retournez tout article sous 30 jours.",
+      "support": "Support 24h/7j",
+      "supportDesc": "Notre équipe est là pour vous à toute heure."
+    },
+    "values": {
+      "heading": "Pourquoi nous choisir",
+      "sustainable": "Matériaux durables",
+      "sustainableDesc": "Tissus issus de sources responsables et emballages écoresponsables.",
+      "handcrafted": "Qualité artisanale",
+      "handcraftedDesc": "Chaque pièce est fabriquée avec une attention méticuleuse aux détails.",
+      "returns": "Retours gratuits",
+      "returnsDesc": "Retours sans tracas sur toutes les commandes, sans questions.",
+      "delivery": "Livraison rapide",
+      "deliveryDesc": "Expédition rapide et fiable directement à votre porte."
+    },
+    "newArrivals": {
+      "heading": "Dernières arrivées",
+      "empty": "De nouveaux produits arrivent bientôt.",
+      "badge": "NOUVEAU",
+      "viewAll": "Voir toutes les nouveautés"
+    },
+    "testimonials": {
+      "heading": "Ce que disent nos clients",
+      "overallRating": "4,9/5 basé sur plus de 2\u00a0400 avis",
+      "quote1": "La qualité a dépassé mes attentes. Chaque détail est soigné — des coutures à l'emballage. C'est ainsi que le shopping devrait se passer.",
+      "name1": "Sarah Mitchell",
+      "location1": "New York, NY",
+      "quote2": "Je cherchais une marque qui allie style et substance. ShopFlow répond aux deux attentes. Ma nouvelle référence pour tout.",
+      "name2": "James Chen",
+      "location2": "San Francisco, CA",
+      "quote3": "Le service client est exceptionnel. Ils m'ont aidé à trouver la pièce parfaite et la livraison a été plus rapide que prévu. Vraiment impressionnant.",
+      "name3": "Emma Rodriguez",
+      "location3": "Austin, TX"
+    },
+    "instagram": {
+      "heading": "Suivez-nous @shopflow",
+      "followUs": "Suivez-nous sur Instagram",
+      "imageAlt": "Publication Instagram {{count}}"
+    },
+    "parallax": {
+      "quote": "L'élégance n'est pas d'être remarqué, c'est d'être mémorable.",
+      "cta": "Acheter maintenant"
+    },
+    "craftsmanship": {
+      "heading": "Engagement envers la qualité",
+      "body": "Nous collaborons avec des artisans qui partagent nos valeurs — attention aux détails, pratiques durables et dévouement indéfectible au savoir-faire. Chaque produit raconte une histoire de passion et de précision.",
+      "cta": "Notre histoire"
+    },
+    "newsletter": {
+      "heading": "Rejoignez la communauté",
+      "subtitle": "Soyez le premier à découvrir les nouveautés et offres exclusives.",
+      "sub": "Soyez le premier à découvrir les nouveautés et offres exclusives.",
+      "placeholder": "Votre adresse e-mail",
+      "button": "S'abonner",
+      "subscribe": "S'abonner",
+      "formLabel": "Inscription à la newsletter",
+      "emailLabel": "Adresse e-mail",
+      "invalidEmail": "Veuillez entrer une adresse e-mail valide.",
+      "error": "Une erreur s'est produite. Veuillez réessayer.",
+      "success": "Merci pour votre inscription !"
+    },
+    "partners": {
+      "heading": "Nos partenaires",
+      "logoAlt": "Logo partenaire"
+    },
+    "recentlyViewed": {
+      "heading": "Vus récemment"
+    },
+    "popup": {
+      "ariaLabel": "Offre promotionnelle"
+    },
+    "footer": {
+      "shop": "Boutique",
+      "newArrivals": "Nouveautés",
+      "allProducts": "Tous les produits",
+      "categories": "Catégories",
+      "customerService": "Service client",
+      "myAccount": "Mon compte",
+      "orderTracking": "Suivi de commande",
+      "wishlist": "Liste de souhaits",
+      "about": "À propos",
+      "ourStory": "Notre histoire",
+      "faq": "FAQ",
+      "contact": "Nous contacter",
+      "contactInfo": "Contact",
+      "rights": "Tous droits réservés.",
+      "legal": "Légal",
+      "terms": "Conditions générales",
+      "privacy": "Politique de confidentialité",
+      "returnPolicy": "Politique de retour",
+      "shippingPolicy": "Politique de livraison",
+      "aboutText": "Bienvenue chez Omega Distribution. Établie en 1989, nous sommes le leader tunisien en matériel de photographie professionnelle. Des imprimantes aux encres, papiers photo et accessoires — nous équipons les professionnels de l'image avec des produits authentiques et un service fiable."
+    }
+  },
+  "contact": {
+    "title": "Nous Contacter",
+    "email": "Email",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "nameLabel": "Votre Nom",
+    "emailLabel": "Votre Email",
+    "subjectLabel": "Sujet",
+    "messageLabel": "Message",
+    "send": "Envoyer le Message",
+    "sending": "Envoi en cours...",
+    "allFieldsRequired": "Tous les champs sont obligatoires.",
+    "success": "Message envoyé avec succès !",
+    "errorSubmitting": "Échec de l'envoi. Veuillez réessayer.",
+    "thankYou": "Merci de nous avoir contactés !",
+    "thankYouMessage": "Nous avons bien reçu votre message et vous répondrons dans les plus brefs délais.",
+    "sendAnother": "Envoyer un Autre Message"
+  },
+  "vitrine": {
+    "topBar": {
+      "freeShipping": "Livraison sur tout le territoire tunisien"
+    },
+    "hero": {
+      "subtitle": "Grossiste en Matériel Photo depuis 1989",
+      "titleLine1": "Votre Partenaire",
+      "titleLine2": "Photo Professionnel",
+      "description": "Imprimantes photo professionnelles, encres authentiques, papiers premium et accessoires — Omega Distribution, grossiste et fournisseur incontournable pour les professionnels de la photographie en Tunisie.",
+      "cta": "Découvrir nos Produits",
+      "tagline": "Nouvelle Collection 2025",
+      "heading": "Redéfinissez Votre Style",
+      "ctaSecondary": "Explorer les Catégories",
+      "scroll": "Défiler"
+    },
+    "trust": {
+      "freeShipping": "Livraison Nationale",
+      "freeShippingDesc": "Couverture sur tout le territoire tunisien via notre réseau d'agents commerciaux",
+      "returns": "Retours sous 30 jours",
+      "returnsDesc": "Processus de retour facile dans les 30 jours suivant l'achat",
+      "cod": "Paiement à la Livraison",
+      "codDesc": "Payez à la réception de votre commande à domicile",
+      "trusted": "+550 Clients Professionnels",
+      "trustedDesc": "Photographes, laboratoires et quincailleries nous font confiance"
+    },
+    "seoHeadline": "{{appName}} : Grossiste en Imprimantes Photo, Encres, Papier & Accessoires Professionnels en Tunisie",
+    "categories": {
+      "title": "Nos Catégories de Produits",
+      "subtitle": "Parcourez notre gamme complète d'équipement photo professionnel",
+      "shopNow": "Voir les produits",
+      "heading": "Acheter par Catégorie",
+      "explore": "Explorer",
+      "tagline": "Parcourir"
+    },
+    "founded": {
+      "year": "Fondée en 1989",
+      "heading": "Fondée en 1989, une histoire de passion et d'évolution",
+      "paragraph": "Née sous le nom de Tunisie Photo en 1989 grâce à la vision de Nabile Ben Younes, notre entreprise a su évoluer avec le temps. En 2006, elle devient Omega Distribution, affirmant sa position de grossiste et fournisseur incontournable pour les professionnels de la photographie en Tunisie. Plus de trois décennies de savoir-faire, d'engagement et d'innovation."
+    },
+    "presence": {
+      "heading": "Une Présence Commerciale sur Tout le Territoire",
+      "paragraph1": "Chez Omega Distribution, nous assurons une couverture nationale grâce à un réseau structuré d'agents commerciaux. Chaque secteur est pris en charge par un représentant dédié, qui rend visite à nos clients chaque semaine ou toutes les deux semaines, selon la localisation.",
+      "paragraph2": "Dans les régions les plus éloignées, nous nous appuyons sur des partenaires logistiques de confiance afin de garantir des livraisons régulières et fiables.",
+      "paragraph3": "Cette organisation nous permet de rester proches de nos clients, où qu'ils soient, et de leur offrir un service réactif et personnalisé."
+    },
+    "clients": {
+      "heading": "+550 Clients Professionnels Nous Font Confiance",
+      "paragraph": "Depuis nos débuts modestes en 1989, nous avons bâti notre réputation sur la qualité de nos produits et la fiabilité de notre service. Grâce à un réseau logistique solide, une présence constante sur le terrain, et un engagement envers nos clients, nous avons su gagner la confiance de plus de 550 photographes professionnels, laboratoires et quincailleries à travers toute la Tunisie. Une croissance progressive qui témoigne de notre sérieux et de notre passion pour l'image."
+    },
+    "welcome": {
+      "title": "Bienvenue chez {{appName}}",
+      "paragraph1": "{{appName}} est votre destination pour tout ce qui concerne l'impression photo et l'imagerie professionnelle. Des imprimantes haut de gamme aux encres authentiques, papiers photo premium et accessoires essentiels — nous fournissons tout ce dont vous avez besoin pour des résultats époustouflants.",
+      "paragraph2": "Établie en Tunisie depuis 1989, {{appName}} s'engage à fournir des produits authentiques à des prix compétitifs avec un service de livraison fiable dans tout le pays. Plus de 550 clients professionnels nous font confiance.",
+      "cta": "À propos de {{appName}}"
+    },
+    "gallery": {
+      "title": "Engagés dans Votre Parcours Créatif",
+      "imageAlt": "Image galerie {{index}}"
+    },
+    "topSelling": {
+      "title": "Nos Produits les Plus Vendus",
+      "subtitle": "Découvrez les produits populaires auprès des professionnels",
+      "viewAll": "Voir tous les produits",
+      "addToCart": "Ajouter au panier",
+      "viewProduct": "Voir le produit"
+    },
+    "featured": {
+      "tagline": "Nos Coups de Cœur",
+      "heading": "Meilleures Ventes",
+      "viewAll": "Voir Tout",
+      "addToCart": "Ajouter au Panier",
+      "addToBag": "Ajouter au Sac",
+      "sale": "Soldes"
+    },
+    "promo": {
+      "title": "Papier Photo Premium",
+      "subtitle": "La qualité dans chaque impression",
+      "cta": "Explorer la Collection",
+      "tagline": "Offre Limitée",
+      "heading": "Jusqu'à -50 %"
+    },
+    "newArrivals": {
+      "title": "Nouveautés",
+      "subtitle": "Nouvelles arrivées et offres spéciales",
+      "viewAll": "Voir tous les produits",
+      "tagline": "Vient de Sortir",
+      "heading": "Nouveautés",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "badge": "Nouveau"
+    },
+    "brand": {
+      "title": "Marques Distribuées",
+      "subtitle": "Distributeur agréé des marques leaders mondiales de photo et d'impression"
+    },
+    "brandDesc": {
+      "title": "Grossiste Officiel d'Équipement Photo & Impression en Tunisie",
+      "paragraph1": "{{appName}} est votre grossiste de confiance pour l'équipement photo et d'impression professionnel en Tunisie. En tant que distributeur agréé des marques leaders, nous nous engageons à fournir des produits authentiques à des prix compétitifs avec un service de livraison fiable dans tout le pays.",
+      "paragraph2": "Que vous ayez besoin d'une imprimante photo haut de gamme, d'encres de qualité, de papier premium ou de stockage et piles fiables, {{appName}} a tout pour équiper votre activité professionnelle."
+    },
+    "footer": {
+      "description": "Établie en 1989, leader en Tunisie dans le domaine du matériel de photographie professionnelle.",
+      "quickLinks": "Liens Rapides",
+      "categoriesTitle": "Catégories",
+      "contactUs": "Nous Contacter",
+      "copyright": "© {{year}} {{appName}}. Tous droits réservés.",
+      "aboutUs": "À Propos",
+      "promotions": "Promotions"
+    },
+    "socialProof": {
+      "ordersDelivered": "Commandes Livrées",
+      "happyCustomers": "Clients Satisfaits",
+      "products": "Produits",
+      "satisfaction": "Taux de Satisfaction"
+    },
+    "newsletter": {
+      "tagline": "Restez Connecté",
+      "heading": "Restez Informé",
+      "subtitle": "Abonnez-vous pour des offres exclusives, un accès anticipé et des promotions spéciales.",
+      "success": "C'est fait ! Vérifiez votre boîte de réception.",
+      "successSub": "Nous vous tiendrons informé des nouveautés et offres exclusives.",
+      "placeholder": "Entrez votre e-mail",
+      "emailLabel": "Adresse e-mail",
+      "sending": "Envoi en cours...",
+      "cta": "S'abonner",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "collections": {
+      "tagline": "Nos Collections",
+      "heading": "Acheter par Catégorie"
+    },
+    "brandStory": {
+      "imageAlt": "Notre histoire",
+      "tagline": "Notre Histoire",
+      "heading": "Conçu avec Passion et Intention",
+      "body1": "Chaque produit de notre collection a été choisi avec soin — alliant qualité, esthétique et valeur durable.",
+      "body2": "Nous croyons que les choses qui vous entourent doivent apporter de la joie et résister à l'épreuve du temps.",
+      "cta": "Explorer Nos Collections"
+    },
+    "mnHero": {
+      "heading": "Moins c'est Plus",
+      "subtitle": "Des essentiels soigneusement sélectionnés pour le minimaliste moderne. La qualité avant la quantité, toujours.",
+      "cta": "Voir la Collection"
+    },
+    "mnFeatured": {
+      "heading": "Pièces Sélectionnées",
+      "addToCart": "Ajouter au Panier",
+      "viewAll": "Voir Tout"
+    },
+    "mnNewArrivals": {
+      "heading": "Nouveautés"
+    },
+    "mnCategories": {
+      "tagline": "Parcourir par",
+      "viewAll": "Voir Toutes les Catégories"
+    },
+    "mnNewsletter": {
+      "heading": "S'abonner",
+      "success": "Vous êtes abonné !",
+      "placeholder": "votre@email.com",
+      "emailLabel": "Adresse e-mail",
+      "submit": "S'abonner",
+      "error": "Une erreur s'est produite."
+    },
+    "craftStory": {
+      "tagline": "Notre Parcours",
+      "heading": "Façonné avec Passion",
+      "text": "Chaque produit de notre collection raconte une histoire de dévouement, de tradition et de savoir-faire artisanal transmis de génération en génération.",
+      "cta": "En Savoir Plus"
+    },
+    "editorial": {
+      "tagline": "Choix de la Rédaction",
+      "heading": "Sélection Éditée",
+      "text": "Notre équipe éditoriale sélectionne les plus belles pièces qui définissent les tendances les plus marquantes de la saison.",
+      "cta": "Lire la Suite"
+    }
+  },
+  "playful": {
+    "hero": {
+      "tagline": "Bienvenue du Côté Fun du Shopping",
+      "heading": "Découvrez Quelque Chose d'Amusant !",
+      "subtitle": "Coloré, créatif et sélectionné rien que pour vous. Le shopping n'a jamais été aussi excitant !",
+      "cta": "Commencer le Shopping",
+      "ctaSecondary": "Parcourir les Catégories"
+    },
+    "categories": {
+      "heading": "Acheter par Ambiance",
+      "subtitle": "Trouvez votre catégorie idéale"
+    },
+    "featured": {
+      "tagline": "Tendance du Moment",
+      "heading": "Les Favoris",
+      "viewAll": "Voir Tout",
+      "addToCart": "Ajouter au Panier"
+    },
+    "promo": {
+      "heading": "Alerte Super Soldes !",
+      "subtitle": "Ne manquez pas ces offres incroyables. Durée limitée !",
+      "cta": "Profiter des Offres"
+    },
+    "newArrivals": {
+      "tagline": "Tout Juste Arrivé !",
+      "heading": "Frais et Nouveau",
+      "badge": "Nouveau",
+      "prev": "Précédent",
+      "next": "Suivant"
+    },
+    "testimonials": {
+      "heading": "Clients Ravis",
+      "subtitle": "Découvrez ce que notre communauté a à dire",
+      "t1": {
+        "name": "Sarah M.",
+        "location": "Tunis, Tunisie",
+        "quote": "Tout ce que j'ai commandé est arrivé parfaitement ! L'emballage était adorable et la qualité a dépassé mes attentes."
+      },
+      "t2": {
+        "name": "Ahmed B.",
+        "location": "Sfax, Tunisie",
+        "quote": "Excellent choix et livraison rapide. Le paiement à la livraison rend le shopping tellement facile."
+      },
+      "t3": {
+        "name": "Leila K.",
+        "location": "Sousse, Tunisie",
+        "quote": "J'adore la variété ! J'ai trouvé des articles uniques introuvables ailleurs. Je vais certainement racheter."
+      }
+    },
+    "newsletter": {
+      "heading": "Rejoignez l'Aventure !",
+      "subtitle": "Recevez des offres exclusives, des nouveautés et des surprises dans votre boîte mail !",
+      "success": "Super ! Vous êtes inscrit !",
+      "placeholder": "votre@email.com",
+      "emailLabel": "Adresse e-mail",
+      "sending": "Inscription en cours...",
+      "cta": "Je m'inscris !",
+      "error": "Oups ! Une erreur s'est produite. Réessayez ?"
+    }
+  },
+  "legal": {
+    "terms": "Conditions générales",
+    "privacy": "Politique de confidentialité",
+    "returnPolicy": "Politique de retour et remboursement",
+    "shippingPolicy": "Politique de livraison",
+    "noContent": "Cette politique n'a pas encore été publiée."
+  },
+  "contactPage": {
+    "title": "Nous contacter",
+    "subtitle": "Vous avez une question ou un commentaire ? Nous serions ravis de vous entendre.",
+    "nameLabel": "Votre nom",
+    "namePlaceholder": "Entrez votre nom complet",
+    "emailLabel": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.com",
+    "subjectLabel": "Sujet",
+    "subjectPlaceholder": "De quoi s'agit-il ?",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Dites-nous en plus...",
+    "submit": "Envoyer le message",
+    "sending": "Envoi en cours...",
+    "successTitle": "Message envoyé !",
+    "successMessage": "Merci de nous avoir contactés. Nous vous répondrons dès que possible.",
+    "sendAnother": "Envoyer un autre message",
+    "error": "Impossible d'envoyer votre message. Veuillez réessayer.",
+    "infoTitle": "Nous joindre",
+    "infoEmail": "Email",
+    "infoPhone": "Téléphone",
+    "infoAddress": "Adresse"
+  },
+  "faqPage": {
+    "title": "Questions fréquemment posées",
+    "subtitle": "Trouvez des réponses aux questions courantes sur nos produits et services.",
+    "empty": "Aucune FAQ disponible pour l'instant. Revenez bientôt !",
+    "loading": "Chargement...",
+    "error": "Impossible de charger les FAQ. Veuillez réessayer."
+  },
+  "maintenancePage": {
+    "title": "En maintenance",
+    "defaultMessage": "Nous effectuons actuellement une maintenance. Veuillez revenir bientôt."
+  }
+}

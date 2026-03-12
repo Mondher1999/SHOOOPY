@@ -1,14 +1,15 @@
 {
-  "appName": "ShopFlow",
+  "appName": "Omega Distribution",
   "home": {
-    "heading": "Welcome to ShopFlow",
-    "description": "Your one-stop shop — browse products and pay Cash on Delivery when your order arrives. No credit card required.",
+    "heading": "Welcome to Omega Distribution",
+    "description": "Your professional photography equipment wholesaler — printers, inks, photo paper and professional accessories. Cash on Delivery.",
     "shopNow": "Shop Now",
     "browseCategories": "Browse Categories"
   },
   "language": {
     "label": "Language",
-    "en": "English"
+    "en": "English",
+    "fr": "Français"
   },
   "actions": {
     "save": "Save",
@@ -17,7 +18,10 @@
     "edit": "Edit",
     "back": "Back",
     "retry": "Try again",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "deleting": "Deleting...",
+    "remove": "Remove"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -27,15 +31,31 @@
   },
   "nav": {
     "home": "Home",
+    "shop": "Shop",
     "products": "Products",
     "categories": "Categories",
+    "newArrivals": "New Arrivals",
+    "bestSellers": "Best Sellers",
+    "sale": "Sale",
+    "allProducts": "All Products",
+    "browseAll": "Browse All",
     "cart": "Cart",
     "account": "Account",
     "signIn": "Sign in",
     "signOut": "Sign out",
     "mainNav": "Main navigation",
+    "wishlist": "Wishlist",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "needDelivery": "Need delivery?",
+    "seeEstimates": "See estimates",
+    "more": "More",
+    "contact": "Contact"
+  },
+  "mega": {
+    "newSeason": "New Season",
+    "springCollection": "Spring Collection",
+    "selectedItems": "Selected Items"
   },
   "search": {
     "placeholder": "Search products...",
@@ -44,5 +64,459 @@
     "suggestionsLabel": "Search suggestions",
     "noResults": "No results for \"{{query}}\"",
     "viewAll": "View all results for \"{{query}}\""
+  },
+  "landing": {
+    "announcement": "Complimentary Shipping on All Orders — Cash on Delivery",
+    "announcementClose": "Close announcement",
+    "hero": {
+      "ariaLabel": "Featured collections slideshow",
+      "slide1": {
+        "heading": "Curated for the Discerning",
+        "sub": "A collection of timeless essentials"
+      },
+      "slide2": {
+        "heading": "Crafted with Intention",
+        "sub": "Where quality meets understated elegance"
+      },
+      "slide3": {
+        "heading": "Elevate Your Everyday",
+        "sub": "Discover pieces that define your style"
+      },
+      "cta": "Explore Collection",
+      "goToSlide": "Go to slide",
+      "prevSlide": "Previous slide",
+      "nextSlide": "Next slide",
+      "pause": "Pause slideshow",
+      "play": "Play slideshow"
+    },
+    "collections": {
+      "heading": "Collections",
+      "empty": "No collections available yet."
+    },
+    "brandStory": {
+      "heading": "The Art of Thoughtful Curation",
+      "body": "Every piece in our collection is chosen with care — balancing form and function, beauty and longevity. We believe shopping should be an experience, not a chore. Browse at your own pace, and pay only when your order arrives at your door.",
+      "cta": "Discover More"
+    },
+    "featured": {
+      "heading": "New Arrivals",
+      "empty": "New products coming soon.",
+      "viewAll": "View All Products",
+      "sale": "Sale"
+    },
+    "promo": {
+      "label": "Limited Time Offer",
+      "heading": "Up to 40% Off",
+      "sub": "Shop our biggest sale of the season. Don't miss out on these exclusive deals.",
+      "days": "Days",
+      "hours": "Hrs",
+      "mins": "Min",
+      "secs": "Sec",
+      "cta": "Shop the Sale"
+    },
+    "parallax": {
+      "quote": "Elegance is not about being noticed, it is about being remembered.",
+      "cta": "Shop Now"
+    },
+    "craftsmanship": {
+      "heading": "Commitment to Quality",
+      "body": "We partner with makers who share our values — attention to detail, sustainable practices, and an unwavering dedication to craft. Each product tells a story of passion and precision.",
+      "cta": "Our Story"
+    },
+    "trust": {
+      "ariaLabel": "Why shop with us",
+      "shipping": "Free Shipping",
+      "shippingDesc": "Complimentary delivery on every order, no minimum required.",
+      "payment": "Secure Payment",
+      "paymentDesc": "Cash on delivery — pay only when your order arrives.",
+      "returns": "30-Day Returns",
+      "returnsDesc": "Changed your mind? Return any item within 30 days.",
+      "support": "24/7 Support",
+      "supportDesc": "Our team is here for you around the clock."
+    },
+    "values": {
+      "heading": "Why Choose Us",
+      "trustedService": "Trusted Client Service",
+      "trustedServiceDesc": "Trusted by 96% of SA's Content Creators (4.8/5 from 1600+ reviews)",
+      "flexiblePayment": "Flexible Payment Options",
+      "flexiblePaymentDesc": "Make your dreams come true with our monthly or weekly finance options",
+      "curatedSelection": "Curated Product Selection",
+      "curatedSelectionDesc": "For creatives, by creatives. Thoughtfully selected products for SA's visual storytellers",
+      "localWarranties": "Local Warranties",
+      "localWarrantiesDesc": "Get local warranties on big brands like Godox, Neewer, Newell, and more.",
+      "sustainable": "Sustainable Materials",
+      "sustainableDesc": "Responsibly sourced fabrics and eco-conscious packaging.",
+      "handcrafted": "Handcrafted Quality",
+      "handcraftedDesc": "Every piece is made with meticulous attention to detail.",
+      "returns": "Free Returns",
+      "returnsDesc": "Hassle-free returns on all orders, no questions asked.",
+      "delivery": "Fast Delivery",
+      "deliveryDesc": "Swift, reliable shipping straight to your doorstep."
+    },
+    "newArrivals": {
+      "heading": "Just Dropped",
+      "empty": "New products coming soon.",
+      "badge": "NEW",
+      "viewAll": "View All New Arrivals"
+    },
+    "testimonials": {
+      "heading": "What Our Customers Say",
+      "overallRating": "4.9/5 from 2,400+ reviews",
+      "quote1": "The quality exceeded my expectations. Every detail is considered — from the stitching to the packaging. This is how shopping should feel.",
+      "name1": "Sarah Mitchell",
+      "location1": "New York, NY",
+      "quote2": "I've been searching for a brand that balances style and substance. ShopFlow delivers on both. My new go-to for everything.",
+      "name2": "James Chen",
+      "location2": "San Francisco, CA",
+      "quote3": "The customer service is exceptional. They helped me find the perfect piece and delivery was faster than expected. Truly impressive.",
+      "name3": "Emma Rodriguez",
+      "location3": "Austin, TX"
+    },
+    "instagram": {
+      "heading": "Follow Us @shopflow",
+      "followUs": "Follow Us on Instagram",
+      "imageAlt": "Instagram post {{count}}"
+    },
+    "newsletter": {
+      "heading": "Join the Community",
+      "subtitle": "Be the first to know about new arrivals and exclusive offers.",
+      "sub": "Be the first to know about new arrivals and exclusive offers.",
+      "placeholder": "Your email address",
+      "button": "Subscribe",
+      "subscribe": "Subscribe",
+      "formLabel": "Newsletter signup",
+      "emailLabel": "Email address",
+      "invalidEmail": "Please enter a valid email address.",
+      "error": "Something went wrong. Please try again.",
+      "success": "Thank you for subscribing!"
+    },
+    "partners": {
+      "heading": "Our Partners",
+      "logoAlt": "Partner logo"
+    },
+    "recentlyViewed": {
+      "heading": "Recently Viewed"
+    },
+    "popup": {
+      "ariaLabel": "Promotional offer"
+    },
+    "footer": {
+      "shop": "Shop",
+      "newArrivals": "New Arrivals",
+      "allProducts": "All Products",
+      "categories": "Categories",
+      "customerService": "Customer Service",
+      "myAccount": "My Account",
+      "orderTracking": "Order Tracking",
+      "wishlist": "Wishlist",
+      "about": "About",
+      "ourStory": "Our Story",
+      "faq": "FAQ",
+      "contact": "Contact Us",
+      "contactInfo": "Contact",
+      "rights": "All rights reserved.",
+      "legal": "Legal",
+      "terms": "Terms & Conditions",
+      "privacy": "Privacy Policy",
+      "returnPolicy": "Return & Refund Policy",
+      "shippingPolicy": "Shipping Policy",
+      "aboutText": "Welcome to ShopFlow. We curate premium products and deliver them to your door with Cash on Delivery — no hassle, no risk. Our mission is to make online shopping simple, trustworthy, and enjoyable for everyone."
+    }
+  },
+  "contact": {
+    "title": "Contact Us",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "nameLabel": "Your Name",
+    "emailLabel": "Your Email",
+    "subjectLabel": "Subject",
+    "messageLabel": "Message",
+    "send": "Send Message",
+    "sending": "Sending...",
+    "allFieldsRequired": "All fields are required.",
+    "success": "Message sent successfully!",
+    "errorSubmitting": "Failed to send message. Please try again.",
+    "thankYou": "Thank you for reaching out!",
+    "thankYouMessage": "We've received your message and will get back to you as soon as possible.",
+    "sendAnother": "Send Another Message"
+  },
+  "vitrine": {
+    "topBar": {
+      "freeShipping": "Delivery across all of Tunisia"
+    },
+    "hero": {
+      "subtitle": "Photo Equipment Wholesaler since 1989",
+      "titleLine1": "Your Professional",
+      "titleLine2": "Photo Partner",
+      "description": "Professional photo printers, genuine inks, premium paper and accessories — Omega Distribution, the essential wholesaler and supplier for photography professionals in Tunisia.",
+      "cta": "Discover our Products",
+      "tagline": "New Collection 2025",
+      "heading": "Redefine Your Style",
+      "ctaSecondary": "Explore Categories",
+      "scroll": "Scroll"
+    },
+    "trust": {
+      "freeShipping": "Nationwide Delivery",
+      "freeShippingDesc": "Coverage across all of Tunisia through our network of sales agents",
+      "returns": "30-Day Returns",
+      "returnsDesc": "Easy return process within 30 days of purchase",
+      "cod": "Cash on Delivery",
+      "codDesc": "Pay when you receive your order at your door",
+      "trusted": "550+ Professional Clients",
+      "trustedDesc": "Photographers, labs and hardware stores trust us"
+    },
+    "seoHeadline": "{{appName}}: Wholesaler of Photo Printers, Inks, Paper & Professional Accessories in Tunisia",
+    "categories": {
+      "title": "Our Product Categories",
+      "subtitle": "Browse our full range of professional photo equipment",
+      "shopNow": "View products",
+      "more": "more",
+      "heading": "Shop by Category",
+      "explore": "Explore",
+      "tagline": "Browse"
+    },
+    "founded": {
+      "year": "Founded in 1989",
+      "heading": "Founded in 1989, a story of passion and evolution",
+      "paragraph": "Born under the name Tunisie Photo in 1989 thanks to the vision of Nabile Ben Younes, our company has evolved over time. In 2006, it became Omega Distribution, establishing its position as an essential wholesaler and supplier for photography professionals in Tunisia. Over three decades of expertise, commitment and innovation."
+    },
+    "presence": {
+      "heading": "Commercial Presence Across the Entire Territory",
+      "paragraph1": "At Omega Distribution, we ensure nationwide coverage through a structured network of sales agents. Each sector is managed by a dedicated representative who visits our clients weekly or biweekly, depending on the location.",
+      "paragraph2": "In the most remote regions, we rely on trusted logistics partners to guarantee regular and reliable deliveries.",
+      "paragraph3": "This organization allows us to stay close to our clients, wherever they are, and to offer them responsive and personalized service."
+    },
+    "clients": {
+      "heading": "550+ Professional Clients Trust Us",
+      "paragraph": "Since our humble beginnings in 1989, we have built our reputation on the quality of our products and the reliability of our service. Thanks to a solid logistics network, a constant presence in the field, and a commitment to our clients, we have earned the trust of over 550 professional photographers, labs and hardware stores across all of Tunisia. Progressive growth that reflects our seriousness and our passion for imaging."
+    },
+    "welcome": {
+      "title": "Welcome to {{appName}}",
+      "paragraph1": "{{appName}} is your destination for everything related to photo printing and professional imaging. From high-end printers to genuine inks, premium photo paper and essential accessories — we supply everything you need for stunning results.",
+      "paragraph2": "Established in Tunisia since 1989, {{appName}} is committed to providing authentic products at competitive prices with reliable delivery service nationwide. Over 550 professional clients trust us.",
+      "cta": "About {{appName}}"
+    },
+    "gallery": {
+      "title": "Committed to Your Creative Journey",
+      "imageAlt": "Gallery image {{index}}"
+    },
+    "topSelling": {
+      "title": "Our Top Selling Products",
+      "subtitle": "See what's popular among professionals",
+      "viewAll": "View all products",
+      "addToCart": "Add to cart",
+      "viewProduct": "View product"
+    },
+    "featured": {
+      "tagline": "Top Picks",
+      "heading": "Best Sellers",
+      "viewAll": "View All",
+      "addToCart": "Add to Cart",
+      "addToBag": "Add to Bag",
+      "sale": "Sale"
+    },
+    "promo": {
+      "title": "Premium Photo Paper",
+      "subtitle": "Quality in every print",
+      "cta": "Explore Collection",
+      "tagline": "Limited Time Offer",
+      "heading": "Up to 50% Off"
+    },
+    "newArrivals": {
+      "title": "What's New",
+      "subtitle": "Fresh arrivals and special deals",
+      "viewAll": "View all products",
+      "tagline": "Just Dropped",
+      "heading": "New Arrivals",
+      "prev": "Previous",
+      "next": "Next",
+      "badge": "New"
+    },
+    "brand": {
+      "title": "Distributed Brands",
+      "subtitle": "Authorized distributor of the world's leading photo and print brands"
+    },
+    "brandDesc": {
+      "title": "Official Photo & Print Equipment Wholesaler in Tunisia",
+      "paragraph1": "{{appName}} is your trusted wholesaler for professional photo and print equipment in Tunisia. As an authorized distributor of leading brands, we are committed to providing authentic products at competitive prices with reliable delivery service nationwide.",
+      "paragraph2": "Whether you need a high-end photo printer, quality inks, premium paper or reliable storage and batteries, {{appName}} has everything to equip your professional business."
+    },
+    "footer": {
+      "description": "Established in 1989, leader in Tunisia in professional photography equipment.",
+      "quickLinks": "Quick Links",
+      "categoriesTitle": "Categories",
+      "contactUs": "Contact Us",
+      "copyright": "© {{year}} {{appName}}. All rights reserved.",
+      "aboutUs": "About Us",
+      "promotions": "Promotions"
+    },
+    "socialProof": {
+      "ordersDelivered": "Orders Delivered",
+      "happyCustomers": "Happy Customers",
+      "products": "Products",
+      "satisfaction": "Satisfaction Rate"
+    },
+    "newsletter": {
+      "tagline": "Stay Connected",
+      "heading": "Stay in the Loop",
+      "subtitle": "Subscribe for exclusive drops, early access, and special offers.",
+      "success": "You're in! Check your inbox.",
+      "successSub": "We'll keep you updated on new arrivals and exclusive offers.",
+      "placeholder": "Enter your email",
+      "emailLabel": "Email address",
+      "sending": "Sending...",
+      "cta": "Subscribe",
+      "error": "Something went wrong. Please try again."
+    },
+    "collections": {
+      "tagline": "Our Collections",
+      "heading": "Shop by Category"
+    },
+    "brandStory": {
+      "imageAlt": "Our story",
+      "tagline": "Our Story",
+      "heading": "Crafted with Purpose & Passion",
+      "body1": "Every product in our collection has been chosen with intention — balancing quality, aesthetics, and lasting value.",
+      "body2": "We believe that the things you surround yourself with should bring joy and stand the test of time.",
+      "cta": "Explore Our Collections"
+    },
+    "mnHero": {
+      "heading": "Less is More",
+      "subtitle": "Curated essentials for the modern minimalist. Quality over quantity, always.",
+      "cta": "Shop Collection"
+    },
+    "mnFeatured": {
+      "heading": "Selected Pieces",
+      "addToCart": "Add to Cart",
+      "viewAll": "View All"
+    },
+    "mnNewArrivals": {
+      "heading": "New Arrivals"
+    },
+    "mnCategories": {
+      "tagline": "Browse by",
+      "viewAll": "View All Categories"
+    },
+    "mnNewsletter": {
+      "heading": "Subscribe",
+      "success": "You're subscribed!",
+      "placeholder": "your@email.com",
+      "emailLabel": "Email address",
+      "submit": "Subscribe",
+      "error": "Something went wrong."
+    },
+    "craftStory": {
+      "tagline": "Our Journey",
+      "heading": "Crafted with Passion",
+      "text": "Every product in our collection tells a story of dedication, tradition, and artisanal craftsmanship passed down through generations.",
+      "cta": "Learn More"
+    },
+    "editorial": {
+      "tagline": "Editor's Pick",
+      "heading": "Curated Selection",
+      "text": "Our editorial team hand-picks the finest pieces that define this season's most compelling trends.",
+      "cta": "Read More"
+    }
+  },
+  "playful": {
+    "hero": {
+      "tagline": "Welcome to the Fun Side of Shopping",
+      "heading": "Discover Something Fun!",
+      "subtitle": "Colorful, creative, and curated just for you. Shopping has never been this exciting!",
+      "cta": "Start Shopping",
+      "ctaSecondary": "Browse Categories"
+    },
+    "categories": {
+      "heading": "Shop by Vibes",
+      "subtitle": "Find your perfect category"
+    },
+    "featured": {
+      "tagline": "Hot Right Now",
+      "heading": "Fan Favorites",
+      "viewAll": "View All",
+      "addToCart": "Add to Cart"
+    },
+    "promo": {
+      "heading": "Super Sale Alert!",
+      "subtitle": "Don't miss these amazing deals. Limited time only!",
+      "cta": "Grab the Deals"
+    },
+    "newArrivals": {
+      "tagline": "Just In!",
+      "heading": "Fresh & New",
+      "badge": "New",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "testimonials": {
+      "heading": "Happy Shoppers",
+      "subtitle": "See what our amazing community has to say",
+      "t1": {
+        "name": "Sarah M.",
+        "location": "Tunis, Tunisia",
+        "quote": "Everything I ordered arrived perfectly! The packaging was adorable and the quality exceeded my expectations."
+      },
+      "t2": {
+        "name": "Ahmed B.",
+        "location": "Sfax, Tunisia",
+        "quote": "Great selection and fast delivery. Cash on delivery makes it so easy to shop without worries."
+      },
+      "t3": {
+        "name": "Leila K.",
+        "location": "Sousse, Tunisia",
+        "quote": "I love the variety! Found unique items I couldn't find anywhere else. Will definitely shop again."
+      }
+    },
+    "newsletter": {
+      "heading": "Join the Fun!",
+      "subtitle": "Get exclusive deals, new arrivals, and happy surprises in your inbox!",
+      "success": "Yay! You're in!",
+      "placeholder": "your@email.com",
+      "emailLabel": "Email address",
+      "sending": "Joining...",
+      "cta": "Count Me In!",
+      "error": "Oops! Something went wrong. Try again?"
+    }
+  },
+  "legal": {
+    "terms": "Terms & Conditions",
+    "privacy": "Privacy Policy",
+    "returnPolicy": "Return & Refund Policy",
+    "shippingPolicy": "Shipping Policy",
+    "noContent": "This policy has not been published yet."
+  },
+  "contactPage": {
+    "title": "Contact Us",
+    "subtitle": "Have a question or feedback? We'd love to hear from you.",
+    "nameLabel": "Your name",
+    "namePlaceholder": "Enter your full name",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "What is this about?",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Tell us more...",
+    "submit": "Send Message",
+    "sending": "Sending...",
+    "successTitle": "Message Sent!",
+    "successMessage": "Thank you for reaching out. We'll get back to you as soon as possible.",
+    "sendAnother": "Send another message",
+    "error": "Failed to send your message. Please try again.",
+    "infoTitle": "Get in Touch",
+    "infoEmail": "Email",
+    "infoPhone": "Phone",
+    "infoAddress": "Address"
+  },
+  "faqPage": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Find answers to common questions about our products and services.",
+    "empty": "No FAQs available yet. Check back soon!",
+    "loading": "Loading...",
+    "error": "Failed to load FAQs. Please try again."
+  },
+  "maintenancePage": {
+    "title": "Under Maintenance",
+    "defaultMessage": "We're currently performing maintenance. Please check back soon."
   }
 }
