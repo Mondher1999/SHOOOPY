@@ -11,6 +11,15 @@ frontend/.next/
 frontend/out/
 
 # IDE
-.claude/projects/
+.claude/
 .vscode/
 *.log
+
+# Dev tools
+.playwright-mcp/
+AGENT-SYSTEM-PROMPT.md
+
+# Dev screenshots & external assets
+/*.png
+cadre/
+images/
