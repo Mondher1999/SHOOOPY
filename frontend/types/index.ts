@@ -56,6 +56,8 @@ export interface ProductImage {
   medium: string;
   /** 1200×1200 webp large */
   large: string;
+  /** Optional variant tags mapping attribute keys to values (e.g., { color: "Walnut" }) */
+  variantMap?: Record<string, string>;
 }
 
 export interface Product {
@@ -72,10 +74,30 @@ export interface Product {
   vendor: ProductVendor;
   ratings: ProductRatings;
   isActive: boolean;
-  attributes: Record<string, string>;
+  productType: string | null;
+  attributes: Record<string, string | string[] | number | boolean>;
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Product Type Catalog ──────────────────────────────────────────────────
+
+export interface ProductTypeAttribute {
+  key: string;
+  label: string;
+  type: "multi-select" | "select" | "text" | "number" | "boolean";
+  options?: string[];
+  required: boolean;
+  unit?: string;
+}
+
+export interface ProductTypeConfig {
+  label: string;
+  icon: string;
+  attributes: ProductTypeAttribute[];
+}
+
+export type ProductTypeCatalog = Record<string, ProductTypeConfig>;
 
 // ─── Cart ─────────────────────────────────────────────────────────────────────
 
@@ -300,6 +322,7 @@ export interface StoreSettings {
   logoEnabled: boolean;
   favicon: string;
   showcaseMode: boolean;
+  buyNowEnabled: boolean;
 }
 
 export interface OrderSettings {
@@ -425,13 +448,43 @@ export type MagazineSectionKey =
   | "editorial"
   | "newsletter";
 
+// Noir template section keys
+export type NoirSectionKey =
+  | "noirCinematicHero"
+  | "noirBrandStatement"
+  | "noirProductGallery"
+  | "noirBenefitsTriptych"
+  | "noirStorySection"
+  | "noirTestimonials"
+  | "noirProductDetails"
+  | "noirPurchaseSection"
+  | "noirTrustFooter";
+
+// Surge template section keys
+export type SurgeSectionKey =
+  | "surgeAnnouncementBar"
+  | "surgeHeroWithCta"
+  | "surgeSocialProofBar"
+  | "surgeProblemSolution"
+  | "surgeVideoDemo"
+  | "surgeBenefitsCarousel"
+  | "surgeComparison"
+  | "surgeTestimonialsGrid"
+  | "surgeMidPageCta"
+  | "surgeHowItWorks"
+  | "surgeFaqSection"
+  | "surgeFinalCta"
+  | "surgeGuaranteeBadge";
+
 // Union of all possible section keys (used in settings storage)
 export type HomepageSectionKey =
   | DynamicSectionKey
   | ClassicSectionKey
   | BoldSectionKey
   | ArtisanSectionKey
-  | MagazineSectionKey;
+  | MagazineSectionKey
+  | NoirSectionKey
+  | SurgeSectionKey;
 
 // Template ID — open string so new themes can be registered without type changes
 export type HomepageTemplate = string;
@@ -446,6 +499,8 @@ export interface ThemeConfig {
   thumbnail?: string;
   /** Whether this theme's sections read content from admin settings */
   editable: boolean;
+  /** Use-case tags shown in admin theme gallery */
+  useCases?: string[];
   /** Default section order for this theme */
   defaultOrder: HomepageSectionKey[];
   /** Map of section key → React component */
@@ -583,6 +638,7 @@ export interface HomepageSettings {
   sections: Record<HomepageSectionKey, boolean>;
   sectionOrder: HomepageSectionKey[];
   slides: HomepageSlide[];
+  featuredProductId?: string;
   announcement: AnnouncementSettings;
   promoBanner: PromoBannerSettings;
   featuredProducts: FeaturedProductsSettings;
@@ -745,6 +801,7 @@ export interface FilterState {
   maxPrice?: number;
   inStock?: boolean;
   rating?: number;
+  onSale?: boolean;
 }
 
 export interface ProductListViewProps {
@@ -789,5 +846,9 @@ export interface ProductDetailViewProps {
   product: Product;
   isShowcase: boolean;
   adding: boolean;
-  onAddToCart: () => void;
+  onAddToCart: (quantityOrEvent?: unknown) => void;
+  onBuyNow?: () => void;
+  typeCatalog?: ProductTypeCatalog | null;
+  selectedOptions?: Record<string, string | string[]>;
+  onOptionChange?: (key: string, value: string | string[]) => void;
 }

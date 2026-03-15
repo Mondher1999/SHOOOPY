@@ -15,6 +15,7 @@ const settingsSchema = new Schema(
       logoEnabled: { type: Boolean, default: true },
       favicon: { type: String, default: "" },
       showcaseMode: { type: Boolean, default: false },
+      buyNowEnabled: { type: Boolean, default: true },
     },
 
     // ─── Orders ─────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ const settingsSchema = new Schema(
         enum: ["newest", "price_asc", "price_desc", "rating"],
         default: "newest",
       },
+      productTypes: [{ type: String }],
     },
 
     // ─── Social Media ───────────────────────────────────────────────────
@@ -127,6 +129,30 @@ const settingsSchema = new Schema(
         craftStory:           { type: Boolean, default: true },
         // Magazine template sections
         editorial:            { type: Boolean, default: true },
+        // Noir template sections
+        noirCinematicHero:    { type: Boolean, default: true },
+        noirBrandStatement:   { type: Boolean, default: true },
+        noirProductGallery:   { type: Boolean, default: true },
+        noirBenefitsTriptych: { type: Boolean, default: true },
+        noirStorySection:     { type: Boolean, default: true },
+        noirTestimonials:     { type: Boolean, default: true },
+        noirProductDetails:   { type: Boolean, default: true },
+        noirPurchaseSection:  { type: Boolean, default: true },
+        noirTrustFooter:      { type: Boolean, default: true },
+        // Surge template sections
+        surgeAnnouncementBar:  { type: Boolean, default: true },
+        surgeHeroWithCta:      { type: Boolean, default: true },
+        surgeSocialProofBar:   { type: Boolean, default: true },
+        surgeProblemSolution:  { type: Boolean, default: true },
+        surgeVideoDemo:        { type: Boolean, default: true },
+        surgeBenefitsCarousel: { type: Boolean, default: true },
+        surgeComparison:       { type: Boolean, default: true },
+        surgeTestimonialsGrid: { type: Boolean, default: true },
+        surgeMidPageCta:       { type: Boolean, default: true },
+        surgeHowItWorks:       { type: Boolean, default: true },
+        surgeFaqSection:       { type: Boolean, default: true },
+        surgeFinalCta:         { type: Boolean, default: true },
+        surgeGuaranteeBadge:   { type: Boolean, default: true },
       },
 
       // ── Section Order ───────────────────────────────────────────────

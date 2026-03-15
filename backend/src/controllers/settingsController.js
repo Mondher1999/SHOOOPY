@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import Settings from "../models/settingsModel.js";
 import Review from "../models/reviewModel.js";
+import PRODUCT_TYPE_CATALOG, { isValidProductType } from "../constants/productTypeCatalog.js";
 import logger from "../utils/logger.js";
 import cache from "../utils/cache.js";
 
@@ -109,6 +110,9 @@ export const updateSettings = async (req, res) => {
       if (store.logoEnabled !== undefined) {
         updates["store.logoEnabled"] = Boolean(store.logoEnabled);
       }
+      if (store.buyNowEnabled !== undefined) {
+        updates["store.buyNowEnabled"] = Boolean(store.buyNowEnabled);
+      }
     }
 
     // ── Orders ──────────────────────────────────────────────────────────
@@ -163,6 +167,17 @@ export const updateSettings = async (req, res) => {
           return res.status(400).json({ success: false, error: "Invalid default sort order" });
         }
         updates["products.defaultSortOrder"] = products.defaultSortOrder;
+      }
+      if (products.productTypes !== undefined) {
+        if (!Array.isArray(products.productTypes)) {
+          return res.status(400).json({ success: false, error: "Product types must be an array" });
+        }
+        const cleanedTypes = products.productTypes.map((t) => String(t).trim()).filter(Boolean);
+        const invalidTypes = cleanedTypes.filter((t) => !isValidProductType(t));
+        if (invalidTypes.length > 0) {
+          return res.status(400).json({ success: false, error: `Invalid product types: ${invalidTypes.join(", ")}` });
+        }
+        updates["products.productTypes"] = cleanedTypes;
       }
     }
 
@@ -241,6 +256,18 @@ export const updateSettings = async (req, res) => {
         "craftStory",
         // Magazine template
         "editorial",
+        // Elegant template (uses shared keys: hero, collections, featuredProducts, promoBanner, newArrivals, newsletter)
+        "brandStory",
+        // Noir template
+        "noirCinematicHero", "noirBrandStatement", "noirProductGallery",
+        "noirBenefitsTriptych", "noirStorySection", "noirTestimonials",
+        "noirProductDetails", "noirPurchaseSection", "noirTrustFooter",
+        // Surge template
+        "surgeAnnouncementBar", "surgeHeroWithCta", "surgeSocialProofBar",
+        "surgeProblemSolution", "surgeVideoDemo", "surgeBenefitsCarousel",
+        "surgeComparison", "surgeTestimonialsGrid", "surgeMidPageCta",
+        "surgeHowItWorks", "surgeFaqSection", "surgeFinalCta",
+        "surgeGuaranteeBadge",
       ];
 
       // Section visibility
@@ -727,6 +754,8 @@ export const updateSettings = async (req, res) => {
 
     // Invalidate cache
     cache.del(SETTINGS_CACHE_KEY);
+    cache.del("settings:product-types-catalog");
+    cache.del("settings:enabled-product-types");
 
     res.status(200).json({ success: true, data: settings });
   } catch (error) {
@@ -911,6 +940,48 @@ export const getTopReviews = async (_req, res) => {
     res.status(200).json({ success: true, data });
   } catch (error) {
     logger.error("getTopReviews error:", error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};
+
+// ─── GET /api/settings/product-types-catalog ────────────────────────────────
+// Public — returns the full product type catalog (all types with attributes)
+export const getProductTypeCatalog = async (_req, res) => {
+  try {
+    const cacheKey = "settings:product-types-catalog";
+    const cached = cache.get(cacheKey);
+    if (cached) return res.status(200).json({ success: true, data: cached });
+
+    cache.set(cacheKey, PRODUCT_TYPE_CATALOG, 600); // 10 min
+    res.status(200).json({ success: true, data: PRODUCT_TYPE_CATALOG });
+  } catch (error) {
+    logger.error("getProductTypeCatalog error:", error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};
+
+// ─── GET /api/settings/product-types ────────────────────────────────────────
+// Public — returns only admin-enabled product types (subset of catalog)
+export const getEnabledProductTypes = async (_req, res) => {
+  try {
+    const cacheKey = "settings:enabled-product-types";
+    const cached = cache.get(cacheKey);
+    if (cached) return res.status(200).json({ success: true, data: cached });
+
+    const settings = await Settings.findOne({}).lean();
+    const enabledKeys = settings?.products?.productTypes ?? [];
+
+    const enabled = {};
+    for (const key of enabledKeys) {
+      if (PRODUCT_TYPE_CATALOG[key]) {
+        enabled[key] = PRODUCT_TYPE_CATALOG[key];
+      }
+    }
+
+    cache.set(cacheKey, enabled, 300); // 5 min
+    res.status(200).json({ success: true, data: enabled });
+  } catch (error) {
+    logger.error("getEnabledProductTypes error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
   }
 };

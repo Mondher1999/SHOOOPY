@@ -31,6 +31,9 @@ const THEME_LAYOUT_MAP: Record<string, { header: { variant: HeaderVariant; mode:
   tech:     { header: { variant: "tech",     mode: "dynamic"   }, footer: { variant: "tech",     mode: "dynamic"   } },
   elegant:  { header: { variant: "elegant",  mode: "dynamic"   }, footer: { variant: "elegant",  mode: "dynamic"   } },
   minimal:  { header: { variant: "minimal",  mode: "dynamic"   }, footer: { variant: "minimal",  mode: "dynamic"   } },
+  noir:     { header: { variant: "minimal",  mode: "dynamic"   }, footer: { variant: "minimal",  mode: "dynamic"   } },
+  surge:    { header: { variant: "bold",     mode: "dynamic"   }, footer: { variant: "bold",     mode: "dynamic"   } },
+  dynamic:  { header: { variant: "classic",  mode: "dynamic"   }, footer: { variant: "columns",  mode: "dynamic"   } },
 };
 
 const inputClasses = cn(
@@ -399,7 +402,7 @@ function StoreTab({ settings, onSave, isSaving, t }: TabProps) {
         {/* Preview */}
         {form.logo && (
           <div className="flex items-center gap-3 p-3 rounded border border-polaris-border bg-polaris-bg">
-            <img src={form.logo} alt="logo preview" className="h-10 w-auto max-w-[120px] object-contain rounded" />
+            <img src={form.logo?.startsWith("/") ? `${BASE_URL}${form.logo}` : form.logo} alt="logo preview" className="h-10 w-auto max-w-[120px] object-contain rounded" />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-polaris-text-subdued truncate">{form.logo}</p>
             </div>
@@ -495,6 +498,13 @@ function StoreTab({ settings, onSave, isSaving, t }: TabProps) {
         help={t("admin:settings.store.showcaseModeHelp", { defaultValue: "Disable all e-commerce features (prices, cart, checkout). The site becomes a product showcase only." })}
         checked={form.showcaseMode ?? false}
         onCheckedChange={(val) => setForm((prev) => ({ ...prev, showcaseMode: val }))}
+      />
+      <ToggleField
+        id="buy-now-enabled"
+        label={t("admin:settings.store.buyNowEnabledLabel")}
+        help={t("admin:settings.store.buyNowEnabledHelp")}
+        checked={form.buyNowEnabled ?? true}
+        onCheckedChange={(val) => setForm((prev) => ({ ...prev, buyNowEnabled: val }))}
       />
       <SaveButton onClick={() => onSave(form)} isSaving={isSaving} t={t} />
     </div>
@@ -1957,8 +1967,8 @@ function HomepageTab({ settings, onSave, isSaving, t, onRefresh }: HomepageTabPr
                   )}
                 </div>
                 <p className="text-xs text-polaris-text-subdued leading-relaxed">{t(`admin:settings.homepage.${theme.description}`)}</p>
-                {/* Editable badge */}
-                <div className="mt-2">
+                {/* Editable badge + use-case tags */}
+                <div className="mt-2 flex flex-wrap items-center gap-1">
                   <span className={cn(
                     "inline-block px-1.5 py-0.5 text-[10px] font-medium rounded",
                     theme.editable
@@ -1967,6 +1977,11 @@ function HomepageTab({ settings, onSave, isSaving, t, onRefresh }: HomepageTabPr
                   )}>
                     {theme.editable ? t("admin:settings.homepage.themeEditable") : t("admin:settings.homepage.themePrebuilt")}
                   </span>
+                  {theme.useCases && theme.useCases.map((uc) => (
+                    <span key={uc} className="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+                      {t(`admin:settings.homepage.${uc}`)}
+                    </span>
+                  ))}
                 </div>
               </button>
             );

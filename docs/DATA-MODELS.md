@@ -469,3 +469,368 @@ Adds `id`, removes `_id` and `__v`.
 ### toJSON transform
 
 Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Settings
+
+**File:** `src/models/settingsModel.js`
+**Collection:** `settings`
+**Implemented:** Sprint 13+
+
+Singleton document controlling store configuration, homepage layout, SMTP, SEO, legal pages, theming, and more. Only one document exists in the collection; accessed via `findOne({})`.
+
+### Fields
+
+The Settings model is organized into nested objects. Top-level sections are listed below with their nested fields.
+
+#### `store` -- Store Information
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `store.name` | String | No | `"ShopFlow"` | Store display name |
+| `store.description` | String | No | `""` | Store description |
+| `store.contactEmail` | String | No | `""` | Contact email |
+| `store.contactPhone` | String | No | `""` | Contact phone |
+| `store.address` | String | No | `""` | Store address |
+| `store.currency` | String | No | `"USD"` | Currency code (e.g., USD, EUR, TND) |
+| `store.timezone` | String | No | `"UTC"` | Timezone string |
+| `store.logo` | String | No | `""` | Logo image URL |
+| `store.logoEnabled` | Boolean | No | `true` | Whether to display logo |
+| `store.favicon` | String | No | `""` | Favicon URL |
+| `store.showcaseMode` | Boolean | No | `false` | Showcase mode (disables checkout) |
+| `store.buyNowEnabled` | Boolean | No | `true` | Show/hide Buy Now button on product pages |
+
+#### `orders` -- Order Configuration
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `orders.defaultShippingCost` | Number | No | `0` | Min: 0 |
+| `orders.minimumOrderAmount` | Number | No | `0` | Min: 0 |
+| `orders.freeShippingThreshold` | Number | No | `0` | Min: 0; 0 = always free |
+| `orders.autoCancelPendingDays` | Number | No | `0` | Min: 0; 0 = disabled |
+
+#### `notifications` -- Email Notification Toggles
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `notifications.orderConfirmation` | Boolean | No | `true` | Send order confirmation emails |
+| `notifications.orderStatusUpdate` | Boolean | No | `true` | Send status change emails |
+| `notifications.welcomeEmail` | Boolean | No | `true` | Send welcome emails |
+| `notifications.adminNewOrder` | Boolean | No | `false` | Notify admin on new orders |
+| `notifications.adminLowStock` | Boolean | No | `false` | Notify admin on low stock |
+| `notifications.adminNotificationEmail` | String | No | `""` | Admin email for notifications |
+
+#### `products` -- Product Configuration
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `products.lowStockThreshold` | Number | No | `10` | Min: 1 |
+| `products.maxImagesPerProduct` | Number | No | `10` | Min: 1, Max: 20 |
+| `products.reviewsEnabled` | Boolean | No | `true` | Enable/disable reviews |
+| `products.defaultSortOrder` | String | No | `"newest"` | Enum: `newest`, `price_asc`, `price_desc`, `rating` |
+| `products.productTypes` | [String] | No | `[]` | Array of enabled product type keys |
+
+#### `social` -- Social Media Links
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `social.facebook` | String | No | `""` | Facebook URL |
+| `social.instagram` | String | No | `""` | Instagram URL |
+| `social.twitter` | String | No | `""` | Twitter/X URL |
+| `social.tiktok` | String | No | `""` | TikTok URL |
+| `social.youtube` | String | No | `""` | YouTube URL |
+| `social.whatsapp` | String | No | `""` | WhatsApp link |
+
+#### `legal` -- Legal Page Content
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `legal.termsAndConditions` | String | No | `""` | HTML/text content |
+| `legal.privacyPolicy` | String | No | `""` | HTML/text content |
+| `legal.returnPolicy` | String | No | `""` | HTML/text content |
+| `legal.shippingPolicy` | String | No | `""` | HTML/text content |
+
+#### `seo` -- SEO Configuration
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `seo.metaTitleTemplate` | String | No | `"%s \| ShopFlow"` | `%s` is replaced by page title |
+| `seo.metaDescription` | String | No | `""` | Default meta description |
+| `seo.googleAnalyticsId` | String | No | `""` | GA measurement ID |
+| `seo.facebookPixelId` | String | No | `""` | Facebook Pixel ID |
+
+#### `maintenance` -- Maintenance Mode
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `maintenance.enabled` | Boolean | No | `false` | Enable maintenance mode |
+| `maintenance.message` | String | No | `"We're currently performing maintenance..."` | Displayed to visitors |
+
+#### `homepage` -- Homepage Layout
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `homepage.template` | String | No | `"classic"` | Active theme template ID |
+| `homepage.mode` | String | No | `"dynamic"` | Enum: `dynamic`, `hardcoded` (legacy) |
+| `homepage.sections` | Object | No | -- | Boolean flags for each section key (e.g., `hero: true`, `newsletter: false`) |
+| `homepage.sectionOrder` | [String] | No | `["hero", "valuePropositions", ...]` | Ordered array of section keys |
+| `homepage.slides` | [Object] | No | `[]` | Hero slides: `{ title, subtitle, ctaText, ctaLink, imageUrl, type, videoUrl, posterUrl }` |
+| `homepage.announcement` | Object | No | -- | `{ enabled, text, link, bgColor, textColor, dismissible }` |
+| `homepage.promoBanner` | Object | No | -- | `{ title, subtitle, ctaText, ctaLink, imageUrl, countdownEnd }` |
+| `homepage.featuredProducts` | Object | No | -- | `{ title, mode, sortBy, limit, productIds }` |
+| `homepage.collections` | Object | No | -- | `{ title, limit, categoryIds, displayMode }` |
+| `homepage.newArrivals` | Object | No | -- | `{ title, limit }` |
+| `homepage.testimonials` | Object | No | -- | `{ title, mode, items: [{ name, quote, location, rating, avatar }] }` |
+| `homepage.brandStory` | Object | No | -- | `{ title, body, ctaText, ctaLink, imageUrl, imagePosition }` |
+| `homepage.trustBar` | Object | No | -- | `{ items: [{ icon, title, description }] }` |
+| `homepage.newsletter` | Object | No | -- | `{ title, subtitle, placeholder, buttonText, bgColor, textColor }` |
+| `homepage.instagram` | Object | No | -- | `{ username, images: [{ url, link }] }` |
+| `homepage.valuePropositions` | Object | No | -- | `{ items: [{ icon, title, description }] }` |
+| `homepage.partners` | Object | No | -- | `{ items: [{ imageUrl, link, name }] }` |
+| `homepage.popup` | Object | No | -- | `{ enabled, title, body, ctaText, ctaLink, imageUrl, trigger, delay, scrollPercent, frequency }` |
+| `homepage.announcementText` | String | No | `""` | Legacy field |
+
+#### `header` -- Header Configuration
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `header.enabled` | Boolean | No | `true` | Show/hide header |
+| `header.variant` | String | No | `"classic"` | Enum: `classic`, `minimal`, `centered`, `bold`, `elegant`, `zen`, `playful`, `tech`, `artisan`, `magazine` |
+| `header.mode` | String | No | `"dynamic"` | Enum: `dynamic`, `hardcoded` |
+
+#### `footer` -- Footer Configuration
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `footer.enabled` | Boolean | No | `true` | Show/hide footer |
+| `footer.variant` | String | No | `"luxury"` | Enum: `luxury`, `minimal`, `columns`, `bold`, `elegant`, `zen`, `playful`, `tech`, `artisan`, `magazine` |
+| `footer.mode` | String | No | `"dynamic"` | Enum: `dynamic`, `hardcoded` |
+
+#### `emailTemplates` -- Customizable Email Subjects
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `emailTemplates.orderConfirmationSubject` | String | No | `"Commande confirmée — #{{orderNumber}}"` | Supports `{{orderNumber}}` placeholder |
+| `emailTemplates.orderShippedSubject` | String | No | `"Commande expédiée — #{{orderNumber}}"` | |
+| `emailTemplates.orderDeliveredSubject` | String | No | `"Commande livrée — #{{orderNumber}}"` | |
+| `emailTemplates.orderCancelledSubject` | String | No | `"Commande annulée — #{{orderNumber}}"` | |
+| `emailTemplates.welcomeSubject` | String | No | `"Bienvenue sur {{shopName}}..."` | Supports `{{shopName}}` |
+| `emailTemplates.verificationSubject` | String | No | `"Vérifiez votre adresse email {{shopName}}"` | |
+| `emailTemplates.passwordResetSubject` | String | No | `"Réinitialisez votre mot de passe {{shopName}}"` | |
+
+#### `smtp` -- SMTP Configuration
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `smtp.host` | String | No | `""` | SMTP server hostname |
+| `smtp.port` | Number | No | `587` | SMTP port |
+| `smtp.secure` | Boolean | No | `false` | Use TLS |
+| `smtp.user` | String | No | `""` | SMTP username |
+| `smtp.pass` | String | No | `""` | Encrypted before storage; masked as `"••••••••"` in toJSON |
+| `smtp.fromName` | String | No | `"ShopFlow"` | Sender display name |
+| `smtp.fromEmail` | String | No | `""` | Sender email address |
+
+#### `typography` -- Font Settings
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `typography.headingFont` | String | No | `""` | Google Font name for headings |
+| `typography.bodyFont` | String | No | `""` | Google Font name for body text |
+| `typography.baseFontSize` | Number | No | `16` | Min: 14, Max: 20 (px) |
+| `typography.headingLetterSpacing` | Number | No | `0.18` | Letter spacing (em) |
+| `typography.headingTextTransform` | String | No | `"uppercase"` | Enum: `uppercase`, `none` |
+
+#### `colorPalette` -- Color Theme
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `colorPalette.preset` | String | No | `"classic"` | Preset name |
+| `colorPalette.bg` | String | No | `"#FFFFFF"` | Background color (hex) |
+| `colorPalette.bgAlt` | String | No | `"#F7F5F3"` | Alternate background (hex) |
+| `colorPalette.text` | String | No | `"#1C1C1C"` | Text color (hex) |
+| `colorPalette.textMuted` | String | No | `"#71717A"` | Muted text (hex) |
+| `colorPalette.dark` | String | No | `"#1C1C1C"` | Dark color (hex) |
+| `colorPalette.accentText` | String | No | `"#FFFFFF"` | Accent text color (hex) |
+| `colorPalette.border` | String | No | `"#E5E5E5"` | Border color (hex) |
+| `colorPalette.sale` | String | No | `"#DC2626"` | Sale price color (hex) |
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`. Masks SMTP password as `"••••••••"` if set, `""` if empty.
+
+### Key patterns
+
+- **Singleton**: accessed via `findOne({})` and `findOneAndUpdate({}, { $set: updates }, { upsert: true })`.
+- **Caching**: `settings:global` key with 5-minute TTL, invalidated on every `PUT /api/settings`.
+- **Partial updates**: uses `$set` with dot notation (e.g., `"store.name": "New Name"`) so only changed fields are overwritten.
+- **Encryption**: SMTP password is encrypted with AES-256-CBC before storage; decrypted on read for email sending.
+
+---
+
+## Contact
+
+**File:** `src/models/contactModel.js`
+**Collection:** `contacts`
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `name` | String | Yes | -- | Trimmed |
+| `email` | String | Yes | -- | Trimmed, lowercase |
+| `subject` | String | Yes | -- | Trimmed |
+| `message` | String | Yes | -- | Contact form message body |
+| `status` | String | No | `"new"` | Enum: `new`, `read`, `replied` |
+| `createdAt` | Date | Auto | -- | Mongoose timestamps |
+| `updatedAt` | Date | Auto | -- | Mongoose timestamps |
+
+### Indexes
+
+| Field(s) | Type | Purpose |
+|---|---|---|
+| `{ status: 1, createdAt: -1 }` | Compound | Admin listing filtered by status, newest first |
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Coupon
+
+**File:** `src/models/couponModel.js`
+**Collection:** `coupons`
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `code` | String | Yes | -- | Unique, uppercase, trimmed |
+| `type` | String | Yes | -- | Enum: `percentage`, `fixed` |
+| `value` | Number | Yes | -- | Min: 0; max 100 for percentage type |
+| `maxDiscount` | Number | No | `0` | Min: 0; cap for percentage discounts; 0 = no cap |
+| `minOrderAmount` | Number | No | `0` | Min: 0; minimum order subtotal required |
+| `maxUses` | Number | No | `0` | Min: 0; maximum uses allowed; 0 = unlimited |
+| `usedCount` | Number | No | `0` | Min: 0; current usage count |
+| `expiresAt` | Date | No | `null` | Expiration date; null = never expires |
+| `isActive` | Boolean | No | `true` | Soft-disable without deletion |
+| `createdAt` | Date | Auto | -- | Mongoose timestamps |
+| `updatedAt` | Date | Auto | -- | Mongoose timestamps |
+
+### Indexes
+
+| Field(s) | Type | Purpose |
+|---|---|---|
+| `{ code: 1 }` | Standard | Fast lookup by coupon code |
+| `{ isActive: 1, expiresAt: 1 }` | Compound | Active coupon queries with expiry check |
+
+### Key patterns
+
+- **Validation**: `validateCoupon` controller checks expiry, usage limit, minimum order amount, then calculates discount (percentage capped by maxDiscount, or fixed amount capped at subtotal).
+- **Usage tracking**: `buyNow` controller increments `usedCount` via `$inc` when a coupon is applied.
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.
+
+---
+
+## FAQ
+
+**File:** `src/models/faqModel.js`
+**Collection:** `faqs`
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `question` | String | Yes | -- | Trimmed |
+| `answer` | String | Yes | -- | Supports rich text / HTML |
+| `order` | Number | No | `0` | Sort order; lower = first |
+| `isActive` | Boolean | No | `true` | Only active FAQs shown publicly |
+| `createdAt` | Date | Auto | -- | Mongoose timestamps |
+| `updatedAt` | Date | Auto | -- | Mongoose timestamps |
+
+### Indexes
+
+| Field(s) | Type | Purpose |
+|---|---|---|
+| `{ isActive: 1, order: 1 }` | Compound | Public FAQ listing sorted by order |
+
+### Key patterns
+
+- **Reorder**: Bulk `updateOne` operations set `order = index` for each ID in the submitted array.
+- **Auto-order**: On create, if no order is provided, assigns `maxOrder + 1`.
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Subscriber
+
+**File:** `src/models/subscriberModel.js`
+**Collection:** `subscribers`
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `email` | String | Yes | -- | Unique, lowercase, trimmed; regex-validated format |
+| `subscribedAt` | Date | No | `Date.now` | When the subscription was created/reactivated |
+| `isActive` | Boolean | No | `true` | False = unsubscribed (soft delete) |
+| `source` | String | No | `"homepage"` | Enum: `homepage`, `checkout`, `footer` |
+| `createdAt` | Date | Auto | -- | Mongoose timestamps |
+| `updatedAt` | Date | Auto | -- | Mongoose timestamps |
+
+### Indexes
+
+| Field(s) | Type | Purpose |
+|---|---|---|
+| `{ email: 1 }` | Unique | Prevent duplicate subscriptions |
+
+### Key patterns
+
+- **Reactivation**: If a previously unsubscribed email re-subscribes, `isActive` is set back to `true` and `subscribedAt` is refreshed.
+- **Soft delete**: Unsubscribing sets `isActive: false` rather than deleting the document.
+- **Race condition**: Duplicate key error (code 11000) is caught and returns 409.
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.
+
+---
+
+## Redirect
+
+**File:** `src/models/redirectModel.js`
+**Collection:** `redirects`
+
+### Fields
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `from` | String | Yes | -- | Unique, trimmed; source URL path |
+| `to` | String | Yes | -- | Trimmed; destination URL path |
+| `type` | Number | No | `301` | Enum: `301` (permanent), `302` (temporary) |
+| `isActive` | Boolean | No | `true` | Only active redirects are resolved |
+| `source` | String | No | `"manual"` | Enum: `manual`, `slug-change`; how the redirect was created |
+| `createdAt` | Date | Auto | -- | Mongoose timestamps |
+| `updatedAt` | Date | Auto | -- | Mongoose timestamps |
+
+### Indexes
+
+| Field(s) | Type | Purpose |
+|---|---|---|
+| `{ from: 1, isActive: 1 }` | Compound | Fast lookup of active redirects by source path |
+
+### Key patterns
+
+- **Auto-creation**: When a product or category slug changes, a redirect from the old slug to the new slug is created with `source: "slug-change"`.
+- **Uniqueness**: The `from` field has a unique constraint; duplicate source paths return 409.
+
+### toJSON transform
+
+Adds `id`, removes `_id` and `__v`.
