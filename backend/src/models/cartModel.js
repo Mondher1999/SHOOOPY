@@ -6,6 +6,9 @@ const cartItemSchema = new Schema(
     quantity: { type: Number, required: true, min: 1 },
     // Price snapshot at time of adding — prevents cart total from fluctuating when product price changes
     price:    { type: Number, required: true, min: 0 },
+    // Selected variant options (e.g., { color: "Blue", size: "M" })
+    // Enables "Blue M" and "Red L" as separate line items in the same cart
+    selectedOptions: { type: Map, of: String, default: {} },
   },
   { _id: false }
 );

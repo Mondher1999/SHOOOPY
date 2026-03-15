@@ -116,6 +116,8 @@ export interface CartItem {
   quantity: number;
   /** Price snapshot at the time the item was added */
   price: number;
+  /** Selected variant options (e.g., { color: "Blue", size: "M" }) */
+  selectedOptions?: Record<string, string>;
 }
 
 export interface Cart {
@@ -154,6 +156,8 @@ export interface OrderItem {
   quantity: number;
   price: number;
   image: string;
+  /** Selected variant options snapshot (e.g., { color: "Blue", size: "M" }) */
+  selectedOptions?: Record<string, string>;
 }
 
 export interface OrderShippingAddress {

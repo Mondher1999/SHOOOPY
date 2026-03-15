@@ -13,6 +13,7 @@ import { ReviewSection } from "@/components/products/ReviewSection";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { WishlistButton } from "@/components/products/WishlistButton";
 import { VariantSelector } from "@/components/products/VariantSelector";
+import { SelectedOptionsSummary } from "@/components/products/SelectedOptionsSummary";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { cn } from "@/lib/utils";
 import type { ProductDetailViewProps } from "@/types";
@@ -214,6 +215,14 @@ export default function ArtisanProductDetailView({
                 selectedOptions={selectedOptions}
                 onOptionChange={onOptionChange}
               />
+            )}
+
+            {/* Selected Options Summary */}
+            {!isShowcase && selectedOptions && Object.keys(selectedOptions).some((k) => {
+              const v = selectedOptions[k];
+              return typeof v === "string" ? v.length > 0 : Array.isArray(v) && v.length > 0;
+            }) && (
+              <SelectedOptionsSummary selectedOptions={selectedOptions} />
             )}
 
             {/* Dotted separator */}

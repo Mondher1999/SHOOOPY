@@ -8,18 +8,40 @@ export async function getCartAPI(): Promise<CartResponse> {
   return res.data;
 }
 
-export async function addItemAPI(productId: string, quantity: number): Promise<CartResponse> {
-  const res = await axiosInstance.post<CartResponse>("/api/cart/items", { productId, quantity });
+export async function addItemAPI(
+  productId: string,
+  quantity: number,
+  selectedOptions?: Record<string, string>,
+): Promise<CartResponse> {
+  const res = await axiosInstance.post<CartResponse>("/api/cart/items", {
+    productId,
+    quantity,
+    ...(selectedOptions && Object.keys(selectedOptions).length > 0 ? { selectedOptions } : {}),
+  });
   return res.data;
 }
 
-export async function updateQuantityAPI(productId: string, quantity: number): Promise<CartResponse> {
-  const res = await axiosInstance.put<CartResponse>(`/api/cart/items/${productId}`, { quantity });
+export async function updateQuantityAPI(
+  productId: string,
+  quantity: number,
+  selectedOptions?: Record<string, string>,
+): Promise<CartResponse> {
+  const res = await axiosInstance.put<CartResponse>(`/api/cart/items/${productId}`, {
+    quantity,
+    ...(selectedOptions && Object.keys(selectedOptions).length > 0 ? { selectedOptions } : {}),
+  });
   return res.data;
 }
 
-export async function removeItemAPI(productId: string): Promise<CartResponse> {
-  const res = await axiosInstance.delete<CartResponse>(`/api/cart/items/${productId}`);
+export async function removeItemAPI(
+  productId: string,
+  selectedOptions?: Record<string, string>,
+): Promise<CartResponse> {
+  // Use POST route for variant-aware removal (DELETE body is unreliable)
+  const res = await axiosInstance.post<CartResponse>("/api/cart/items/remove", {
+    productId,
+    ...(selectedOptions && Object.keys(selectedOptions).length > 0 ? { selectedOptions } : {}),
+  });
   return res.data;
 }
 
@@ -31,6 +53,7 @@ export async function clearCartAPI(): Promise<{ success: true; data: { message: 
 export interface GuestCartItem {
   productId: string;
   quantity: number;
+  selectedOptions?: Record<string, string>;
 }
 
 export async function mergeCartAPI(items: GuestCartItem[]): Promise<CartResponse> {

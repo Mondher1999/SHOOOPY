@@ -18,7 +18,8 @@ router.get("/", getCart);
 router.post("/merge", mergeCart);
 router.post("/items", addItem);
 router.put("/items/:productId", updateQuantity);
-router.delete("/items/:productId", removeItem);
+router.post("/items/remove", removeItem);     // Preferred: supports selectedOptions in body
+router.delete("/items/:productId", removeItem); // Legacy compat: removes first match (empty options)
 router.delete("/", clearCart);
 
 export default router;

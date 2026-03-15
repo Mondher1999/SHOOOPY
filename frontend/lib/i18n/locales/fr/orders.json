@@ -37,7 +37,13 @@
     "cod": "Paiement à la livraison",
     "notes": "Notes de commande",
     "qty": "Qté : {{count}}",
-    "discount": "Réduction"
+    "discount": "Réduction",
+    "statusNotes": {
+      "Order placed": "Commande passée",
+      "Buy Now order placed": "Commande rapide passée",
+      "Cancelled by customer": "Annulée par le client",
+      "Manual order created by admin": "Commande créée manuellement par l'admin"
+    }
   },
   "cancelDialog": {
     "title": "Annuler la commande ?",

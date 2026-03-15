@@ -68,6 +68,7 @@
     "productTypeLabel": "Type de produit",
     "productTypePlaceholder": "Sélectionner un type de produit",
     "productTypeHelp": "Choisissez le type de produit pour obtenir des champs d'attributs prédéfinis",
+    "productTypeNone": "Aucun (attributs libres)",
     "typeAttributesLabel": "Attributs {{type}}",
     "typeAttributesHelp": "Renseignez les attributs spécifiques à ce type de produit",
     "removeOptionAriaLabel": "Retirer {{option}}",
@@ -201,7 +202,8 @@
     "fillAllFields": "Veuillez remplir tous les champs obligatoires",
     "loginRequired": "Veuillez vous connecter pour passer une commande",
     "outOfStock": "Rupture de stock : {{names}}",
-    "errorPlacing": "Erreur lors de la commande. Veuillez réessayer."
+    "errorPlacing": "Erreur lors de la commande. Veuillez réessayer.",
+    "removeItem": "Retirer {{name}} de la commande"
   },
   "quickView": {
     "ariaLabel": "Aperçu rapide : {{name}}",

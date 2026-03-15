@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useActiveTheme } from "@/hooks/useActiveTheme";
 import { cn } from "@/lib/utils";
+import { isColorAttr, getColorValue } from "@/lib/colorMap";
 import logger from "@/lib/logger";
 import type { CartItem } from "@/types";
 
@@ -47,10 +48,45 @@ function CartPageSkeleton() {
   );
 }
 
+// ─── Composite key + Options display ───────────────────────────────────────────
+
+function cartItemKey(item: CartItem): string {
+  const opts = item.selectedOptions;
+  if (!opts || Object.keys(opts).length === 0) return item.product.id;
+  const sorted = Object.keys(opts).sort().reduce<Record<string, string>>((acc, k) => {
+    acc[k] = opts[k];
+    return acc;
+  }, {});
+  return `${item.product.id}::${JSON.stringify(sorted)}`;
+}
+
+function OptionsText({ options, t }: { options?: Record<string, string>; t: (key: string, opts?: Record<string, unknown>) => string }) {
+  if (!options || Object.keys(options).length === 0) return null;
+  return (
+    <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
+      {Object.entries(options).map(([key, value], idx) => (
+        <span key={key} className="inline-flex items-center gap-0.5">
+          {idx > 0 && <span className="mx-0.5">/</span>}
+          <span>{t(`products:typeAttrs.${key}`, { defaultValue: key })}:</span>
+          {isColorAttr(key) && getColorValue(value) && (
+            <span
+              className="inline-block h-3 w-3 rounded-full border border-border flex-shrink-0"
+              style={{ backgroundColor: getColorValue(value) }}
+              aria-hidden="true"
+            />
+          )}
+          <span className="font-medium">{value}</span>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 // ─── Cart item row ─────────────────────────────────────────────────────────────
 
 function CartItemCard({ item }: { item: CartItem }) {
   const { t } = useTranslation("cart");
+  const { t: tProducts } = useTranslation("products");
   const { updateQuantity, removeItem } = useCart();
   const { toast } = useToast();
   const formatPrice = useFormatPrice();
@@ -59,10 +95,11 @@ function CartItemCard({ item }: { item: CartItem }) {
   const primaryImage = product.images[0] ?? null;
   const atStockLimit = item.quantity >= product.stock;
   const lineTotal = item.price * item.quantity;
+  const opts = item.selectedOptions;
 
   const handleIncrease = async () => {
     try {
-      await updateQuantity(product.id, item.quantity + 1);
+      await updateQuantity(product.id, item.quantity + 1, opts);
     } catch (err) {
       logger.error("cart page increase qty error:", err);
       toast({
@@ -79,7 +116,7 @@ function CartItemCard({ item }: { item: CartItem }) {
       return;
     }
     try {
-      await updateQuantity(product.id, item.quantity - 1);
+      await updateQuantity(product.id, item.quantity - 1, opts);
     } catch (err) {
       logger.error("cart page decrease qty error:", err);
     }
@@ -87,7 +124,7 @@ function CartItemCard({ item }: { item: CartItem }) {
 
   const handleRemove = async () => {
     try {
-      await removeItem(product.id);
+      await removeItem(product.id, opts);
       toast({ description: t("removedFromCartDesc", { name: product.name }) });
     } catch (err) {
       logger.error("cart page remove error:", err);
@@ -135,6 +172,7 @@ function CartItemCard({ item }: { item: CartItem }) {
             >
               {product.name}
             </Link>
+            <OptionsText options={opts} t={tProducts} />
 
             {product.stock <= 5 && product.stock > 0 && (
               <Badge variant="secondary" className="text-xs mt-1 block w-fit">
@@ -330,7 +368,7 @@ export default function CartPage() {
           {/* Items */}
           <section className="lg:col-span-2 space-y-4" aria-label={t("itemsInCart")}>
             {items.map((item) => (
-              <CartItemCard key={item.product.id} item={item} />
+              <CartItemCard key={cartItemKey(item)} item={item} />
             ))}
           </section>
 

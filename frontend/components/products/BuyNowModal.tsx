@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { User, Phone, MapPin, Tag, ShoppingBag, Truck, Loader2 } from "lucide-react";
+import { User, Phone, MapPin, Tag, ShoppingBag, Truck, Loader2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,11 @@ import { cn } from "@/lib/utils";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { buyNowAPI } from "@/services/order-service";
 import { validateCouponAPI } from "@/services/coupon-service";
+import { isColorAttr, getColorValue } from "@/lib/colorMap";
 import logger from "@/lib/logger";
 import type { Product } from "@/types";
 
@@ -38,9 +40,38 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
   const { t: tCheckout } = useTranslation("checkout");
   const router = useRouter();
   const { user } = useAuth();
+  const { cart, reload: reloadCart } = useCart();
   const { settings } = useSettings();
   const formatPrice = useFormatPrice();
   const { toast } = useToast();
+
+  const thumbnail = product.images[0]?.thumbnail
+    ? `${BASE_URL}${product.images[0].thumbnail}`
+    : "";
+
+  // Track items the user removed from this order
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+
+  // Build combined items list: existing cart items + the Buy Now product
+  const allItems = useMemo(() => {
+    const items: { id: string; name: string; price: number; quantity: number; image: string; isBuyNow: boolean }[] = [];
+    // Add existing cart items (excluding removed ones)
+    if (cart?.items) {
+      for (const ci of cart.items) {
+        if (ci.product.id === product.id) continue;
+        if (excludedIds.has(ci.product.id)) continue;
+        const img = ci.product.images?.[0]?.thumbnail
+          ? `${BASE_URL}${ci.product.images[0].thumbnail}`
+          : "";
+        items.push({ id: ci.product.id, name: ci.product.name, price: ci.price, quantity: ci.quantity, image: img, isBuyNow: false });
+      }
+    }
+    // Add the Buy Now product (merge quantity if already in cart)
+    const existingInCart = cart?.items?.find((ci) => ci.product.id === product.id);
+    const buyNowQty = (existingInCart?.quantity ?? 0) + 1;
+    items.push({ id: product.id, name: product.name, price: product.price, quantity: buyNowQty, image: thumbnail, isBuyNow: true });
+    return items;
+  }, [cart, product, thumbnail, excludedIds]);
 
   // Form state
   const [fullName, setFullName] = useState("");
@@ -57,7 +88,7 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
   const [placing, setPlacing] = useState(false);
 
   // Calculations
-  const subtotal = product.price;
+  const subtotal = allItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const orderSettings = settings?.orders;
   let shippingCost = orderSettings?.defaultShippingCost ?? 0;
   if (orderSettings?.freeShippingThreshold && orderSettings.freeShippingThreshold > 0 && subtotal >= orderSettings.freeShippingThreshold) {
@@ -65,10 +96,6 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
   }
   const discount = appliedCoupon?.discount ?? 0;
   const total = subtotal + shippingCost - discount;
-
-  const thumbnail = product.images[0]?.thumbnail
-    ? `${BASE_URL}${product.images[0].thumbnail}`
-    : "";
 
   const handleApplyCoupon = useCallback(async () => {
     if (!couponInput.trim()) return;
@@ -110,9 +137,11 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
         address: address.trim(),
         couponCode: appliedCoupon?.code,
         selectedOptions,
+        excludeProductIds: excludedIds.size > 0 ? [...excludedIds] : undefined,
       });
 
       onOpenChange(false);
+      reloadCart();
       router.push(`/checkout/success?orderNumber=${res.data.orderNumber}&orderId=${res.data.id}`);
     } catch (err: unknown) {
       logger.error("BuyNow placeOrder error:", err);
@@ -126,7 +155,7 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
     } finally {
       setPlacing(false);
     }
-  }, [fullName, phone, address, user, product.id, appliedCoupon, onOpenChange, router, toast, t, selectedOptions]);
+  }, [fullName, phone, address, user, product.id, appliedCoupon, excludedIds, onOpenChange, reloadCart, router, toast, t, selectedOptions]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,29 +173,64 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-5">
-          {/* ── Product Info ── */}
-          <div className="flex items-start gap-3">
-            {thumbnail && (
-              <div className="relative h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden bg-muted border">
-                <div className="absolute -top-1 -right-1 z-10 bg-primary text-primary-foreground text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center">
-                  1
+          {/* ── All Items ── */}
+          <div className="space-y-2">
+            {allItems.map((item) => (
+              <div key={item.id} className="flex items-center gap-3">
+                {item.image && (
+                  <div className="relative h-14 w-14 flex-shrink-0 rounded-lg overflow-hidden bg-muted border">
+                    <div className="absolute -top-1 -right-1 z-10 bg-primary text-primary-foreground text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center">
+                      {item.quantity}
+                    </div>
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                      sizes="56px"
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm leading-tight truncate">{item.name}</p>
+                  {item.isBuyNow && selectedOptions && Object.keys(selectedOptions).length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
+                      {Object.entries(selectedOptions).map(([key, rawVal], idx) => {
+                        const value = Array.isArray(rawVal) ? rawVal[0] : rawVal;
+                        return (
+                          <span key={key} className="inline-flex items-center gap-0.5">
+                            {idx > 0 && <span className="mx-0.5">/</span>}
+                            <span>{t(`typeAttrs.${key}`, { defaultValue: key })}:</span>
+                            {isColorAttr(key) && getColorValue(value) && (
+                              <span
+                                className="inline-block h-2.5 w-2.5 rounded-full border border-border"
+                                style={{ backgroundColor: getColorValue(value) }}
+                                aria-hidden="true"
+                              />
+                            )}
+                            <span className="font-medium">{value}</span>
+                          </span>
+                        );
+                      })}
+                    </p>
+                  )}
+                  {item.quantity > 1 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">×{item.quantity}</p>
+                  )}
                 </div>
-                <Image
-                  src={thumbnail}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="64px"
-                />
+                <span className="font-semibold text-sm whitespace-nowrap">{formatPrice(item.price * item.quantity)}</span>
+                {!item.isBuyNow && (
+                  <button
+                    type="button"
+                    className="flex-shrink-0 p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    onClick={() => setExcludedIds((prev) => new Set(prev).add(item.id))}
+                    aria-label={t("buyNow.removeItem", { name: item.name })}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm leading-tight truncate">{product.name}</p>
-              {product.category && (
-                <p className="text-xs text-muted-foreground mt-0.5">{product.category.name}</p>
-              )}
-            </div>
-            <span className="font-semibold text-sm whitespace-nowrap">{formatPrice(product.price)}</span>
+            ))}
           </div>
 
           {/* ── Order Summary ── */}

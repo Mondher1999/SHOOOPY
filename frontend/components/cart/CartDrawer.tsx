@@ -21,13 +21,50 @@ import { useToast } from "@/hooks/use-toast";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useActiveTheme } from "@/hooks/useActiveTheme";
 import { cn } from "@/lib/utils";
+import { isColorAttr, getColorValue } from "@/lib/colorMap";
 import logger from "@/lib/logger";
 import type { CartItem } from "@/types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
+/** Composite key for cart items: productId + sorted selectedOptions */
+function cartItemKey(item: CartItem): string {
+  const opts = item.selectedOptions;
+  if (!opts || Object.keys(opts).length === 0) return item.product.id;
+  const sorted = Object.keys(opts).sort().reduce<Record<string, string>>((acc, k) => {
+    acc[k] = opts[k];
+    return acc;
+  }, {});
+  return `${item.product.id}::${JSON.stringify(sorted)}`;
+}
+
+/** Format selected options as readable text: "Color: Blue / Size: M" */
+function OptionsText({ options, t }: { options?: Record<string, string>; t: (key: string, opts?: Record<string, unknown>) => string }) {
+  if (!options || Object.keys(options).length === 0) return null;
+
+  return (
+    <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
+      {Object.entries(options).map(([key, value], idx) => (
+        <span key={key} className="inline-flex items-center gap-0.5">
+          {idx > 0 && <span className="mx-0.5">/</span>}
+          <span>{t(`products:typeAttrs.${key}`, { defaultValue: key })}:</span>
+          {isColorAttr(key) && getColorValue(value) && (
+            <span
+              className="inline-block h-3 w-3 rounded-full border border-border flex-shrink-0"
+              style={{ backgroundColor: getColorValue(value) }}
+              aria-hidden="true"
+            />
+          )}
+          <span className="font-medium">{value}</span>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 function CartItemRow({ item }: { item: CartItem }) {
   const { t } = useTranslation("cart");
+  const { t: tProducts } = useTranslation("products");
   const { updateQuantity, removeItem, closeDrawer } = useCart();
   const { toast } = useToast();
   const formatPrice = useFormatPrice();
@@ -35,10 +72,11 @@ function CartItemRow({ item }: { item: CartItem }) {
   const product = item.product;
   const primaryImage = product.images[0] ?? null;
   const atStockLimit = item.quantity >= product.stock;
+  const opts = item.selectedOptions;
 
   const handleIncrease = async () => {
     try {
-      await updateQuantity(product.id, item.quantity + 1);
+      await updateQuantity(product.id, item.quantity + 1, opts);
     } catch (err) {
       logger.error("CartDrawer increase qty error:", err);
       toast({
@@ -55,7 +93,7 @@ function CartItemRow({ item }: { item: CartItem }) {
       return;
     }
     try {
-      await updateQuantity(product.id, item.quantity - 1);
+      await updateQuantity(product.id, item.quantity - 1, opts);
     } catch (err) {
       logger.error("CartDrawer decrease qty error:", err);
     }
@@ -63,7 +101,7 @@ function CartItemRow({ item }: { item: CartItem }) {
 
   const handleRemove = async () => {
     try {
-      await removeItem(product.id);
+      await removeItem(product.id, opts);
       toast({ description: t("removedFromCartDesc", { name: product.name }) });
     } catch (err) {
       logger.error("CartDrawer remove error:", err);
@@ -111,6 +149,7 @@ function CartItemRow({ item }: { item: CartItem }) {
         >
           {product.name}
         </Link>
+        <OptionsText options={opts} t={tProducts} />
         <p className={cn("text-sm font-semibold mt-0.5", theme.text)}>{formatPrice(item.price * item.quantity)}</p>
         {product.stock <= 5 && (
           <Badge variant="secondary" className="text-xs mt-0.5">
@@ -217,7 +256,7 @@ export function CartDrawer() {
           ) : (
             <ul aria-label={t("itemsInCart")} className="divide-y">
               {items.map((item) => (
-                <CartItemRow key={item.product.id} item={item} />
+                <CartItemRow key={cartItemKey(item)} item={item} />
               ))}
             </ul>
           )}

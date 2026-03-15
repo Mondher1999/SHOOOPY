@@ -120,9 +120,17 @@ export default function ProductDetailClient({ initialProduct }: ProductDetailCli
   const handleAddToCart = useCallback(async (quantityOrEvent?: number | unknown) => {
     if (!product) return;
     const qty = typeof quantityOrEvent === "number" ? quantityOrEvent : 1;
+    // Convert cleanSelectedOptions to Record<string, string> for cart storage
+    // (buyer picks ONE value per attribute, so array values take the first element)
+    const cartOptions: Record<string, string> | undefined = cleanSelectedOptions
+      ? Object.entries(cleanSelectedOptions).reduce<Record<string, string>>((acc, [k, v]) => {
+          acc[k] = Array.isArray(v) ? v[0] : v;
+          return acc;
+        }, {})
+      : undefined;
     setAdding(true);
     try {
-      await addItem(product.id, qty);
+      await addItem(product.id, qty, cartOptions);
       toast({ description: tCart("addedToCartDesc", { name: product.name }) });
       openDrawer();
     } catch (err) {

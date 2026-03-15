@@ -22,6 +22,7 @@ export interface BuyNowPayload {
   address: string;
   couponCode?: string;
   selectedOptions?: Record<string, string | string[]>;
+  excludeProductIds?: string[];
 }
 
 export async function buyNowAPI(payload: BuyNowPayload): Promise<OrderResponse> {

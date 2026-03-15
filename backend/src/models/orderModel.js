@@ -10,6 +10,8 @@ const orderItemSchema = new Schema(
     price:    { type: Number, required: true, min: 0 },
     // First image URL (thumbnail) captured at order time
     image:    { type: String, default: "" },
+    // Snapshot of selected variant options at order time (e.g., { color: "Blue", size: "M" })
+    selectedOptions: { type: Map, of: String, default: {} },
   },
   { _id: false }
 );

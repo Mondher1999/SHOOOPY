@@ -4,11 +4,25 @@ import Product from "../models/productModel.js";
 import Coupon from "../models/couponModel.js";
 import Address from "../models/addressModel.js";
 import User from "../models/userModel.js";
+import Settings from "../models/settingsModel.js";
 import logger from "../utils/logger.js";
 import { escapeRegex } from "../utils/sanitize.js";
 import { sendOrderNotification } from "../utils/notificationService.js";
 
 const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+
+/**
+ * Compute shipping cost from Settings based on itemsTotal.
+ * If freeShippingThreshold > 0 and itemsTotal >= threshold → free.
+ * Otherwise → defaultShippingCost (fallback 0).
+ */
+const computeShippingCost = async (itemsTotal) => {
+  const settings = await Settings.findOne({}).lean();
+  const defaultCost = settings?.orders?.defaultShippingCost ?? 0;
+  const threshold = settings?.orders?.freeShippingThreshold ?? 0;
+  if (threshold > 0 && itemsTotal >= threshold) return 0;
+  return defaultCost;
+};
 
 // Valid status transitions — key is current status, value is array of allowed next statuses
 const VALID_TRANSITIONS = {
@@ -89,18 +103,21 @@ export const placeOrder = async (req, res) => {
       });
     }
 
-    // Build order items snapshot from cart
+    // Build order items snapshot from cart (including selected variant options)
     const orderItems = cart.items.map((item) => ({
       product: item.product._id,
       name:     item.product.name,
       quantity: item.quantity,
       price:    item.price, // locked-in price from cart
       image:    item.product.images[0]?.thumbnail ?? "",
+      selectedOptions: item.selectedOptions instanceof Map
+        ? Object.fromEntries(item.selectedOptions)
+        : (item.selectedOptions || {}),
     }));
 
     // Calculate totals
     const itemsTotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const shippingCost = 0; // COD — free shipping in this implementation
+    const shippingCost = await computeShippingCost(itemsTotal);
 
     const orderNumber = await generateOrderNumber();
 
@@ -153,7 +170,7 @@ export const placeOrder = async (req, res) => {
 // cart items (existing + new). Uses inline address (name + phone + address text).
 export const buyNow = async (req, res) => {
   try {
-    const { productId, quantity = 1, fullName, phone, address, couponCode, selectedOptions } = req.body;
+    const { productId, quantity = 1, fullName, phone, address, couponCode, selectedOptions, excludeProductIds } = req.body;
 
     if (!productId || !fullName || !phone || !address) {
       return res.status(400).json({ success: false, error: "Missing required fields" });
@@ -174,14 +191,25 @@ export const buyNow = async (req, res) => {
     if (!cart) {
       cart = await Cart.create({ user: req.user._id, items: [] });
     }
-    const existingIdx = cart.items.findIndex(
-      (i) => i.product.toString() === productId
+    const opts = selectedOptions && typeof selectedOptions === "object" ? selectedOptions : {};
+
+    // Composite identity: same product + same options = same line item
+    const optionsKey = JSON.stringify(
+      Object.keys(opts).sort().reduce((acc, k) => { acc[k] = opts[k]; return acc; }, {})
     );
+    const existingIdx = cart.items.findIndex((i) => {
+      if (i.product.toString() !== productId) return false;
+      const itemOpts = i.selectedOptions instanceof Map ? Object.fromEntries(i.selectedOptions) : (i.selectedOptions || {});
+      const itemKey = JSON.stringify(
+        Object.keys(itemOpts).sort().reduce((acc, k) => { acc[k] = itemOpts[k]; return acc; }, {})
+      );
+      return itemKey === optionsKey;
+    });
     if (existingIdx >= 0) {
       cart.items[existingIdx].quantity += qty;
       cart.items[existingIdx].price = product.price;
     } else {
-      cart.items.push({ product: product._id, quantity: qty, price: product.price });
+      cart.items.push({ product: product._id, quantity: qty, price: product.price, selectedOptions: opts });
     }
     await cart.save();
 
@@ -190,6 +218,14 @@ export const buyNow = async (req, res) => {
       path: "items.product",
       select: "name images stock price isActive",
     });
+
+    // ── Remove excluded items from cart before ordering ──
+    if (Array.isArray(excludeProductIds) && excludeProductIds.length > 0) {
+      const excludeSet = new Set(excludeProductIds.map(String));
+      cart.items = cart.items.filter(
+        (item) => !excludeSet.has(item.product._id.toString())
+      );
+    }
 
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ success: false, error: "Cart is empty" });
@@ -215,13 +251,16 @@ export const buyNow = async (req, res) => {
       });
     }
 
-    // ── Build order items from full cart ──
+    // ── Build order items from full cart (including selected variant options) ──
     const orderItems = cart.items.map((item) => ({
       product: item.product._id,
       name: item.product.name,
       quantity: item.quantity,
       price: item.price,
       image: item.product.images?.[0]?.thumbnail ?? "",
+      selectedOptions: item.selectedOptions instanceof Map
+        ? Object.fromEntries(item.selectedOptions)
+        : (item.selectedOptions || {}),
     }));
 
     // ── Calculate totals ──
@@ -247,7 +286,7 @@ export const buyNow = async (req, res) => {
       }
     }
 
-    const shippingCost = 0;
+    const shippingCost = await computeShippingCost(subtotal);
     const totalPrice = subtotal + shippingCost - discount;
 
     const orderNumber = await generateOrderNumber();
@@ -269,7 +308,7 @@ export const buyNow = async (req, res) => {
       paymentMethod: "COD",
       totalPrice,
       shippingCost,
-      notes: selectedOptions ? JSON.stringify(selectedOptions) : "",
+      notes: "",
       statusHistory: [{ status: "pending", date: new Date(), note: "Buy Now order placed" }],
     });
 
@@ -702,6 +741,8 @@ export const createOrderAdmin = async (req, res) => {
         quantity: qty,
         price: product.price,
         image: product.images?.[0]?.thumbnail ?? "",
+        selectedOptions: item.selectedOptions && typeof item.selectedOptions === "object"
+          ? item.selectedOptions : {},
       });
     }
 
@@ -715,7 +756,7 @@ export const createOrderAdmin = async (req, res) => {
 
     // ── Calculate totals ──────────────────────────────────────────────────
     const itemsTotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const shippingCost = 0;
+    const shippingCost = await computeShippingCost(itemsTotal);
 
     const orderNumber = await generateOrderNumber();
 

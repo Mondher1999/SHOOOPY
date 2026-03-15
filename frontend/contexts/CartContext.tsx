@@ -28,6 +28,17 @@ const GUEST_CART_KEY = "shopflow_guest_cart";
 interface GuestItem {
   productId: string;
   quantity: number;
+  selectedOptions?: Record<string, string>;
+}
+
+// Composite key for guest cart identity: productId + sorted options
+function guestItemKey(productId: string, opts?: Record<string, string>): string {
+  if (!opts || Object.keys(opts).length === 0) return productId;
+  const sorted = Object.keys(opts).sort().reduce<Record<string, string>>((acc, k) => {
+    acc[k] = opts[k];
+    return acc;
+  }, {});
+  return `${productId}::${JSON.stringify(sorted)}`;
 }
 
 function loadGuestCart(): GuestItem[] {
@@ -66,9 +77,9 @@ interface CartContextValue {
   isDrawerOpen: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
-  addItem: (productId: string, quantity?: number) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => Promise<void>;
-  removeItem: (productId: string) => Promise<void>;
+  addItem: (productId: string, quantity?: number, selectedOptions?: Record<string, string>) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number, selectedOptions?: Record<string, string>) => Promise<void>;
+  removeItem: (productId: string, selectedOptions?: Record<string, string>) => Promise<void>;
   clearCart: () => Promise<void>;
   reload: () => Promise<void>;
 }
@@ -156,18 +167,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Actions (authenticated) ──────────────────────────────────────────────
   const addItem = useCallback(
-    async (productId: string, quantity = 1) => {
+    async (productId: string, quantity = 1, selectedOptions?: Record<string, string>) => {
       if (!user) {
-        // Guest: update localStorage
+        // Guest: update localStorage with composite identity
         setGuestItems((prev) => {
-          const existing = prev.find((i) => i.productId === productId);
+          const key = guestItemKey(productId, selectedOptions);
+          const existing = prev.find((i) => guestItemKey(i.productId, i.selectedOptions) === key);
           const next = existing
             ? prev.map((i) =>
-                i.productId === productId
+                guestItemKey(i.productId, i.selectedOptions) === key
                   ? { ...i, quantity: i.quantity + quantity }
                   : i
               )
-            : [...prev, { productId, quantity }];
+            : [...prev, { productId, quantity, selectedOptions }];
           saveGuestCart(next);
           return next;
         });
@@ -175,7 +187,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const res = await addItemAPI(productId, quantity);
+        const res = await addItemAPI(productId, quantity, selectedOptions);
         setCart(res.data);
       } catch (err) {
         logger.error("addItem error:", err);
@@ -186,10 +198,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateQuantity = useCallback(
-    async (productId: string, quantity: number) => {
+    async (productId: string, quantity: number, selectedOptions?: Record<string, string>) => {
       if (!user) return; // guests don't have full product info to validate stock
       try {
-        const res = await updateQuantityAPI(productId, quantity);
+        const res = await updateQuantityAPI(productId, quantity, selectedOptions);
         setCart(res.data);
       } catch (err) {
         logger.error("updateQuantity error:", err);
@@ -200,17 +212,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const removeItem = useCallback(
-    async (productId: string) => {
+    async (productId: string, selectedOptions?: Record<string, string>) => {
       if (!user) {
         setGuestItems((prev) => {
-          const next = prev.filter((i) => i.productId !== productId);
+          const key = guestItemKey(productId, selectedOptions);
+          const next = prev.filter((i) => guestItemKey(i.productId, i.selectedOptions) !== key);
           saveGuestCart(next);
           return next;
         });
         return;
       }
       try {
-        const res = await removeItemAPI(productId);
+        const res = await removeItemAPI(productId, selectedOptions);
         setCart(res.data);
       } catch (err) {
         logger.error("removeItem error:", err);

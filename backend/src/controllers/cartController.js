@@ -13,6 +13,20 @@ async function getPopulatedCart(userId) {
   });
 }
 
+// ─── Composite identity: productId + sorted selectedOptions JSON ─────────────
+// Allows "Blue M" and "Red L" to be separate line items for the same product.
+function optionsKey(opts) {
+  if (!opts || (opts instanceof Map && opts.size === 0)) return "{}";
+  const plain = opts instanceof Map ? Object.fromEntries(opts) : opts;
+  const sorted = Object.keys(plain).sort().reduce((acc, k) => { acc[k] = plain[k]; return acc; }, {});
+  return JSON.stringify(sorted);
+}
+
+function cartItemMatches(item, productId, selectedOptions) {
+  if (item.product.toString() !== productId) return false;
+  return optionsKey(item.selectedOptions) === optionsKey(selectedOptions);
+}
+
 // ─── GET /api/cart ───────────────────────────────────────────────────────────
 export const getCart = async (req, res) => {
   try {
@@ -32,7 +46,7 @@ export const getCart = async (req, res) => {
 // ─── POST /api/cart/items ────────────────────────────────────────────────────
 export const addItem = async (req, res) => {
   try {
-    const { productId, quantity = 1 } = req.body;
+    const { productId, quantity = 1, selectedOptions } = req.body;
 
     if (!productId) {
       return res.status(400).json({ success: false, error: "Missing required field: productId" });
@@ -54,9 +68,9 @@ export const addItem = async (req, res) => {
       cart = new Cart({ user: req.user._id, items: [] });
     }
 
-    const existingItem = cart.items.find(
-      (item) => item.product.toString() === productId
-    );
+    // Composite match: same product + same selected options = same line item
+    const opts = selectedOptions && typeof selectedOptions === "object" ? selectedOptions : {};
+    const existingItem = cart.items.find((item) => cartItemMatches(item, productId, opts));
 
     const requestedQty = existingItem ? existingItem.quantity + quantity : quantity;
 
@@ -71,7 +85,7 @@ export const addItem = async (req, res) => {
       existingItem.quantity = requestedQty;
       existingItem.price = product.price; // refresh snapshot
     } else {
-      cart.items.push({ product: productId, quantity, price: product.price });
+      cart.items.push({ product: productId, quantity, price: product.price, selectedOptions: opts });
     }
 
     await cart.save();
@@ -88,7 +102,7 @@ export const addItem = async (req, res) => {
 export const updateQuantity = async (req, res) => {
   try {
     const { productId } = req.params;
-    const { quantity } = req.body;
+    const { quantity, selectedOptions } = req.body;
 
     if (!isObjectId(productId)) {
       return res.status(400).json({ success: false, error: "Invalid productId format" });
@@ -105,7 +119,9 @@ export const updateQuantity = async (req, res) => {
       return res.status(404).json({ success: false, error: "Cart not found" });
     }
 
-    const item = cart.items.find((i) => i.product.toString() === productId);
+    // Composite match: if selectedOptions provided, match by product + options
+    const opts = selectedOptions && typeof selectedOptions === "object" ? selectedOptions : {};
+    const item = cart.items.find((i) => cartItemMatches(i, productId, opts));
     if (!item) {
       return res.status(404).json({ success: false, error: "Item not found in cart" });
     }
@@ -133,12 +149,16 @@ export const updateQuantity = async (req, res) => {
   }
 };
 
-// ─── DELETE /api/cart/items/:productId ──────────────────────────────────────
+// ─── POST /api/cart/items/remove  OR  DELETE /api/cart/items/:productId ──────
+// POST body: { productId, selectedOptions? } — preferred, supports variant disambiguation
+// DELETE param: productId — legacy compat, removes first match (empty options)
 export const removeItem = async (req, res) => {
   try {
-    const { productId } = req.params;
+    // Accept productId from body (POST) or params (DELETE)
+    const productId = req.body.productId || req.params.productId;
+    const selectedOptions = req.body.selectedOptions;
 
-    if (!isObjectId(productId)) {
+    if (!productId || !isObjectId(productId)) {
       return res.status(400).json({ success: false, error: "Invalid productId format" });
     }
 
@@ -147,8 +167,9 @@ export const removeItem = async (req, res) => {
       return res.status(404).json({ success: false, error: "Cart not found" });
     }
 
+    const opts = selectedOptions && typeof selectedOptions === "object" ? selectedOptions : {};
     const beforeCount = cart.items.length;
-    cart.items = cart.items.filter((i) => i.product.toString() !== productId);
+    cart.items = cart.items.filter((i) => !cartItemMatches(i, productId, opts));
 
     if (cart.items.length === beforeCount) {
       return res.status(404).json({ success: false, error: "Item not found in cart" });
@@ -218,8 +239,11 @@ export const mergeCart = async (req, res) => {
       const product = products[idx];
       if (!product || !product.isActive) return; // skip unavailable products silently
 
+      const opts = guestItem.selectedOptions && typeof guestItem.selectedOptions === "object"
+        ? guestItem.selectedOptions : {};
+
       const existingItem = resolvedCart.items.find(
-        (i) => i.product.toString() === guestItem.productId
+        (i) => cartItemMatches(i, guestItem.productId, opts)
       );
 
       if (existingItem) {
@@ -230,7 +254,7 @@ export const mergeCart = async (req, res) => {
       } else {
         const qty = Math.min(guestItem.quantity, product.stock);
         if (qty > 0) {
-          resolvedCart.items.push({ product: guestItem.productId, quantity: qty, price: product.price });
+          resolvedCart.items.push({ product: guestItem.productId, quantity: qty, price: product.price, selectedOptions: opts });
         }
       }
     });

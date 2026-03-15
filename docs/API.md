@@ -589,7 +589,7 @@ Settings is a singleton document controlling store configuration, homepage layou
 
 **Auth:** `protect + restrictTo("admin")`
 
-**Body:** Partial update -- send only the sections/fields to change. Supports: `store`, `orders`, `notifications`, `products`, `social`, `legal`, `seo`, `maintenance`, `homepage`, `header`, `footer`, `emailTemplates`, `smtp`, `typography`, `colorPalette`.
+**Body:** Partial update -- send only the sections/fields to change. Supports: `store`, `orders`, `notifications`, `products`, `social`, `legal`, `seo`, `maintenance`, `homepage`, `navigation`, `header`, `footer`, `emailTemplates`, `smtp`, `typography`, `colorPalette`.
 
 **What it does:** Merges updates into the singleton settings document using `$set` dot notation. Validates all field values (numeric ranges, enum values, hex colors, etc.). Encrypts SMTP password before storage. Invalidates settings cache on success.
 
@@ -1593,15 +1593,16 @@ Common HTTP status codes:
   "images": ["string URL array (optional)"],
   "stock": "number (optional, default 0)",
   "sku": "string (optional, unique)",
+  "productType": "string (optional, must be a valid catalog key e.g. 'clothing', 'shoes')",
   "attributes": { "key": "value" }
 }
 ```
 
-**What it does:** Creates a product. The authenticated user becomes the vendor.
+**What it does:** Creates a product. The authenticated user becomes the vendor. If `productType` is provided, it is validated against the product type catalog.
 
 **Response:** `201` with populated category and vendor
 
-**Errors:** 400 (missing name/price, invalid price, invalid category ID), 404 (category not found), 409 (duplicate SKU)
+**Errors:** 400 (missing name/price, invalid price, invalid category ID, invalid product type), 404 (category not found), 409 (duplicate SKU)
 
 ---
 
@@ -1611,11 +1612,11 @@ Common HTTP status codes:
 
 **Params:** `id` — MongoDB ObjectId
 
-**Body:** Same fields as POST (all optional) + `isActive: boolean`
+**Body:** Same fields as POST (all optional) + `isActive: boolean` + `productType: string | null`
 
-**What it does:** Updates product. Non-owners get 403. Soft-deleted products return 404.
+**What it does:** Updates product. Non-owners get 403. Soft-deleted products return 404. If `productType` is provided, it is validated against the product type catalog.
 
-**Errors:** 400 (invalid ID/price), 403 (not owner or admin), 404 (not found), 409 (duplicate SKU)
+**Errors:** 400 (invalid ID/price, invalid product type), 403 (not owner or admin), 404 (not found), 409 (duplicate SKU)
 
 ---
 
@@ -1733,7 +1734,7 @@ All upload routes require `protect + restrictTo("admin")`.
 
 **Response:**
 ```json
-{ "success": true, "data": { "id": "...", "items": [{ "product": { "id": "...", "name": "...", "slug": "...", "images": [], "stock": 10, "price": 29.99, "isActive": true }, "quantity": 2, "price": 29.99 }], "totalPrice": 59.98 } }
+{ "success": true, "data": { "id": "...", "items": [{ "product": { "id": "...", "name": "...", "slug": "...", "images": [], "stock": 10, "price": 29.99, "isActive": true }, "quantity": 2, "price": 29.99, "selectedOptions": { "Color": "Blue", "Size": "M" } }], "totalPrice": 59.98 } }
 ```
 
 ---
@@ -1742,9 +1743,16 @@ All upload routes require `protect + restrictTo("admin")`.
 
 **Auth:** `protect`
 
-**Body:** `{ "productId": "string (ObjectId)", "quantity": "number (integer ≥ 1, default 1)" }`
+**Body:**
+```json
+{
+  "productId": "string (ObjectId, required)",
+  "quantity": "number (integer ≥ 1, default 1)",
+  "selectedOptions": "{ key: value } (optional, e.g. { \"Color\": \"Blue\", \"Size\": \"M\" })"
+}
+```
 
-**What it does:** Adds a product to the cart. If already present, increments quantity. Validates stock availability.
+**What it does:** Adds a product to the cart. Uses **composite identity** (productId + sorted selectedOptions) to determine uniqueness — the same product with different options creates separate line items. If an exact match exists, increments quantity. Validates stock availability.
 
 **Errors:** 400 (missing/invalid productId, invalid quantity, exceeds stock), 404 (product not found or inactive)
 
@@ -1756,11 +1764,35 @@ All upload routes require `protect + restrictTo("admin")`.
 
 **Params:** `productId` — product ObjectId
 
-**Body:** `{ "quantity": "number (integer ≥ 1)" }`
+**Body:**
+```json
+{
+  "quantity": "number (integer ≥ 1, required)",
+  "selectedOptions": "{ key: value } (optional, for variant disambiguation)"
+}
+```
 
-**What it does:** Sets the exact quantity for a cart item. Validates stock.
+**What it does:** Sets the exact quantity for a cart item. When `selectedOptions` is provided, matches the specific variant; otherwise matches the item with empty options. Validates stock.
 
 **Errors:** 400 (missing/invalid quantity, exceeds stock), 404 (cart not found, item not in cart, product not found)
+
+---
+
+### POST /api/cart/items/remove
+
+**Auth:** `protect`
+
+**Body:**
+```json
+{
+  "productId": "string (ObjectId, required)",
+  "selectedOptions": "{ key: value } (optional, for variant disambiguation)"
+}
+```
+
+**What it does:** Removes a specific item from the cart using composite identity matching. Preferred over DELETE because request bodies are unreliable with DELETE across HTTP clients.
+
+**Errors:** 400 (invalid productId), 404 (cart not found, item not in cart)
 
 ---
 
@@ -1770,7 +1802,7 @@ All upload routes require `protect + restrictTo("admin")`.
 
 **Params:** `productId` — product ObjectId
 
-**What it does:** Removes a specific item from the cart.
+**What it does:** Legacy route — removes the cart item matching the productId with empty options. Use `POST /api/cart/items/remove` for variant-aware removal.
 
 **Errors:** 400 (invalid productId), 404 (cart not found, item not in cart)
 
@@ -1790,9 +1822,20 @@ All upload routes require `protect + restrictTo("admin")`.
 
 **Auth:** `protect`
 
-**Body:** `{ "items": [{ "productId": "string", "quantity": "number" }] }`
+**Body:**
+```json
+{
+  "items": [
+    {
+      "productId": "string (ObjectId)",
+      "quantity": "number (integer ≥ 1)",
+      "selectedOptions": "{ key: value } (optional)"
+    }
+  ]
+}
+```
 
-**What it does:** Merges a guest localStorage cart with the server cart on login. Server cart wins on quantity conflicts (higher quantity, capped at stock).
+**What it does:** Merges a guest localStorage cart with the server cart on login. Uses composite identity (productId + selectedOptions) for matching. Server cart wins on quantity conflicts (higher quantity, capped at stock).
 
 **Errors:** 400 (items not array, invalid productId, invalid quantity)
 

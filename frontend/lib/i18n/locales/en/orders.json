@@ -36,7 +36,14 @@
     "paymentMethod": "Payment method",
     "cod": "Cash on Delivery",
     "notes": "Order Notes",
-    "qty": "Qty: {{count}}"
+    "qty": "Qty: {{count}}",
+    "discount": "Discount",
+    "statusNotes": {
+      "Order placed": "Order placed",
+      "Buy Now order placed": "Buy Now order placed",
+      "Cancelled by customer": "Cancelled by customer",
+      "Manual order created by admin": "Manual order created by admin"
+    }
   },
   "cancelDialog": {
     "title": "Cancel order?",

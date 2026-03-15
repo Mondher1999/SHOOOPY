@@ -249,6 +249,7 @@ Adds `id`, removes `_id` and `__v`.
 | `items[].product` | ObjectId (ref: Product) | Yes | — | No `_id` on sub-doc |
 | `items[].quantity` | Number | Yes | — | min: 1 |
 | `items[].price` | Number | Yes | — | min: 0 — snapshot at add time |
+| `items[].selectedOptions` | Map of String | No | `{}` | Variant selections (e.g. `{ Color: "Blue", Size: "M" }`) — composite identity with `product` for line-item uniqueness |
 | `createdAt` | Date | — | auto | Timestamps |
 | `updatedAt` | Date | — | auto | Timestamps |
 
@@ -329,6 +330,7 @@ Adds `id`, removes `_id` and `__v`.
 | `quantity` | Number | Yes | — | min: 1 |
 | `price` | Number | Yes | — | min: 0 — snapshot of unit price at order time |
 | `image` | String | No | — | Snapshot of product thumbnail URL |
+| `selectedOptions` | Map of String | No | `{}` | Variant selections snapshot (e.g. `{ Color: "Blue", Size: "M" }`) — copied from cart item at checkout |
 
 **ShippingAddress** (embedded, full snapshot):
 
@@ -590,6 +592,21 @@ The Settings model is organized into nested objects. Top-level sections are list
 | `homepage.partners` | Object | No | -- | `{ items: [{ imageUrl, link, name }] }` |
 | `homepage.popup` | Object | No | -- | `{ enabled, title, body, ctaText, ctaLink, imageUrl, trigger, delay, scrollPercent, frequency }` |
 | `homepage.announcementText` | String | No | `""` | Legacy field |
+
+#### `navigation` -- Navigation Menu
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `navigation.mainMenu` | [Object] | No | `[]` | Array of navigation items (max 20) |
+| `navigation.mainMenu[].id` | String | Yes | -- | Unique item identifier |
+| `navigation.mainMenu[].type` | String | No | `"builtin"` | Enum: `builtin`, `custom` |
+| `navigation.mainMenu[].builtinPage` | String | No | `""` | Built-in page key (e.g., `shop`, `categories`, `contact`, `faq`, `terms`, `privacy`, `shipping-policy`, `refund-policy`, `wishlist`) |
+| `navigation.mainMenu[].label` | String | No | `""` | EN label override (empty = use i18n default) |
+| `navigation.mainMenu[].labelFr` | String | No | `""` | FR label override |
+| `navigation.mainMenu[].href` | String | No | `""` | URL (auto-derived for builtin, required for custom) |
+| `navigation.mainMenu[].enabled` | Boolean | No | `true` | Toggle visibility |
+| `navigation.mainMenu[].openInNewTab` | Boolean | No | `false` | Open link in new tab |
+| `navigation.mainMenu[].children` | [Object] | No | `[]` | Sub-items (same shape, max 10 per parent, 1 level only) |
 
 #### `header` -- Header Configuration
 

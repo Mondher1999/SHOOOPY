@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { isColorAttr, getColorValue } from "@/lib/colorMap";
 import logger from "@/lib/logger";
 import type { Order } from "@/types";
 
@@ -180,6 +181,24 @@ export default function CustomerOrderDetailPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.name}</p>
+                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
+                        {Object.entries(item.selectedOptions).map(([key, value], idx) => (
+                          <span key={key} className="inline-flex items-center gap-0.5">
+                            {idx > 0 && <span className="mx-0.5">/</span>}
+                            <span>{t("products:typeAttrs." + key, { defaultValue: key })}:</span>
+                            {isColorAttr(key) && getColorValue(value) && (
+                              <span
+                                className="inline-block h-2.5 w-2.5 rounded-full border border-border"
+                                style={{ backgroundColor: getColorValue(value) }}
+                                aria-hidden="true"
+                              />
+                            )}
+                            <span className="font-medium">{value}</span>
+                          </span>
+                        ))}
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {t("detail.qty", { count: item.quantity })} &times; {formatPrice(item.price)}
                     </p>
@@ -204,7 +223,7 @@ export default function CustomerOrderDetailPage() {
                     <div key={idx} className="flex items-start gap-3">
                       <StatusBadge status={entry.status as Order["status"]} className="mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm">{entry.note}</p>
+                        <p className="text-sm">{t(`detail.statusNotes.${entry.note}`, { defaultValue: entry.note })}</p>
                         <p className="text-xs text-muted-foreground">{formatDate(entry.date)}</p>
                       </div>
                     </div>
