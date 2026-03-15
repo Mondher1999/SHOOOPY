@@ -50,7 +50,12 @@
     "needDelivery": "Need delivery?",
     "seeEstimates": "See estimates",
     "more": "More",
-    "contact": "Contact"
+    "contact": "Contact",
+    "faq": "FAQ",
+    "terms": "Terms & Conditions",
+    "privacy": "Privacy Policy",
+    "shippingPolicy": "Shipping Policy",
+    "refundPolicy": "Refund Policy"
   },
   "mega": {
     "newSeason": "New Season",
