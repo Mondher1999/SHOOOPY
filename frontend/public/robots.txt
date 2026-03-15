@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /products
+Allow: /categories
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /checkout
+Disallow: /auth
+
+Sitemap: https://shopflow.com/sitemap.xml
