@@ -36,7 +36,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: [
           "Cotton", "Polyester", "Silk", "Wool", "Linen", "Denim",
           "Leather", "Nylon", "Cashmere", "Velvet", "Fleece", "Viscose",
@@ -88,7 +88,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Leather", "Suede", "Canvas", "Synthetic", "Mesh", "Rubber", "Textile"],
         required: false,
       },
@@ -120,14 +120,14 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "storage",
         label: "Storage",
-        type: "select",
+        type: "multi-select",
         options: ["16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB"],
         required: false,
       },
       {
         key: "ram",
         label: "RAM",
-        type: "select",
+        type: "multi-select",
         options: ["2GB", "4GB", "6GB", "8GB", "12GB", "16GB", "32GB", "64GB"],
         required: false,
       },
@@ -180,21 +180,21 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "necklaceLength",
         label: "Necklace Length",
-        type: "select",
+        type: "multi-select",
         options: ["40cm", "45cm", "50cm", "55cm", "60cm", "70cm", "80cm", "90cm"],
         required: false,
       },
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Gold", "Silver", "Platinum", "Stainless Steel", "Titanium", "Rose Gold", "White Gold", "Brass"],
         required: false,
       },
       {
         key: "gemstone",
         label: "Gemstone",
-        type: "select",
+        type: "multi-select",
         options: ["Diamond", "Ruby", "Sapphire", "Emerald", "Amethyst", "Pearl", "Topaz", "Opal", "None"],
         required: false,
       },
@@ -216,7 +216,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "size",
         label: "Size",
-        type: "select",
+        type: "multi-select",
         options: ["Small", "Medium", "Large", "XL"],
         required: false,
       },
@@ -233,7 +233,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Leather", "Canvas", "Nylon", "Faux Leather", "Fabric", "Polyester", "Cotton"],
         required: false,
       },
@@ -297,7 +297,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "bandMaterial",
         label: "Band Material",
-        type: "select",
+        type: "multi-select",
         options: ["Leather", "Stainless Steel", "Silicone", "Nylon", "Titanium", "Ceramic", "Rubber"],
         required: false,
       },
@@ -333,7 +333,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "frameSize",
         label: "Frame Size",
-        type: "select",
+        type: "multi-select",
         options: ["Small", "Medium", "Large"],
         required: false,
       },
@@ -347,14 +347,14 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "frameMaterial",
         label: "Frame Material",
-        type: "select",
+        type: "multi-select",
         options: ["Metal", "Plastic", "Titanium", "Wood", "Acetate", "Carbon Fiber"],
         required: false,
       },
       {
         key: "lensType",
         label: "Lens Type",
-        type: "select",
+        type: "multi-select",
         options: ["Prescription", "Sunglasses", "Blue Light", "Reading", "Photochromic"],
         required: false,
       },
@@ -390,7 +390,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Wood", "Metal", "Glass", "Plastic", "Fabric", "Leather", "Rattan", "Marble", "MDF"],
         required: false,
       },
@@ -452,7 +452,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "format",
         label: "Format",
-        type: "select",
+        type: "multi-select",
         options: ["Paperback", "Hardcover", "eBook", "Audiobook"],
         required: false,
       },
@@ -499,7 +499,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Plastic", "Wood", "Fabric", "Metal", "Silicone", "Cardboard"],
         required: false,
       },
@@ -565,7 +565,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Metal", "Plastic", "Rubber", "Carbon Fiber", "Aluminum", "Stainless Steel"],
         required: false,
       },
@@ -652,7 +652,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Ceramic", "Glass", "Wood", "Metal", "Fabric", "Rattan", "Marble", "Resin", "Paper"],
         required: false,
       },
@@ -688,7 +688,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "size",
         label: "Size",
-        type: "select",
+        type: "multi-select",
         options: ["XS", "S", "M", "L", "XL"],
         required: false,
       },
@@ -702,7 +702,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Nylon", "Leather", "Cotton", "Rubber", "Plush", "Silicone", "Stainless Steel"],
         required: false,
       },
@@ -724,7 +724,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "paperSize",
         label: "Size",
-        type: "select",
+        type: "multi-select",
         options: ["A4", "A5", "B5", "Letter", "Pocket", "A3"],
         required: false,
       },
@@ -744,7 +744,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Paper", "Cardboard", "Recycled", "Plastic", "Leather", "Cork"],
         required: false,
       },
@@ -766,7 +766,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Wood", "Metal", "Plastic", "Carbon Fiber", "Brass", "Composite"],
         required: false,
       },
@@ -808,7 +808,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Ceramic", "Plastic", "Terracotta", "Metal", "Wood", "Concrete", "Resin"],
         required: false,
       },
@@ -837,7 +837,7 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "frameSize",
         label: "Frame Size",
-        type: "select",
+        type: "multi-select",
         options: ["10x15cm", "13x18cm", "15x20cm", "20x25cm", "20x30cm", "21x29.7cm (A4)", "24x30cm", "30x40cm", "40x50cm", "40x60cm", "50x70cm", "60x80cm", "70x100cm"],
         required: false,
       },
@@ -854,28 +854,28 @@ const PRODUCT_TYPE_CATALOG = {
       {
         key: "material",
         label: "Material",
-        type: "select",
+        type: "multi-select",
         options: ["Wood", "Aluminum", "Plastic", "MDF", "Bamboo", "Metal", "Acrylic", "Composite"],
         required: false,
       },
       {
         key: "frameStyle",
         label: "Style",
-        type: "select",
+        type: "multi-select",
         options: ["Classic", "Modern", "Rustic", "Baroque", "Minimalist", "Vintage", "Industrial", "Floating"],
         required: false,
       },
       {
         key: "glassType",
         label: "Glass Type",
-        type: "select",
+        type: "multi-select",
         options: ["Standard Glass", "Anti-Reflective Glass", "Plexiglass", "UV-Protective Glass", "No Glass"],
         required: false,
       },
       {
         key: "orientation",
         label: "Orientation",
-        type: "select",
+        type: "multi-select",
         options: ["Portrait", "Landscape", "Square", "Multi-Photo"],
         required: false,
       },

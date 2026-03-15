@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { Check, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COLOR_MAP, isColorAttr } from "@/lib/colorMap";
 import type { Product, ProductTypeCatalog, ProductTypeAttribute } from "@/types";
@@ -26,6 +26,8 @@ export function VariantSelector({
   const typeDef = typeCatalog[product.productType];
   if (!typeDef) return null;
 
+  const outOfStock = typeof product.stock === "number" && product.stock <= 0;
+
   // Only show selectable attributes (multi-select and select) that have values in the product
   const selectableAttrs = typeDef.attributes.filter(
     (attr) =>
@@ -41,6 +43,12 @@ export function VariantSelector({
 
   return (
     <div className="space-y-5">
+      {outOfStock && (
+        <div className="flex items-center gap-2 text-sm text-destructive font-medium" role="alert">
+          <Ban className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          {t("catalog.outOfStock")}
+        </div>
+      )}
       {selectableAttrs.map((attr) => (
         <AttributeSelector
           key={attr.key}
@@ -48,6 +56,7 @@ export function VariantSelector({
           availableValues={product.attributes[attr.key]}
           selectedValue={selectedOptions[attr.key]}
           onChange={(val) => onOptionChange(attr.key, val)}
+          disabled={outOfStock}
           t={t}
         />
       ))}
@@ -62,10 +71,11 @@ interface AttributeSelectorProps {
   availableValues: string | string[] | number | boolean;
   selectedValue: string | string[] | undefined;
   onChange: (value: string | string[]) => void;
+  disabled?: boolean;
   t: (key: string, opts?: Record<string, string>) => string;
 }
 
-function AttributeSelector({ attr, availableValues, selectedValue, onChange, t }: AttributeSelectorProps) {
+function AttributeSelector({ attr, availableValues, selectedValue, onChange, disabled, t }: AttributeSelectorProps) {
   const label = t(`typeAttrs.${attr.key}`, { defaultValue: attr.label });
 
   // Normalize available options
@@ -81,7 +91,7 @@ function AttributeSelector({ attr, availableValues, selectedValue, onChange, t }
   if (attr.type === "select") {
     const current = typeof selectedValue === "string" ? selectedValue : "";
     return (
-      <div>
+      <div className={cn(disabled && "opacity-60")}>
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
           {label}
           {current && (
@@ -97,6 +107,7 @@ function AttributeSelector({ attr, availableValues, selectedValue, onChange, t }
               label={opt}
               isSelected={current === opt}
               isColor={isColorAttr(attr.key)}
+              disabled={disabled}
               onClick={() => onChange(opt === current ? "" : opt)}
             />
           ))}
@@ -109,7 +120,7 @@ function AttributeSelector({ attr, availableValues, selectedValue, onChange, t }
   if (attr.type === "multi-select") {
     const current = typeof selectedValue === "string" ? selectedValue : "";
     return (
-      <div>
+      <div className={cn(disabled && "opacity-60")}>
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
           {label}
           {current && (
@@ -125,6 +136,7 @@ function AttributeSelector({ attr, availableValues, selectedValue, onChange, t }
               label={opt}
               isSelected={current === opt}
               isColor={isColorAttr(attr.key)}
+              disabled={disabled}
               onClick={() => onChange(opt === current ? "" : opt)}
             />
           ))}
@@ -142,10 +154,11 @@ interface OptionChipProps {
   label: string;
   isSelected: boolean;
   isColor: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }
 
-function OptionChip({ label, isSelected, isColor, onClick }: OptionChipProps) {
+function OptionChip({ label, isSelected, isColor, disabled, onClick }: OptionChipProps) {
   const colorValue = isColor ? COLOR_MAP[label] : null;
   const isGradient = colorValue?.includes("gradient") || colorValue?.includes("conic");
   const isClear = label === "Clear" || label === "White";
@@ -154,24 +167,31 @@ function OptionChip({ label, isSelected, isColor, onClick }: OptionChipProps) {
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        "relative flex items-center gap-2 rounded-lg border-2 px-3.5 py-2.5 text-sm font-medium transition-all cursor-pointer",
-        "hover:border-foreground/40",
+        "relative flex items-center gap-2 rounded-lg border-2 px-3.5 py-2.5 text-sm font-medium transition-all",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         "min-h-[44px]",
-        isSelected
+        disabled
+          ? "cursor-not-allowed opacity-50 border-border bg-muted"
+          : "cursor-pointer hover:border-foreground/40",
+        !disabled && isSelected
           ? "border-foreground bg-foreground/5 ring-1 ring-foreground/10"
-          : "border-border bg-background"
+          : !disabled
+          ? "border-border bg-background"
+          : ""
       )}
       aria-pressed={isSelected}
       aria-label={label}
+      aria-disabled={disabled}
     >
       {/* Color swatch */}
       {isColor && colorValue && (
         <span
           className={cn(
             "h-5 w-5 rounded-full flex-shrink-0 border",
-            isClear ? "border-border" : "border-transparent"
+            isClear ? "border-border" : "border-transparent",
+            disabled && "grayscale"
           )}
           style={{
             background: isGradient ? colorValue : undefined,
@@ -182,10 +202,10 @@ function OptionChip({ label, isSelected, isColor, onClick }: OptionChipProps) {
       )}
 
       {/* Label */}
-      <span className="uppercase text-xs font-bold tracking-wide">{label}</span>
+      <span className={cn("uppercase text-xs font-bold tracking-wide", disabled && "line-through")}>{label}</span>
 
       {/* Checkmark */}
-      {isSelected && (
+      {isSelected && !disabled && (
         <Check className="h-3.5 w-3.5 text-foreground flex-shrink-0" aria-hidden="true" />
       )}
     </button>

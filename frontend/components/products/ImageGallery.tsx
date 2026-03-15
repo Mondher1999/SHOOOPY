@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { useVariantFilteredImages } from "@/hooks/useVariantFilteredImages";
 import type { ProductImage } from "@/types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
@@ -38,51 +39,7 @@ export function ImageGallery({ images, productName, className, selectedOptions }
   const [imgError, setImgError] = useState(false);
 
   // Filter/prioritize images based on selected variant options
-  const displayImages = useMemo(() => {
-    if (!selectedOptions || Object.keys(selectedOptions).length === 0) return images;
-
-    // Build a map of active single-value selections
-    const activeSelections: Record<string, string> = {};
-    for (const [key, val] of Object.entries(selectedOptions)) {
-      if (typeof val === "string" && val) activeSelections[key] = val;
-    }
-    if (Object.keys(activeSelections).length === 0) return images;
-
-    const matching: ProductImage[] = [];
-    const untagged: ProductImage[] = [];
-
-    for (const img of images) {
-      const map = img.variantMap;
-      if (!map || Object.keys(map).length === 0) {
-        untagged.push(img);
-        continue;
-      }
-
-      let conflicts = false;
-      let matches = false;
-      for (const [attrKey, selectedVal] of Object.entries(activeSelections)) {
-        const imgVal = map[attrKey];
-        if (imgVal !== undefined) {
-          if (imgVal === selectedVal) {
-            matches = true;
-          } else {
-            conflicts = true;
-            break;
-          }
-        }
-      }
-
-      if (conflicts) continue; // hide conflicting images
-      if (matches) {
-        matching.push(img);
-      } else {
-        untagged.push(img);
-      }
-    }
-
-    const result = [...matching, ...untagged];
-    return result.length > 0 ? result : images;
-  }, [images, selectedOptions]);
+  const displayImages = useVariantFilteredImages(images, selectedOptions);
 
   // Reset to first image when displayImages changes
   const prevDisplayRef = useRef(displayImages);

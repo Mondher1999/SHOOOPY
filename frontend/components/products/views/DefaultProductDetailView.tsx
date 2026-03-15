@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { Breadcrumb, BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageGallery } from "@/components/products/ImageGallery";
+import { useVariantFilteredImages } from "@/hooks/useVariantFilteredImages";
 import { ReviewSection } from "@/components/products/ReviewSection";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { WishlistButton } from "@/components/products/WishlistButton";
@@ -240,6 +241,7 @@ export default function DefaultProductDetailView({
   const { t } = useTranslation("products");
   const theme = useActiveTheme();
   const formatPrice = useFormatPrice();
+  const displayImages = useVariantFilteredImages(product.images, selectedOptions);
   const [quantity, setQuantity] = useState(1);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const ctaRef = useRef<HTMLDivElement>(null);
@@ -289,12 +291,12 @@ export default function DefaultProductDetailView({
             <div className="md:hidden">
               <ImageGallery images={product.images} productName={product.name} selectedOptions={selectedOptions} />
             </div>
-            {/* Desktop: vertical scroll-reveal images */}
+            {/* Desktop: vertical scroll-reveal images (variant-filtered) */}
             <div className="hidden md:block space-y-6">
-              {product.images.length > 0 ? (
-                product.images.map((img, idx) => (
+              {displayImages.length > 0 ? (
+                displayImages.map((img, idx) => (
                   <ScrollRevealImage
-                    key={idx}
+                    key={`${img.original}-${idx}`}
                     src={img.large || img.original}
                     alt={t("catalog.imageAlt", { name: product.name, idx: idx + 1 })}
                     index={idx}
