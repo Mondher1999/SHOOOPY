@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,15 +18,20 @@ import {
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { useActiveTheme } from "@/hooks/useActiveTheme";
+import { cn } from "@/lib/utils";
 import logger from "@/lib/logger";
 import type { CartItem } from "@/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 function CartItemRow({ item }: { item: CartItem }) {
   const { t } = useTranslation("cart");
   const { updateQuantity, removeItem, closeDrawer } = useCart();
   const { toast } = useToast();
+  const formatPrice = useFormatPrice();
+  const theme = useActiveTheme();
   const product = item.product;
   const primaryImage = product.images[0] ?? null;
   const atStockLimit = item.quantity >= product.stock;
@@ -77,7 +81,7 @@ function CartItemRow({ item }: { item: CartItem }) {
         aria-hidden="true"
         tabIndex={-1}
       >
-        <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted">
+        <div className={cn("relative h-16 w-16 rounded-md overflow-hidden", theme.surface)}>
           {primaryImage ? (
             <Image
               src={`${BASE_URL}${primaryImage.thumbnail}`}
@@ -89,7 +93,7 @@ function CartItemRow({ item }: { item: CartItem }) {
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
-              <ShoppingBag className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+              <ShoppingBag className={cn("h-6 w-6", theme.textMuted)} aria-hidden="true" />
             </div>
           )}
         </div>
@@ -100,11 +104,14 @@ function CartItemRow({ item }: { item: CartItem }) {
         <Link
           href={`/products/${product.slug}`}
           onClick={closeDrawer}
-          className="text-sm font-medium line-clamp-2 hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+          className={cn(
+            "text-sm font-medium line-clamp-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded",
+            theme.text, theme.accentHover
+          )}
         >
           {product.name}
         </Link>
-        <p className="text-sm font-semibold mt-0.5">${(item.price * item.quantity).toFixed(2)}</p>
+        <p className={cn("text-sm font-semibold mt-0.5", theme.text)}>{formatPrice(item.price * item.quantity)}</p>
         {product.stock <= 5 && (
           <Badge variant="secondary" className="text-xs mt-0.5">
             {t("stockWarning", { count: product.stock })}
@@ -116,17 +123,17 @@ function CartItemRow({ item }: { item: CartItem }) {
           <Button
             variant="outline"
             size="icon"
-            className="h-6 w-6"
+            className={cn("h-6 w-6", theme.border)}
             onClick={handleDecrease}
             aria-label={t("decreaseQty")}
           >
             <Minus className="h-3 w-3" aria-hidden="true" />
           </Button>
-          <span className="text-sm w-6 text-center tabular-nums" aria-live="polite" aria-label={t("quantity")}>{item.quantity}</span>
+          <span className={cn("text-sm w-6 text-center tabular-nums", theme.text)} aria-live="polite" aria-label={t("quantity")}>{item.quantity}</span>
           <Button
             variant="outline"
             size="icon"
-            className="h-6 w-6"
+            className={cn("h-6 w-6", theme.border)}
             onClick={handleIncrease}
             disabled={atStockLimit}
             aria-label={t("increaseQty")}
@@ -152,6 +159,8 @@ export function CartDrawer() {
   const { t } = useTranslation("cart");
   const { user } = useAuth();
   const { cart, guestItems, isLoading, isDrawerOpen, closeDrawer, totalItems, totalPrice } = useCart();
+  const formatPrice = useFormatPrice();
+  const theme = useActiveTheme();
   const items = cart?.items ?? [];
   const isGuest = !user;
   const hasGuestItems = isGuest && guestItems.length > 0;
@@ -185,23 +194,23 @@ export function CartDrawer() {
             </div>
           ) : hasGuestItems ? (
             <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-              <ShoppingBag className="h-12 w-12 text-muted-foreground" aria-hidden="true" />
-              <p className="font-medium">
+              <ShoppingBag className={cn("h-12 w-12", theme.textMuted)} aria-hidden="true" />
+              <p className={cn("font-medium", theme.text)}>
                 {t(guestItems.length === 1 ? "itemCount" : "itemCount_plural", { count: guestItems.length })}
               </p>
-              <p className="text-sm text-muted-foreground">{t("guestSignInHint")}</p>
-              <Button asChild onClick={closeDrawer}>
+              <p className={cn("text-sm", theme.textMuted)}>{t("guestSignInHint")}</p>
+              <Button className={theme.btnPrimary} asChild onClick={closeDrawer}>
                 <Link href="/auth/login">{t("guestSignIn")}</Link>
               </Button>
-              <Button variant="outline" asChild onClick={closeDrawer}>
+              <Button variant="ghost" className={theme.btnOutline} asChild onClick={closeDrawer}>
                 <Link href="/products">{t("continueShopping")}</Link>
               </Button>
             </div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-              <ShoppingBag className="h-12 w-12 text-muted-foreground" aria-hidden="true" />
-              <p className="text-muted-foreground">{t("empty")}</p>
-              <Button variant="outline" asChild onClick={closeDrawer}>
+              <ShoppingBag className={cn("h-12 w-12", theme.textMuted)} aria-hidden="true" />
+              <p className={theme.textMuted}>{t("empty")}</p>
+              <Button variant="ghost" className={theme.btnOutline} asChild onClick={closeDrawer}>
                 <Link href="/products">{t("continueShopping")}</Link>
               </Button>
             </div>
@@ -217,12 +226,12 @@ export function CartDrawer() {
         {/* Footer: subtotal + CTA */}
         {items.length > 0 && (
           <SheetFooter>
-            <div className="flex justify-between text-sm font-semibold">
+            <div className={cn("flex justify-between text-sm font-semibold", theme.text)}>
               <span>{t("subtotal")}</span>
-              <span>${totalPrice.toFixed(2)}</span>
+              <span>{formatPrice(totalPrice)}</span>
             </div>
-            <Separator className="my-2" />
-            <Button className="w-full" asChild onClick={closeDrawer}>
+            <div className={cn("h-px w-full my-2", theme.separator)} />
+            <Button className={cn("w-full", theme.btnPrimary)} asChild onClick={closeDrawer}>
               <Link href="/cart">{t("viewCart")}</Link>
             </Button>
           </SheetFooter>

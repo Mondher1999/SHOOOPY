@@ -8,13 +8,19 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { searchProductsAPI, SlimProduct } from "@/services/product-service";
 import { cn } from "@/lib/utils";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { useActiveTheme } from "@/hooks/useActiveTheme";
 import logger from "@/lib/logger";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 const DEBOUNCE_MS = 300;
 
 export function SearchBar({ className }: { className?: string }) {
   const { t } = useTranslation("common");
   const router = useRouter();
+  const formatPrice = useFormatPrice();
+  const theme = useActiveTheme();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SlimProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,10 +89,10 @@ export function SearchBar({ className }: { className?: string }) {
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
-      <form onSubmit={handleSubmit} role="search" aria-label={t("search.ariaLabel")}>
+      <form onSubmit={handleSubmit} role="search" aria-label={t("search.ariaLabel")} suppressHydrationWarning>
         <div className="relative">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"
+            className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", theme.textMuted)}
             aria-hidden="true"
           />
           <Input
@@ -103,16 +109,17 @@ export function SearchBar({ className }: { className?: string }) {
             aria-haspopup="listbox"
             aria-autocomplete="list"
             autoComplete="off"
+            suppressHydrationWarning
           />
           {(loading || query) && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {loading ? (
-                <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" aria-hidden="true" />
+                <Loader2 className={cn("h-4 w-4 animate-spin", theme.textMuted)} aria-hidden="true" />
               ) : (
                 <button
                   type="button"
                   onClick={clear}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  className={cn("transition-colors", theme.textMuted)}
                   aria-label={t("search.clear")}
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
@@ -128,10 +135,10 @@ export function SearchBar({ className }: { className?: string }) {
         <div
           role="listbox"
           aria-label={t("search.suggestionsLabel")}
-          className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border bg-popover shadow-lg max-h-80 overflow-y-auto"
+          className={cn("absolute top-full left-0 right-0 z-50 mt-1 rounded-md border shadow-lg max-h-80 overflow-y-auto", theme.surface, theme.border)}
         >
           {suggestions.length === 0 ? (
-            <p className="p-3 text-sm text-muted-foreground text-center">
+            <p className={cn("p-3 text-sm text-center", theme.textMuted)}>
               {t("search.noResults", { query })}
             </p>
           ) : (
@@ -148,25 +155,25 @@ export function SearchBar({ className }: { className?: string }) {
                   >
                     {product.images[0] ? (
                       <img
-                        src={product.images[0]}
+                        src={product.images[0].thumbnail?.startsWith("http") ? product.images[0].thumbnail : `${BASE_URL}${product.images[0].thumbnail}`}
                         alt=""
                         aria-hidden="true"
                         className="h-10 w-10 rounded object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className="h-10 w-10 rounded bg-muted flex-shrink-0" aria-hidden="true" />
+                      <div className={cn("h-10 w-10 rounded flex-shrink-0", theme.surface)} aria-hidden="true" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{product.name}</p>
-                      <p className="text-xs text-muted-foreground">${product.price.toFixed(2)}</p>
+                      <p className={cn("text-sm font-medium truncate", theme.text)}>{product.name}</p>
+                      <p className={cn("text-xs", theme.textMuted)}>{formatPrice(product.price)}</p>
                     </div>
                   </Link>
                 </li>
               ))}
-              <li className="border-t">
+              <li className={cn("border-t", theme.border)}>
                 <Link
                   href={`/products/search?q=${encodeURIComponent(query)}`}
-                  className="block px-3 py-2 text-sm text-primary hover:bg-muted transition-colors focus:outline-none focus:bg-muted"
+                  className={cn("block px-3 py-2 text-sm hover:bg-muted transition-colors focus:outline-none focus:bg-muted", theme.accent)}
                   onClick={() => setOpen(false)}
                 >
                   {t("search.viewAll", { query })}

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { useActiveTheme } from "@/hooks/useActiveTheme";
 import { getAddressesAPI, createAddressAPI } from "@/services/address-service";
 import logger from "@/lib/logger";
 import type { Address } from "@/types";
@@ -51,6 +52,7 @@ interface AddressFormProps {
 
 export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressFormProps) {
   const { t } = useTranslation("checkout");
+  const theme = useActiveTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -60,7 +62,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
     reset,
     formState: { errors },
   } = useForm<AddressFields>({
-    resolver: zodResolver(addressSchema),
+    resolver: zodResolver(addressSchema) as never,
     defaultValues: { label: "home", country: "US" },
   });
 
@@ -84,7 +86,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit(onSubmit as never)} className="space-y-4" noValidate>
       {serverError && (
         <Alert variant="destructive" role="alert">
           <AlertDescription>{serverError}</AlertDescription>
@@ -93,7 +95,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="fullName">{t("addressForm.fullName")}</Label>
+          <Label htmlFor="fullName" className={theme.text}>{t("addressForm.fullName")}</Label>
           <Input
             id="fullName"
             {...register("fullName")}
@@ -108,7 +110,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="phone">{t("addressForm.phone")}</Label>
+          <Label htmlFor="phone" className={theme.text}>{t("addressForm.phone")}</Label>
           <Input
             id="phone"
             type="tel"
@@ -125,7 +127,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="street">{t("addressForm.street")}</Label>
+        <Label htmlFor="street" className={theme.text}>{t("addressForm.street")}</Label>
         <Input
           id="street"
           {...register("street")}
@@ -141,7 +143,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="city">{t("addressForm.city")}</Label>
+          <Label htmlFor="city" className={theme.text}>{t("addressForm.city")}</Label>
           <Input
             id="city"
             {...register("city")}
@@ -156,7 +158,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="state">{t("addressForm.state")}</Label>
+          <Label htmlFor="state" className={theme.text}>{t("addressForm.state")}</Label>
           <Input
             id="state"
             {...register("state")}
@@ -171,7 +173,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="postalCode">{t("addressForm.postalCode")}</Label>
+          <Label htmlFor="postalCode" className={theme.text}>{t("addressForm.postalCode")}</Label>
           <Input
             id="postalCode"
             {...register("postalCode")}
@@ -188,7 +190,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="country">{t("addressForm.country")}</Label>
+          <Label htmlFor="country" className={theme.text}>{t("addressForm.country")}</Label>
           <Input
             id="country"
             {...register("country")}
@@ -203,7 +205,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="label">{t("addressForm.label")}</Label>
+          <Label htmlFor="label" className={theme.text}>{t("addressForm.label")}</Label>
           <select
             id="label"
             {...register("label")}
@@ -217,12 +219,12 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
       </div>
 
       <div className="flex gap-2 pt-2">
-        <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
+        <Button type="submit" disabled={isSubmitting} className={cn("min-w-[120px]", theme.btnPrimary)}>
           {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />}
           {t("addressForm.save")}
         </Button>
         {showCancel && onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="ghost" className={theme.btnOutline} onClick={onCancel}>
             {t("common:actions.cancel")}
           </Button>
         )}
@@ -240,6 +242,7 @@ interface AddressSelectorProps {
 
 export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) {
   const { t } = useTranslation("checkout");
+  const theme = useActiveTheme();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -312,31 +315,31 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
             className={cn(
               "w-full text-left rounded-lg border-2 p-4 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               isSelected
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-muted-foreground"
+                ? cn(theme.accentBg, theme.border, "border-2")
+                : cn("border-transparent", theme.border, "border-2 hover:opacity-80")
             )}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <LabelIcon label={address.label} />
-                  <span className="font-medium text-sm capitalize">{address.label}</span>
+                  <span className={cn("font-medium text-sm capitalize", theme.text)}>{address.label}</span>
                   {address.isDefault && (
                     <Badge variant="secondary" className="text-xs">
                       {t("addressSelector.default")}
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm font-semibold">{address.fullName}</p>
-                <p className="text-sm text-muted-foreground">{address.phone}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("text-sm font-semibold", theme.text)}>{address.fullName}</p>
+                <p className={cn("text-sm", theme.textMuted)}>{address.phone}</p>
+                <p className={cn("text-sm", theme.textMuted)}>
                   {address.street}, {address.city}, {address.state} {address.postalCode}
                 </p>
-                <p className="text-sm text-muted-foreground">{address.country}</p>
+                <p className={cn("text-sm", theme.textMuted)}>{address.country}</p>
               </div>
               {isSelected && (
                 <CheckCircle2
-                  className="h-5 w-5 text-primary flex-shrink-0 mt-0.5"
+                  className={cn("h-5 w-5 flex-shrink-0 mt-0.5", theme.accent)}
                   aria-hidden="true"
                 />
               )}
@@ -347,9 +350,9 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
 
       {/* No saved addresses: show inline form immediately */}
       {addresses.length === 0 && (
-        <Card>
+        <Card className={cn("border", theme.surface, theme.border)}>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground text-sm mb-4">{t("addressSelector.noAddresses")}</p>
+            <p className={cn("text-sm mb-4", theme.textMuted)}>{t("addressSelector.noAddresses")}</p>
             <AddressForm onCreated={handleCreated} showCancel={false} />
           </CardContent>
         </Card>
@@ -360,17 +363,17 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
         !showForm ? (
           <Button
             type="button"
-            variant="outline"
-            className="w-full border-dashed"
+            variant="ghost"
+            className={cn("w-full border-dashed", theme.btnOutline)}
             onClick={() => setShowForm(true)}
           >
             <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
             {t("addressSelector.addNew")}
           </Button>
         ) : (
-          <Card>
+          <Card className={cn("border", theme.surface, theme.border)}>
             <CardContent className="pt-6">
-              <h3 className="font-semibold mb-4">{t("addressSelector.newAddressTitle")}</h3>
+              <h3 className={cn("font-semibold mb-4", theme.text, theme.headingClass)}>{t("addressSelector.newAddressTitle")}</h3>
               <AddressForm
                 onCreated={handleCreated}
                 onCancel={() => setShowForm(false)}

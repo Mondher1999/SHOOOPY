@@ -8,6 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { useActiveTheme } from "@/hooks/useActiveTheme";
 import type { ProductQueryParams } from "@/types";
 
 type SortValue = NonNullable<ProductQueryParams["sort"]>;
@@ -26,14 +28,15 @@ const SORT_OPTIONS: { value: SortValue; labelKey: string }[] = [
 
 export function ProductSort({ value, onChange }: ProductSortProps) {
   const { t } = useTranslation("products");
+  const theme = useActiveTheme();
   return (
     <Select value={value ?? "newest"} onValueChange={(v) => onChange(v as SortValue)}>
-      <SelectTrigger className="w-40" aria-label={t("catalog.sortLabel")}>
+      <SelectTrigger className={cn("w-40", theme.border, theme.text, theme.bodyClass)} aria-label={t("catalog.sortLabel")} suppressHydrationWarning>
         <SelectValue placeholder={t("catalog.sortLabel")} />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className={cn(theme.surface, theme.border)}>
         {SORT_OPTIONS.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
+          <SelectItem key={opt.value} value={opt.value} className={cn(theme.text)}>
             {t(opt.labelKey)}
           </SelectItem>
         ))}

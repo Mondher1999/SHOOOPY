@@ -36,6 +36,8 @@ interface DataTableProps<T> {
   searchPlaceholder?: string;
   emptyMessage?: string;
   className?: string;
+  /** When true, removes outer border/spacing — use when embedding inside a Card */
+  embedded?: boolean;
 }
 
 export function DataTable<T>({
@@ -51,11 +53,12 @@ export function DataTable<T>({
   searchPlaceholder,
   emptyMessage,
   className,
+  embedded = false,
 }: DataTableProps<T>) {
   const { t } = useTranslation("common");
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn(!embedded && "space-y-5", className)}>
       {/* Search bar */}
       {onSearchChange !== undefined && (
         <div className="relative">
@@ -83,7 +86,7 @@ export function DataTable<T>({
       )}
 
       {!error && (
-        <div className="rounded-md border">
+        <div className={cn(!embedded && "rounded-md border")}>
           <Table>
             <TableHeader>
               <TableRow>

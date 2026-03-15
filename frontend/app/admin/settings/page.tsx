@@ -13,7 +13,8 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import logger from "@/lib/logger";
-import type { SiteSettings, HomepageSlide, HomepageSectionKey, ThemeConfig, TestimonialItem, TrustBarItem, ValuePropositionItem, PartnerItem, InstagramImage, TypographySettings, ColorPaletteSettings, HeaderVariant, FooterVariant } from "@/types";
+import type { SiteSettings, HomepageSlide, HomepageSectionKey, ThemeConfig, TestimonialItem, TrustBarItem, ValuePropositionItem, PartnerItem, InstagramImage, TypographySettings, ColorPaletteSettings, HeaderVariant, FooterVariant, NavigationItem } from "@/types";
+import { BUILTIN_PAGES } from "@/hooks/useNavigation";
 import { THEMES, getThemeIds, getTheme } from "@/components/home/HomepageSections";
 import { CURRENCIES, getCurrency } from "@/lib/currency";
 
@@ -244,7 +245,7 @@ export default function AdminSettingsPage() {
           ))}
           <span className="mx-1 h-5 w-px bg-polaris-border-subdued" aria-hidden="true" />
           {/* Appearance */}
-          {["layout", "homepage", "typography", "colors"].map((tab) => (
+          {["layout", "navigation", "homepage", "typography", "colors"].map((tab) => (
             <TabsTrigger key={tab} value={tab} className="px-3 py-1.5 text-sm rounded data-[state=active]:bg-polaris-primary data-[state=active]:text-white text-polaris-text-subdued hover:text-polaris-text transition-colors">
               {t(`admin:settings.tabs.${tab}`)}
             </TabsTrigger>
@@ -301,6 +302,11 @@ export default function AdminSettingsPage() {
         {/* ── Layout Tab (Header & Footer) ────────────────────────────── */}
         <TabsContent value="layout">
           <LayoutTab key={settings.updatedAt} settings={settings} onSave={saveSection} isSaving={savingTab} t={t} />
+        </TabsContent>
+
+        {/* ── Navigation Tab ─────────────────────────────────────────────── */}
+        <TabsContent value="navigation">
+          <NavigationTab settings={settings} onSave={(data) => saveSection("navigation", data)} isSaving={savingTab === "navigation"} t={t} />
         </TabsContent>
 
         {/* ── Homepage Tab ───────────────────────────────────────────────── */}
@@ -2874,6 +2880,415 @@ function SmtpTab({ settings, onSave, isSaving, t }: TabProps) {
           {isTesting ? t("common:actions.loading") : t("admin:settings.smtp.testButton")}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Navigation Tab — Shopify-like menu management
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const DEFAULT_MENU_ITEMS: NavigationItem[] = [
+  { id: "default-shop",       type: "builtin", builtinPage: "shop",         label: "", labelFr: "", href: "", enabled: true, openInNewTab: false },
+  { id: "default-categories", type: "builtin", builtinPage: "categories",   label: "", labelFr: "", href: "", enabled: true, openInNewTab: false },
+  { id: "default-new",        type: "builtin", builtinPage: "new-arrivals", label: "", labelFr: "", href: "", enabled: true, openInNewTab: false },
+  { id: "default-contact",    type: "builtin", builtinPage: "contact",      label: "", labelFr: "", href: "", enabled: true, openInNewTab: false },
+];
+
+function NavigationTab({ settings, onSave, isSaving, t }: TabProps) {
+  const [menuItems, setMenuItems] = useState<NavigationItem[]>(() =>
+    settings.navigation?.mainMenu?.length ? settings.navigation.mainMenu : DEFAULT_MENU_ITEMS
+  );
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [addMode, setAddMode] = useState<"builtin" | "custom" | null>(null);
+  const [newBuiltinPage, setNewBuiltinPage] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [newLabelFr, setNewLabelFr] = useState("");
+  const [newHref, setNewHref] = useState("");
+  const [newOpenInNewTab, setNewOpenInNewTab] = useState(false);
+  const [addingToParent, setAddingToParent] = useState<string | null>(null);
+
+  // Drag state
+  const dragIdx = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  const handleSave = () => onSave({ mainMenu: menuItems });
+
+  const generateId = () => `nav-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  const resetAddForm = () => {
+    setAddMode(null);
+    setNewBuiltinPage("");
+    setNewLabel("");
+    setNewLabelFr("");
+    setNewHref("");
+    setNewOpenInNewTab(false);
+    setAddingToParent(null);
+  };
+
+  const addItem = () => {
+    const item: NavigationItem = {
+      id: generateId(),
+      type: addMode!,
+      builtinPage: addMode === "builtin" ? (newBuiltinPage as NavigationItem["builtinPage"]) : "",
+      label: newLabel.trim(),
+      labelFr: newLabelFr.trim(),
+      href: addMode === "custom" ? newHref.trim() : "",
+      enabled: true,
+      openInNewTab: newOpenInNewTab,
+      children: [],
+    };
+
+    if (addingToParent) {
+      setMenuItems((prev) =>
+        prev.map((mi) =>
+          mi.id === addingToParent
+            ? { ...mi, children: [...(mi.children || []), item] }
+            : mi
+        )
+      );
+    } else {
+      setMenuItems((prev) => [...prev, item]);
+    }
+    resetAddForm();
+  };
+
+  const removeItem = (id: string) => {
+    setMenuItems((prev) =>
+      prev
+        .filter((mi) => mi.id !== id)
+        .map((mi) => ({
+          ...mi,
+          children: (mi.children || []).filter((c) => c.id !== id),
+        }))
+    );
+  };
+
+  const toggleEnabled = (id: string) => {
+    setMenuItems((prev) =>
+      prev.map((mi) => {
+        if (mi.id === id) return { ...mi, enabled: !mi.enabled };
+        return {
+          ...mi,
+          children: (mi.children || []).map((c) =>
+            c.id === id ? { ...c, enabled: !c.enabled } : c
+          ),
+        };
+      })
+    );
+  };
+
+  const updateItem = (id: string, updates: Partial<NavigationItem>) => {
+    setMenuItems((prev) =>
+      prev.map((mi) => {
+        if (mi.id === id) return { ...mi, ...updates };
+        return {
+          ...mi,
+          children: (mi.children || []).map((c) =>
+            c.id === id ? { ...c, ...updates } : c
+          ),
+        };
+      })
+    );
+  };
+
+  // Drag handlers for top-level reorder
+  const onDragStart = (idx: number) => { dragIdx.current = idx; };
+  const onDragOver = (e: DragEvent<HTMLDivElement>, idx: number) => { e.preventDefault(); setDragOverIdx(idx); };
+  const onDragEnd = () => {
+    if (dragIdx.current !== null && dragOverIdx !== null && dragIdx.current !== dragOverIdx) {
+      setMenuItems((prev) => {
+        const items = [...prev];
+        const [moved] = items.splice(dragIdx.current!, 1);
+        items.splice(dragOverIdx, 0, moved);
+        return items;
+      });
+    }
+    dragIdx.current = null;
+    setDragOverIdx(null);
+  };
+
+  const builtinPageLabel = (key: string) => t(`admin:settings.navigation.builtinPages.${key}`);
+
+  const getItemDisplayLabel = (item: NavigationItem) => {
+    if (item.label) return item.label;
+    if (item.type === "builtin" && item.builtinPage) return builtinPageLabel(item.builtinPage);
+    return item.href || "—";
+  };
+
+  const canAddItem = () => {
+    if (addMode === "builtin") return !!newBuiltinPage;
+    if (addMode === "custom") return !!newHref.trim() && !!newLabel.trim();
+    return false;
+  };
+
+  return (
+    <div className={sectionClasses}>
+      <div className="space-y-1 mb-6">
+        <h2 className="text-base font-semibold text-polaris-text">{t("admin:settings.navigation.title")}</h2>
+        <p className="text-sm text-polaris-text-subdued">{t("admin:settings.navigation.help")}</p>
+      </div>
+
+      {/* Menu items list */}
+      <div className="space-y-2 mb-4">
+        {menuItems.length === 0 && (
+          <div className="text-center py-8 text-sm text-polaris-text-subdued border border-dashed border-polaris-border rounded-lg">
+            {t("admin:settings.navigation.emptyMenu")}
+          </div>
+        )}
+
+        {menuItems.map((item, idx) => (
+          <div
+            key={item.id}
+            draggable
+            onDragStart={() => onDragStart(idx)}
+            onDragOver={(e) => onDragOver(e, idx)}
+            onDragEnd={onDragEnd}
+            className={cn(
+              "border border-polaris-border rounded-lg bg-white transition-all",
+              dragOverIdx === idx && "border-polaris-primary border-dashed",
+              !item.enabled && "opacity-60"
+            )}
+          >
+            {/* Item header */}
+            <div className="flex items-center gap-3 px-4 py-3">
+              <GripVertical className="w-4 h-4 text-polaris-text-subdued cursor-grab shrink-0" />
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-polaris-text truncate">{getItemDisplayLabel(item)}</span>
+                  <span className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider",
+                    item.type === "builtin" ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"
+                  )}>
+                    {item.type === "builtin" ? t("admin:settings.navigation.typeBuiltin") : t("admin:settings.navigation.typeCustom")}
+                  </span>
+                </div>
+                <p className="text-xs text-polaris-text-subdued truncate mt-0.5">
+                  {item.type === "builtin" && item.builtinPage && BUILTIN_PAGES[item.builtinPage]
+                    ? BUILTIN_PAGES[item.builtinPage].href
+                    : item.href}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Switch
+                  checked={item.enabled}
+                  onCheckedChange={() => toggleEnabled(item.id)}
+                  aria-label={t("admin:settings.navigation.enabledLabel")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditingId(editingId === item.id ? null : item.id)}
+                  className="text-xs text-polaris-primary hover:underline cursor-pointer"
+                >
+                  {editingId === item.id ? t("common:actions.cancel") : t("admin:settings.navigation.editItem")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeItem(item.id)}
+                  className="p-1 text-polaris-text-subdued hover:text-red-500 transition-colors cursor-pointer"
+                  aria-label={t("admin:settings.navigation.deleteItem")}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Inline edit form */}
+            {editingId === item.id && (
+              <div className="px-4 pb-4 pt-1 border-t border-polaris-border space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label={t("admin:settings.navigation.labelEnLabel")}>
+                    <input
+                      className={inputClasses}
+                      value={item.label}
+                      onChange={(e) => updateItem(item.id, { label: e.target.value })}
+                      placeholder={item.type === "builtin" && item.builtinPage ? builtinPageLabel(item.builtinPage) : ""}
+                    />
+                  </Field>
+                  <Field label={t("admin:settings.navigation.labelFrLabel")}>
+                    <input
+                      className={inputClasses}
+                      value={item.labelFr}
+                      onChange={(e) => updateItem(item.id, { labelFr: e.target.value })}
+                      placeholder={item.type === "builtin" && item.builtinPage ? builtinPageLabel(item.builtinPage) : ""}
+                    />
+                  </Field>
+                </div>
+                {item.type === "custom" && (
+                  <Field label={t("admin:settings.navigation.urlLabel")}>
+                    <input
+                      className={inputClasses}
+                      value={item.href}
+                      onChange={(e) => updateItem(item.id, { href: e.target.value })}
+                      placeholder={t("admin:settings.navigation.urlPlaceholder")}
+                    />
+                  </Field>
+                )}
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id={`newTab-${item.id}`}
+                    checked={item.openInNewTab}
+                    onCheckedChange={(val) => updateItem(item.id, { openInNewTab: val })}
+                  />
+                  <Label htmlFor={`newTab-${item.id}`} className="text-sm text-polaris-text cursor-pointer">
+                    {t("admin:settings.navigation.openInNewTabLabel")}
+                  </Label>
+                </div>
+              </div>
+            )}
+
+            {/* Children */}
+            {(item.children || []).length > 0 && (
+              <div className="px-4 pb-3 space-y-1.5">
+                {item.children!.map((child) => (
+                  <div key={child.id} className="flex items-center gap-2 pl-6 py-1.5 border-l-2 border-polaris-border">
+                    <span className="text-sm text-polaris-text truncate flex-1">{getItemDisplayLabel(child)}</span>
+                    <Switch
+                      checked={child.enabled}
+                      onCheckedChange={() => toggleEnabled(child.id)}
+                      aria-label={t("admin:settings.navigation.enabledLabel")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(editingId === child.id ? null : child.id)}
+                      className="text-xs text-polaris-primary hover:underline cursor-pointer"
+                    >
+                      {editingId === child.id ? t("common:actions.cancel") : t("admin:settings.navigation.editItem")}
+                    </button>
+                    <button type="button" onClick={() => removeItem(child.id)} className="p-1 text-polaris-text-subdued hover:text-red-500 cursor-pointer" aria-label={t("admin:settings.navigation.deleteItem")}>
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Inline edit for children */}
+                {item.children!.map((child) =>
+                  editingId === child.id ? (
+                    <div key={`edit-${child.id}`} className="pl-6 pb-2 space-y-3 border-l-2 border-polaris-primary">
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field label={t("admin:settings.navigation.labelEnLabel")}>
+                          <input className={inputClasses} value={child.label} onChange={(e) => updateItem(child.id, { label: e.target.value })} placeholder={child.type === "builtin" && child.builtinPage ? builtinPageLabel(child.builtinPage) : ""} />
+                        </Field>
+                        <Field label={t("admin:settings.navigation.labelFrLabel")}>
+                          <input className={inputClasses} value={child.labelFr} onChange={(e) => updateItem(child.id, { labelFr: e.target.value })} placeholder={child.type === "builtin" && child.builtinPage ? builtinPageLabel(child.builtinPage) : ""} />
+                        </Field>
+                      </div>
+                      {child.type === "custom" && (
+                        <Field label={t("admin:settings.navigation.urlLabel")}>
+                          <input className={inputClasses} value={child.href} onChange={(e) => updateItem(child.id, { href: e.target.value })} placeholder={t("admin:settings.navigation.urlPlaceholder")} />
+                        </Field>
+                      )}
+                    </div>
+                  ) : null
+                )}
+              </div>
+            )}
+
+            {/* Add sub-item button */}
+            {editingId === item.id && (item.children || []).length < 10 && (
+              <div className="px-4 pb-3">
+                <button
+                  type="button"
+                  onClick={() => { setAddingToParent(item.id); setAddMode("builtin"); }}
+                  className="text-xs text-polaris-primary hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  {t("admin:settings.navigation.addSubItem")}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add menu item section */}
+      {addMode === null && menuItems.length < 20 && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setAddMode("builtin")}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded border border-polaris-border text-polaris-text bg-polaris-surface hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {t("admin:settings.navigation.typeBuiltin")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setAddMode("custom")}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded border border-polaris-border text-polaris-text bg-polaris-surface hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {t("admin:settings.navigation.typeCustom")}
+          </button>
+        </div>
+      )}
+
+      {/* Add form (builtin) */}
+      {addMode === "builtin" && (
+        <div className="border border-polaris-border rounded-lg p-4 space-y-3 bg-polaris-surface-subdued">
+          <Field label={t("admin:settings.navigation.pageLabel")}>
+            <select className={selectClasses} value={newBuiltinPage} onChange={(e) => setNewBuiltinPage(e.target.value)}>
+              <option value="">— {t("admin:settings.navigation.pageLabel")} —</option>
+              {Object.keys(BUILTIN_PAGES).map((key) => (
+                <option key={key} value={key}>{builtinPageLabel(key)} ({BUILTIN_PAGES[key].href})</option>
+              ))}
+            </select>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin:settings.navigation.labelEnLabel")} help={t("admin:settings.navigation.labelOverrideHelp")}>
+              <input className={inputClasses} value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder={newBuiltinPage ? builtinPageLabel(newBuiltinPage) : ""} />
+            </Field>
+            <Field label={t("admin:settings.navigation.labelFrLabel")}>
+              <input className={inputClasses} value={newLabelFr} onChange={(e) => setNewLabelFr(e.target.value)} placeholder={newBuiltinPage ? builtinPageLabel(newBuiltinPage) : ""} />
+            </Field>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Switch id="add-newTab" checked={newOpenInNewTab} onCheckedChange={setNewOpenInNewTab} />
+              <Label htmlFor="add-newTab" className="text-sm text-polaris-text cursor-pointer">{t("admin:settings.navigation.openInNewTabLabel")}</Label>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={resetAddForm} className="px-3 py-1.5 text-sm text-polaris-text-subdued hover:text-polaris-text cursor-pointer">{t("common:actions.cancel")}</button>
+              <button type="button" onClick={addItem} disabled={!canAddItem()} className="px-4 py-1.5 text-sm font-medium rounded bg-polaris-primary text-white hover:bg-polaris-primary-hovered disabled:opacity-50 transition-colors cursor-pointer">
+                {addingToParent ? t("admin:settings.navigation.addSubItem") : t("admin:settings.navigation.addItem")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add form (custom) */}
+      {addMode === "custom" && (
+        <div className="border border-polaris-border rounded-lg p-4 space-y-3 bg-polaris-surface-subdued">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin:settings.navigation.labelEnLabel")}>
+              <input className={inputClasses} value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="My Link" />
+            </Field>
+            <Field label={t("admin:settings.navigation.labelFrLabel")}>
+              <input className={inputClasses} value={newLabelFr} onChange={(e) => setNewLabelFr(e.target.value)} placeholder="Mon Lien" />
+            </Field>
+          </div>
+          <Field label={t("admin:settings.navigation.urlLabel")}>
+            <input className={inputClasses} value={newHref} onChange={(e) => setNewHref(e.target.value)} placeholder={t("admin:settings.navigation.urlPlaceholder")} />
+          </Field>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Switch id="add-custom-newTab" checked={newOpenInNewTab} onCheckedChange={setNewOpenInNewTab} />
+              <Label htmlFor="add-custom-newTab" className="text-sm text-polaris-text cursor-pointer">{t("admin:settings.navigation.openInNewTabLabel")}</Label>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={resetAddForm} className="px-3 py-1.5 text-sm text-polaris-text-subdued hover:text-polaris-text cursor-pointer">{t("common:actions.cancel")}</button>
+              <button type="button" onClick={addItem} disabled={!canAddItem()} className="px-4 py-1.5 text-sm font-medium rounded bg-polaris-primary text-white hover:bg-polaris-primary-hovered disabled:opacity-50 transition-colors cursor-pointer">
+                {addingToParent ? t("admin:settings.navigation.addSubItem") : t("admin:settings.navigation.addItem")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SaveButton onClick={handleSave} isSaving={isSaving} t={t} />
     </div>
   );
 }

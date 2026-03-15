@@ -1,7 +1,7 @@
 # API Reference
 
 Base URL:
-- Development: `http://localhost:5000`
+- Development: `http://localhost:5001`
 - Production: `/api` (nginx reverse proxy)
 
 All protected endpoints require the header:
@@ -546,16 +546,826 @@ avatar  (file, optional — JPEG/PNG/WebP/GIF, max 5 MB)
 
 ---
 
-## Document your endpoints here
+## Settings (`/api/settings`)
 
-<!-- Copy the CRUD pattern above for each resource in your API. Suggested sections: -->
+Settings is a singleton document controlling store configuration, homepage layout, SMTP, SEO, legal pages, and more. Public endpoints are needed for footer, legal pages, and maintenance mode detection.
 
-<!-- ## Resource Name (`/route-prefix`) -->
-<!-- ### POST /route-prefix -->
-<!-- ### GET /route-prefix -->
-<!-- ### GET /route-prefix/:id -->
-<!-- ### PUT /route-prefix/:id -->
-<!-- ### DELETE /route-prefix/:id -->
+---
+
+### GET /api/settings
+
+**Auth:** Public (cached 5 minutes)
+
+**What it does:** Returns the full settings document. Creates a default one if none exists. SMTP password is masked as `"••••••••"`.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "store": { "name": "ShopFlow", "description": "...", "contactEmail": "...", "currency": "USD", "logo": "...", "favicon": "...", "showcaseMode": false, "logoEnabled": true },
+    "orders": { "defaultShippingCost": 0, "minimumOrderAmount": 0, "freeShippingThreshold": 0, "autoCancelPendingDays": 0 },
+    "notifications": { "orderConfirmation": true, "orderStatusUpdate": true, "welcomeEmail": true, "adminNewOrder": false, "adminLowStock": false, "adminNotificationEmail": "" },
+    "products": { "lowStockThreshold": 10, "maxImagesPerProduct": 10, "reviewsEnabled": true, "defaultSortOrder": "newest", "productTypes": [] },
+    "social": { "facebook": "", "instagram": "", "twitter": "", "tiktok": "", "youtube": "", "whatsapp": "" },
+    "legal": { "termsAndConditions": "", "privacyPolicy": "", "returnPolicy": "", "shippingPolicy": "" },
+    "seo": { "metaTitleTemplate": "%s | ShopFlow", "metaDescription": "", "googleAnalyticsId": "", "facebookPixelId": "" },
+    "maintenance": { "enabled": false, "message": "..." },
+    "homepage": { "template": "classic", "mode": "dynamic", "sections": {}, "sectionOrder": [], "slides": [], "announcement": {}, "..." : "..." },
+    "header": { "enabled": true, "variant": "classic", "mode": "dynamic" },
+    "footer": { "enabled": true, "variant": "luxury", "mode": "dynamic" },
+    "emailTemplates": { "orderConfirmationSubject": "...", "..." : "..." },
+    "smtp": { "host": "", "port": 587, "secure": false, "user": "", "pass": "••••••••", "fromName": "ShopFlow", "fromEmail": "" },
+    "typography": { "headingFont": "", "bodyFont": "", "baseFontSize": 16, "headingLetterSpacing": 0.18, "headingTextTransform": "uppercase" },
+    "colorPalette": { "preset": "classic", "bg": "#FFFFFF", "bgAlt": "#F7F5F3", "text": "#1C1C1C", "textMuted": "#71717A", "dark": "#1C1C1C", "accentText": "#FFFFFF", "border": "#E5E5E5", "sale": "#DC2626" }
+  }
+}
+```
+
+---
+
+### PUT /api/settings
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:** Partial update -- send only the sections/fields to change. Supports: `store`, `orders`, `notifications`, `products`, `social`, `legal`, `seo`, `maintenance`, `homepage`, `header`, `footer`, `emailTemplates`, `smtp`, `typography`, `colorPalette`.
+
+**What it does:** Merges updates into the singleton settings document using `$set` dot notation. Validates all field values (numeric ranges, enum values, hex colors, etc.). Encrypts SMTP password before storage. Invalidates settings cache on success.
+
+**Response:** `200` -- updated Settings object
+
+**Errors:**
+- `400` invalid field value (numeric out of range, invalid enum, invalid hex color, empty required field)
+- `400` no fields to update
+
+---
+
+### POST /api/settings/upload
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:** `multipart/form-data`
+- `file` -- image file (max 5 MB, image/* or image/x-icon)
+- `field` -- one of: `logo`, `favicon`, `hero-N`, `promo-banner`, `brand-story`, `popup-image`, `testimonial-N`, `partner-N`
+
+**What it does:** Uploads a settings image (logo, favicon, or homepage image). For `logo` and `favicon`, auto-updates the settings document. For other fields, returns the URL for the frontend to include in a subsequent settings update.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "url": "/uploads/settings/hero-0.jpg" } }
+```
+Or for logo/favicon:
+```json
+{ "success": true, "data": { "id": "...", "store": { "logo": "/uploads/settings/logo.png", "..." : "..." }, "..." : "..." } }
+```
+
+**Errors:** `400` no file uploaded, `400` missing `field`, `400` invalid field name
+
+---
+
+### POST /api/settings/test-email
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body (optional):**
+```json
+{
+  "smtp": {
+    "host": "string",
+    "port": "number",
+    "secure": "boolean",
+    "user": "string",
+    "pass": "string",
+    "fromName": "string",
+    "fromEmail": "string"
+  }
+}
+```
+
+**What it does:** Sends a test email using SMTP configuration. If `smtp` is provided in the body, uses those settings (allows testing before saving). If not, reads from the database or falls back to environment variables. Sends to the admin notification email or the requesting user's email.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "messageId": "...", "sentTo": "admin@example.com" } }
+```
+
+**Errors:** `400` SMTP not configured, `400` SMTP password required/cannot be decrypted, `400` email send failure
+
+---
+
+### GET /api/settings/top-reviews
+
+**Auth:** Public (cached 5 minutes)
+
+**What it does:** Returns up to 3 reviews with rating >= 4, formatted for homepage testimonials section.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": [
+    { "name": "John Doe", "quote": "Amazing product!", "location": "", "rating": 5, "avatar": "/uploads/avatars/..." }
+  ]
+}
+```
+
+---
+
+### GET /api/settings/product-types-catalog
+
+**Auth:** Public (cached 10 minutes)
+
+**What it does:** Returns the full product type catalog (all 20 types with their attribute definitions).
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "clothing": { "label": "Clothing", "attributes": [...] }, "shoes": { "..." : "..." }, "..." : "..." } }
+```
+
+---
+
+### GET /api/settings/product-types
+
+**Auth:** Public (cached 5 minutes)
+
+**What it does:** Returns only the admin-enabled product types (subset of catalog based on `settings.products.productTypes`).
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "clothing": { "label": "Clothing", "attributes": [...] } } }
+```
+
+---
+
+## Contacts (`/api/contacts`)
+
+Contact form submissions. Public submission is rate-limited to 5 per 15 minutes per IP.
+
+---
+
+### POST /api/contacts
+
+**Auth:** Public (rate-limited: 5/15min per IP)
+
+**Body:**
+```json
+{
+  "name": "string (required)",
+  "email": "string (required, valid email)",
+  "subject": "string (required)",
+  "message": "string (required, max 5000 chars)"
+}
+```
+
+**What it does:** Creates a contact form submission. Sends a notification email to the admin notification email (non-blocking).
+
+**Response:** `201`
+```json
+{ "success": true, "data": { "id": "...", "name": "...", "email": "...", "subject": "...", "message": "...", "status": "new", "createdAt": "...", "updatedAt": "..." } }
+```
+
+**Errors:** `400` missing required fields, `400` invalid email, `400` message too long, `429` rate limit exceeded
+
+---
+
+### GET /api/contacts
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:**
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | number | 1 | Page number |
+| `limit` | number | 20 | Results per page (max 50) |
+| `status` | string | -- | Filter by status: `new`, `read`, `replied` |
+
+**What it does:** Returns paginated contact submissions, sorted newest first.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "contacts": [{ "id": "...", "name": "...", "email": "...", "subject": "...", "message": "...", "status": "new", "createdAt": "..." }],
+    "pagination": { "page": 1, "limit": 20, "total": 42, "pages": 3 }
+  }
+}
+```
+
+---
+
+### GET /api/contacts/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- MongoDB ObjectId
+
+**What it does:** Returns a single contact submission.
+
+**Response:** `200` -- Contact object
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+### PATCH /api/contacts/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- MongoDB ObjectId
+
+**Body:**
+```json
+{ "status": "new | read | replied" }
+```
+
+**What it does:** Updates the status of a contact submission.
+
+**Response:** `200` -- updated Contact object
+
+**Errors:** `400` invalid ObjectId, `400` invalid status, `404` not found
+
+---
+
+### DELETE /api/contacts/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- MongoDB ObjectId
+
+**What it does:** Permanently deletes a contact submission.
+
+**Response:** `200`
+```json
+{ "success": true, "data": null }
+```
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+## Coupons (`/api/coupons`)
+
+Discount coupon management. Admin CRUD plus authenticated validation endpoint.
+
+---
+
+### POST /api/coupons/validate
+
+**Auth:** `protect`
+
+**Body:**
+```json
+{
+  "code": "string (required)",
+  "subtotal": "number (optional -- order subtotal for discount calculation)"
+}
+```
+
+**What it does:** Validates a coupon code and calculates the discount amount for a given subtotal. Checks expiration, usage limits, and minimum order requirements.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "couponId": "...",
+    "code": "SAVE20",
+    "type": "percentage",
+    "value": 20,
+    "discount": 15.00
+  }
+}
+```
+
+**Errors:** `400` missing code, `400` coupon expired, `400` usage limit reached, `400` below minimum order amount, `404` invalid or inactive coupon code
+
+---
+
+### GET /api/coupons
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:**
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | number | 1 | Page number |
+| `limit` | number | 20 | Results per page (max 50) |
+| `search` | string | -- | Search by coupon code (case-insensitive) |
+| `active` | string | -- | `"true"` or `"false"` to filter by active status |
+
+**What it does:** Returns paginated list of coupons, sorted newest first.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "coupons": [{ "id": "...", "code": "SAVE20", "type": "percentage", "value": 20, "maxDiscount": 50, "minOrderAmount": 30, "maxUses": 100, "usedCount": 12, "expiresAt": "...", "isActive": true, "createdAt": "..." }],
+    "pagination": { "page": 1, "limit": 20, "total": 10, "pages": 1 }
+  }
+}
+```
+
+---
+
+### POST /api/coupons
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:**
+```json
+{
+  "code": "string (required, auto-uppercased)",
+  "type": "percentage | fixed (required)",
+  "value": "number (required, >= 0; max 100 for percentage)",
+  "maxDiscount": "number (optional, default 0 = no cap; for percentage type)",
+  "minOrderAmount": "number (optional, default 0)",
+  "maxUses": "number (optional, default 0 = unlimited)",
+  "expiresAt": "ISO date string (optional)"
+}
+```
+
+**What it does:** Creates a new coupon. Code is stored uppercased and trimmed.
+
+**Response:** `201` -- Coupon object
+
+**Errors:** `400` missing required fields, `400` invalid type, `400` invalid value, `400` percentage > 100, `409` duplicate code
+
+---
+
+### PUT /api/coupons/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- MongoDB ObjectId
+
+**Body:** Any subset of: `code`, `type`, `value`, `maxDiscount`, `minOrderAmount`, `maxUses`, `expiresAt`, `isActive`
+
+**What it does:** Updates a coupon.
+
+**Response:** `200` -- updated Coupon object
+
+**Errors:** `400` invalid ObjectId, `400` invalid type, `404` not found
+
+---
+
+### DELETE /api/coupons/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- MongoDB ObjectId
+
+**What it does:** Permanently deletes a coupon.
+
+**Response:** `200`
+```json
+{ "success": true, "data": null }
+```
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+## FAQ (`/api/faq`)
+
+Frequently Asked Questions management with admin ordering support.
+
+---
+
+### GET /api/faq
+
+**Auth:** Public
+
+**What it does:** Returns all active FAQs sorted by `order` field (ascending).
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "...", "question": "How do I track my order?", "answer": "...", "order": 0, "isActive": true, "createdAt": "...", "updatedAt": "..." }
+  ]
+}
+```
+
+---
+
+### GET /api/faq/admin
+
+**Auth:** `protect + restrictTo("admin")`
+
+**What it does:** Returns all FAQs (including inactive) sorted by `order` field.
+
+**Response:** `200` -- array of all FAQ objects
+
+---
+
+### POST /api/faq
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:**
+```json
+{
+  "question": "string (required)",
+  "answer": "string (required)",
+  "order": "number (optional, auto-assigned if omitted)"
+}
+```
+
+**What it does:** Creates a new FAQ. If `order` is not provided, assigns the next sequential order value.
+
+**Response:** `201` -- FAQ object
+
+**Errors:** `400` missing `question` or `answer`
+
+---
+
+### PUT /api/faq/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- MongoDB ObjectId
+
+**Body:** Any subset of: `question`, `answer`, `order`, `isActive`
+
+**What it does:** Updates a FAQ entry.
+
+**Response:** `200` -- updated FAQ object
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+### PUT /api/faq/reorder
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:**
+```json
+{ "orderedIds": ["id1", "id2", "id3"] }
+```
+
+**What it does:** Bulk-updates the `order` field for all listed FAQ entries based on array position (index 0 = order 0, etc.).
+
+**Response:** `200` -- array of all FAQs with updated order
+
+**Errors:** `400` `orderedIds` not a non-empty array, `400` invalid FAQ ID in array
+
+---
+
+### DELETE /api/faq/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- MongoDB ObjectId
+
+**What it does:** Permanently deletes a FAQ entry.
+
+**Response:** `200`
+```json
+{ "success": true, "data": null }
+```
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+## Shipping (`/api/shipping`)
+
+Delivery company integration for creating, tracking, and cancelling shipments. All admin endpoints require shipping integration to be enabled and configured in settings.
+
+---
+
+### POST /api/shipping/test-connection
+
+**Auth:** `protect + restrictTo("admin")`
+
+**What it does:** Tests API credentials with the configured delivery company.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "provider": "...", "status": "connected" } }
+```
+
+**Errors:** `400` shipping not configured, `400` provider could not be initialized, `400` connection test failed
+
+---
+
+### POST /api/shipping/:orderId/send
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `orderId` -- Order ObjectId
+
+**Body (optional):**
+```json
+{ "weight": "number (optional, defaults to provider default weight)" }
+```
+
+**What it does:** Creates a shipment with the delivery company for the specified order. Stores tracking info (tracking number, URL, estimated delivery) on the order's `shipping` field.
+
+**Response:** `200` -- updated Order object with `shipping` field populated
+
+**Errors:** `400` invalid order ID, `400` shipping not configured, `404` order not found, `409` order already has a shipment
+
+---
+
+### GET /api/shipping/:orderId/track
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `orderId` -- Order ObjectId
+
+**What it does:** Fetches the latest tracking status from the delivery company API and updates the order's shipping info.
+
+**Response:** `200` -- updated Order object with latest tracking status
+
+**Errors:** `400` invalid order ID, `400` order has no shipment to track, `400` shipping not configured, `404` order not found
+
+---
+
+### POST /api/shipping/:orderId/cancel
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `orderId` -- Order ObjectId
+
+**What it does:** Cancels a shipment with the delivery company. Updates the carrier status to `"cancelled"`.
+
+**Response:** `200` -- updated Order object
+
+**Errors:** `400` invalid order ID, `400` order has no shipment to cancel, `400` shipping not configured, `404` order not found
+
+---
+
+### POST /api/shipping/webhook
+
+**Auth:** Public (verified by `X-Webhook-Secret` header; rate-limited: 60/min)
+
+**Headers:** `X-Webhook-Secret: <webhook_secret>`
+
+**Body:**
+```json
+{
+  "trackingNumber": "string (required)",
+  "status": "string (optional)",
+  "statusLabel": "string (optional)",
+  "estimatedDelivery": "ISO date (optional)",
+  "actualDelivery": "ISO date (optional)"
+}
+```
+
+**What it does:** Receives status updates from the delivery company. Verifies the webhook secret using timing-safe comparison. Updates the order's shipping fields. Auto-updates order status to `"delivered"` if carrier reports delivery and order is in `"shipped"` status.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "matched": true } }
+```
+Returns `{ "matched": false }` if no order matches the tracking number (not an error).
+
+**Errors:** `400` missing trackingNumber, `401` invalid or missing webhook secret
+
+---
+
+## Subscribers (`/api/subscribers`)
+
+Newsletter subscriber management. Public subscription is rate-limited to 5 per 15 minutes per IP.
+
+---
+
+### POST /api/subscribers
+
+**Auth:** Public (rate-limited: 5/15min per IP)
+
+**Body:**
+```json
+{
+  "email": "string (required, valid email)",
+  "source": "homepage | checkout | footer (optional, default: homepage)"
+}
+```
+
+**What it does:** Subscribes an email to the newsletter. If a previously unsubscribed email is re-submitted, it is reactivated.
+
+**Response:** `201` (new) or `200` (reactivated)
+```json
+{ "success": true, "data": { "email": "user@example.com", "subscribedAt": "..." } }
+```
+
+**Errors:** `400` missing email, `400` invalid email, `400` invalid source, `409` already subscribed, `429` rate limit exceeded
+
+---
+
+### GET /api/subscribers
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:** `page` (default 1), `limit` (default 20, max 50)
+
+**What it does:** Returns paginated list of active subscribers, sorted newest first. Cached for 60 seconds.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "subscribers": [{ "id": "...", "email": "...", "subscribedAt": "...", "source": "homepage", "isActive": true }],
+    "total": 100,
+    "page": 1,
+    "pages": 5
+  }
+}
+```
+
+---
+
+### GET /api/subscribers/export
+
+**Auth:** `protect + restrictTo("admin")`
+
+**What it does:** Exports all active subscribers as a CSV file. CSV cells are escaped to prevent injection.
+
+**Response:** `200` -- `text/csv` file download (`subscribers.csv`)
+
+---
+
+### DELETE /api/subscribers/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- Subscriber ObjectId
+
+**What it does:** Soft-deletes a subscriber (sets `isActive: false`).
+
+**Response:** `200`
+```json
+{ "success": true, "data": null }
+```
+
+**Errors:** `400` invalid ObjectId, `400` subscriber already inactive, `404` not found
+
+---
+
+## Redirects (`/api/redirects`)
+
+URL redirect management for SEO and slug changes.
+
+---
+
+### GET /api/redirects/resolve
+
+**Auth:** Public
+
+**Query:** `from` -- source path (required)
+
+**What it does:** Looks up an active redirect by source path and returns the destination.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "id": "...", "from": "/old-path", "to": "/new-path", "type": 301, "isActive": true, "source": "manual", "createdAt": "..." } }
+```
+
+**Errors:** `400` missing `from` query parameter, `404` no redirect found
+
+---
+
+### GET /api/redirects
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:** `page` (default 1), `limit` (default 20, max 100)
+
+**What it does:** Returns paginated list of all redirects, sorted newest first.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "redirects": [{ "id": "...", "from": "/old", "to": "/new", "type": 301, "isActive": true, "source": "manual", "createdAt": "..." }],
+    "pagination": { "page": 1, "limit": 20, "total": 5, "pages": 1 }
+  }
+}
+```
+
+---
+
+### POST /api/redirects
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:**
+```json
+{
+  "from": "string (required, source path)",
+  "to": "string (required, destination path)",
+  "type": "301 | 302 (optional, default 301)"
+}
+```
+
+**What it does:** Creates a new redirect. Source is set to `"manual"`.
+
+**Response:** `201` -- Redirect object
+
+**Errors:** `400` missing `from` or `to`, `400` source and destination are the same, `409` redirect from this path already exists
+
+---
+
+### PUT /api/redirects/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- Redirect ObjectId
+
+**Body:** Any subset of: `from`, `to`, `type`, `isActive`
+
+**What it does:** Updates a redirect.
+
+**Response:** `200` -- updated Redirect object
+
+**Errors:** `400` invalid ObjectId, `400` no fields to update, `404` not found, `409` duplicate `from` path
+
+---
+
+### DELETE /api/redirects/:id
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `id` -- Redirect ObjectId
+
+**What it does:** Permanently deletes a redirect.
+
+**Response:** `200`
+```json
+{ "success": true, "data": { "message": "Redirect deleted successfully" } }
+```
+
+**Errors:** `400` invalid ObjectId, `404` not found
+
+---
+
+## Export / Import (`/api/export`)
+
+CSV export and import for products and orders. All routes are admin-only.
+
+---
+
+### GET /api/export/products
+
+**Auth:** `protect + restrictTo("admin")`
+
+**What it does:** Exports all products as a CSV file. Columns: ID, Name, SKU, Price, CompareAtPrice, Stock, Category, IsActive, CreatedAt.
+
+**Response:** `200` -- `text/csv` file download (`products-{timestamp}.csv`)
+
+---
+
+### GET /api/export/orders
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Query:**
+| Param | Type | Description |
+|---|---|---|
+| `status` | string | Filter by order status |
+| `startDate` | ISO date | Filter orders created on or after this date |
+| `endDate` | ISO date | Filter orders created on or before this date |
+
+**What it does:** Exports orders as a CSV file. Columns: OrderNumber, Customer, Email, Status, ItemsCount, Subtotal, Shipping, Discount, Total, PaymentMethod, Date.
+
+**Response:** `200` -- `text/csv` file download (`orders-{timestamp}.csv`)
+
+---
+
+### POST /api/export/products
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:** `multipart/form-data`
+- `file` -- CSV file (max 10 MB, must be `.csv`)
+
+**What it does:** Imports products from a CSV file. Required CSV columns: `Name`, `Price`. Optional columns: `Stock`, `SKU`. The authenticated admin user becomes the vendor for all imported products. Processes rows individually and reports both successes and per-row errors.
+
+**Response:** `200`
+```json
+{
+  "success": true,
+  "data": {
+    "imported": 15,
+    "errors": [
+      { "line": 3, "error": "Invalid price (must be >= 0)" }
+    ],
+    "products": [
+      { "id": "...", "name": "Product Name" }
+    ]
+  }
+}
+```
+
+**Errors:** `400` no file uploaded, `400` CSV empty or missing data rows, `400` missing required columns
 
 ---
 
@@ -996,6 +1806,25 @@ All address routes require authentication. Max 5 addresses per user.
 
 ---
 
+### GET /api/addresses/admin/:userId
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Params:** `userId` — ObjectId of the customer
+
+**What it does:** Returns all saved addresses for the specified user. Used by admin manual order creation to load a customer's addresses.
+
+**Response:** `200`
+```json
+{ "success": true, "data": [{ "id": "...", "fullName": "...", "phone": "...", "street": "...", "city": "...", "state": "...", "postalCode": "...", "country": "...", "isDefault": true, "label": "home" }] }
+```
+
+**Errors:**
+- `400` invalid userId format
+- `404` user not found
+
+---
+
 ### GET /api/addresses
 
 **Auth:** `protect`
@@ -1144,6 +1973,51 @@ Order number format: `ORD-YYYYMMDD-XXXX` (e.g., `ORD-20260306-0001`).
 
 ---
 
+### POST /api/orders/buy-now
+
+**Auth:** `protect`
+
+**Body:**
+```json
+{
+  "productId": "string (required, ObjectId)",
+  "quantity": "number (optional, default 1)",
+  "fullName": "string (required)",
+  "phone": "string (required)",
+  "address": "string (required)",
+  "couponCode": "string (optional)",
+  "selectedOptions": "object (optional -- stored in order notes as JSON)"
+}
+```
+
+**What it does:** Places a single-product order directly, bypassing the cart. Uses inline address fields (not a saved address). If a valid coupon code is provided, applies the discount and increments the coupon's `usedCount`. Shipping address fields `city`, `state`, `postalCode`, and `country` are set to `"-"` since only a free-text address is collected.
+
+**Response:** `201`
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "orderNumber": "ORD-20260313-0001",
+    "status": "pending",
+    "paymentMethod": "COD",
+    "items": [{ "product": "...", "name": "Product Name", "quantity": 1, "price": 29.99, "image": "..." }],
+    "shippingAddress": { "fullName": "...", "phone": "...", "street": "...", "city": "-", "state": "-", "postalCode": "-", "country": "-" },
+    "totalPrice": 29.99,
+    "shippingCost": 0,
+    "statusHistory": [{ "status": "pending", "date": "...", "note": "Buy Now order placed" }]
+  }
+}
+```
+
+**Errors:**
+- `400` missing required fields (`productId`, `fullName`, `phone`, `address`)
+- `400` invalid productId format
+- `400` item out of stock (includes `data.outOfStock` array)
+- `404` product not found or inactive
+
+---
+
 ### GET /api/orders/my-orders
 
 **Auth:** `protect`
@@ -1278,6 +2152,70 @@ Valid transitions:
 - `400` note exceeds 500 characters
 - `400` invalid status transition (includes allowed transitions in error message)
 - `404` not found
+
+---
+
+### POST /api/orders/admin
+
+**Auth:** `protect + restrictTo("admin")`
+
+**Body:**
+```json
+{
+  "userId": "string (required — ObjectId of the customer)",
+  "items": [
+    { "productId": "string (ObjectId)", "quantity": "number (>= 1)" }
+  ],
+  "shippingAddress": {
+    "fullName": "string (required)",
+    "phone": "string (required)",
+    "street": "string (required)",
+    "city": "string (required)",
+    "state": "string (required)",
+    "postalCode": "string (required)",
+    "country": "string (required)",
+    "label": "string (optional, default 'home')"
+  },
+  "notes": "string (optional)",
+  "notifyCustomer": "boolean (optional, default false)"
+}
+```
+
+**What it does:** Creates a manual order on behalf of a customer (phone orders, in-store, etc.). Order starts at `"confirmed"` status (admin-placed, skips pending). Stock is decremented after creation. Optionally sends order confirmation email to the customer.
+
+Flow:
+1. Validates all required fields (userId, items, shippingAddress)
+2. Verifies customer exists
+3. Fetches all products, validates existence + stock
+4. Builds order items snapshot with current prices
+5. Creates order with `"confirmed"` status
+6. Decrements stock
+7. Optionally sends email notification
+
+**Response:** `201`
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "orderNumber": "ORD-20260315-0001",
+    "status": "confirmed",
+    "user": { "_id": "...", "name": "...", "email": "..." },
+    "items": [{ "product": "...", "name": "...", "quantity": 2, "price": 29.99, "image": "..." }],
+    "shippingAddress": { ... },
+    "totalPrice": 59.98,
+    "statusHistory": [{ "status": "confirmed", "note": "Manual order created by admin" }]
+  }
+}
+```
+
+**Errors:**
+- `400` missing required fields (userId, items, shippingAddress fields)
+- `400` invalid ObjectId format
+- `400` empty items array
+- `400` items out of stock (includes `data.outOfStock` array)
+- `404` customer not found
+- `404` product not found or inactive
 
 ---
 

@@ -126,7 +126,7 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
     } finally {
       setPlacing(false);
     }
-  }, [fullName, phone, address, user, product.id, appliedCoupon, addItem, onOpenChange, router, toast, t]);
+  }, [fullName, phone, address, user, product.id, appliedCoupon, onOpenChange, router, toast, t, selectedOptions]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

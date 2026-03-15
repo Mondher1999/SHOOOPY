@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Plus, MoreHorizontal, AlertCircle } from "lucide-react";
+import { Plus, MoreHorizontal, AlertCircle, Download, Upload, Search } from "lucide-react";
 import { getAllProductsAPI, deleteProductAPI } from "@/services/product-service";
 import { getAllCategoriesAPI } from "@/services/category-service";
 import type { Product, Category } from "@/types";
@@ -11,6 +11,8 @@ import type { PaginationInfo } from "@/types";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -20,11 +22,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Alert } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { CategoryPills } from "@/components/admin/CategoryPills";
+import axiosInstance from "@/utils/axiosInstance";
 import logger from "@/lib/logger";
 
 export default function AdminProductsPage() {
   const { t } = useTranslation(["products", "common"]);
   const { toast } = useToast();
+  const formatPrice = useFormatPrice();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -106,9 +112,9 @@ export default function AdminProductsPage() {
       key: "name",
       header: t("products:columns.name"),
       render: (row) => (
-        <div>
-          <p className="font-medium truncate max-w-[200px]">{row.name}</p>
-          {row.sku && <p className="text-xs text-muted-foreground">{row.sku}</p>}
+        <div className="leading-tight">
+          <p className="font-medium truncate max-w-[280px]">{row.name}</p>
+          {row.sku && <p className="text-[11px] text-polaris-text-subdued mt-0.5">{row.sku}</p>}
         </div>
       ),
     },
@@ -116,7 +122,7 @@ export default function AdminProductsPage() {
       key: "category",
       header: t("products:columns.category"),
       render: (row) => (
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-polaris-text-subdued">
           {row.category?.name ?? "—"}
         </span>
       ),
@@ -126,10 +132,10 @@ export default function AdminProductsPage() {
       header: t("products:columns.price"),
       render: (row) => (
         <div>
-          <span className="font-medium">${row.price.toFixed(2)}</span>
+          <span className="font-medium">{formatPrice(row.price)}</span>
           {row.compareAtPrice && (
-            <span className="text-xs text-muted-foreground line-through ml-1">
-              ${row.compareAtPrice.toFixed(2)}
+            <span className="text-xs text-polaris-text-subdued line-through ml-1">
+              {formatPrice(row.compareAtPrice)}
             </span>
           )}
         </div>
@@ -138,26 +144,29 @@ export default function AdminProductsPage() {
     {
       key: "stock",
       header: t("products:columns.stock"),
-      render: (row) => (
-        <Badge variant={row.stock > 0 ? "success" : "destructive"}>
-          {row.stock > 0
-            ? `${row.stock} — ${t("products:status.inStock")}`
-            : t("products:status.outOfStock")}
-        </Badge>
-      ),
+      render: (row) => {
+        const variant = row.stock === 0 ? "destructive" : row.stock <= 5 ? "warning" : "success";
+        return (
+          <Badge variant={variant}>
+            {row.stock > 0
+              ? `${row.stock} ${t("products:status.inStock")}`
+              : t("products:status.outOfStock")}
+          </Badge>
+        );
+      },
     },
     {
       key: "status",
       header: t("products:columns.status"),
       render: (row) => (
-        <Badge variant={row.isActive ? "default" : "secondary"}>
+        <Badge variant={row.isActive ? "success" : "secondary"}>
           {row.isActive ? t("products:status.active") : t("products:status.inactive")}
         </Badge>
       ),
     },
     {
       key: "actions",
-      header: t("products:columns.actions"),
+      header: "",
       className: "w-12",
       render: (row) => (
         <DropdownMenu>
@@ -188,43 +197,78 @@ export default function AdminProductsPage() {
     },
   ];
 
+  const handleExportCSV = async () => {
+    try {
+      const res = await axiosInstance.get("/export/products", { responseType: "blob" });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `products-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast({ title: t("common:errors.generic"), variant: "destructive" });
+      logger.error("exportCSV failed:", err);
+    }
+  };
+
+  const handleImportCSV = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+        const res = await axiosInstance.post("/export/products", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast({ title: t("products:importSuccess", { count: res.data.data.imported }) });
+        fetchProducts(1);
+      } catch (err) {
+        toast({ title: t("common:errors.generic"), variant: "destructive" });
+        logger.error("importCSV failed:", err);
+      }
+    };
+    input.click();
+  };
+
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t("products:title")}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{t("products:subtitle")}</p>
+          <h1 className="text-xl font-semibold text-polaris-text">{t("products:title")}</h1>
+          <p className="text-sm text-polaris-text-subdued mt-1">{t("products:subtitle")}</p>
         </div>
-        <Button asChild>
-          <Link href="/admin/products/new">
-            <Plus className="h-4 w-4 mr-2" />
-            {t("products:addButton")}
-          </Link>
-        </Button>
-      </div>
-
-      {/* Category filter */}
-      {categories.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant={categoryFilter === "" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setCategoryFilter("")}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 12px", fontSize: "13px", fontWeight: 500, color: "#202223", background: "#FFFFFF", backgroundColor: "#FFFFFF", border: "1px solid #C9CCCF", borderRadius: "6px", cursor: "pointer", whiteSpace: "nowrap" }}
+            className="hover:bg-polaris-surface-hovered transition-colors"
           >
-            {t("products:filterCategory")}
+            <Download style={{ width: "14px", height: "14px" }} />
+            {t("products:exportCSV")}
+          </button>
+          <button
+            type="button"
+            onClick={handleImportCSV}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 12px", fontSize: "13px", fontWeight: 500, color: "#202223", background: "#FFFFFF", backgroundColor: "#FFFFFF", border: "1px solid #C9CCCF", borderRadius: "6px", cursor: "pointer", whiteSpace: "nowrap" }}
+            className="hover:bg-polaris-surface-hovered transition-colors"
+          >
+            <Upload style={{ width: "14px", height: "14px" }} />
+            {t("products:importCSV")}
+          </button>
+          <Button asChild>
+            <Link href="/admin/products/new">
+              <Plus className="h-4 w-4 mr-2" />
+              {t("products:addButton")}
+            </Link>
           </Button>
-          {categories.map((cat) => (
-            <Button
-              key={cat.id}
-              variant={categoryFilter === cat.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCategoryFilter(cat.id)}
-            >
-              {cat.name}
-            </Button>
-          ))}
         </div>
-      )}
+      </div>
 
       {error && (
         <Alert variant="destructive">
@@ -233,24 +277,63 @@ export default function AdminProductsPage() {
         </Alert>
       )}
 
-      <DataTable
-        columns={columns}
-        data={products}
-        isLoading={isLoading}
-        pagination={pagination}
-        onPageChange={(page) => fetchProducts(page)}
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder={t("products:searchPlaceholder")}
-        emptyMessage={t("products:empty")}
-      />
+      <Card>
+        {/* Search bar */}
+        <div style={{ position: "relative", padding: "16px", paddingBottom: "12px", maxWidth: "420px" }}>
+          <Search style={{ position: "absolute", left: "28px", top: "50%", transform: "translateY(-50%)", width: "14px", height: "14px", color: "rgba(138,138,138,1)" }} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("products:searchPlaceholder")}
+            aria-label={t("products:searchPlaceholder")}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              height: "36px",
+              paddingLeft: "34px",
+              paddingRight: "12px",
+              fontSize: "13px",
+              borderRadius: "8px",
+              border: "1px solid rgba(227,227,227,1)",
+              background: "#FFFFFF",
+              color: "rgba(48,48,48,1)",
+              outline: "none",
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(26,26,26,1)"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(26,26,26,0.08)"; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(138,138,138,1)"; e.currentTarget.style.boxShadow = "none"; }}
+          />
+        </div>
+
+        {/* Category filter pills */}
+        {categories.length > 0 && (
+          <CategoryPills
+            categories={categories}
+            activeId={categoryFilter}
+            allLabel={t("products:filterCategory")}
+            onChange={setCategoryFilter}
+          />
+        )}
+
+        {/* Table + Pagination */}
+        <DataTable
+          columns={columns}
+          data={products}
+          isLoading={isLoading}
+          pagination={pagination}
+          onPageChange={(page) => fetchProducts(page)}
+          emptyMessage={t("products:empty")}
+          embedded
+          className="px-4 pb-4"
+        />
+      </Card>
 
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
-          <h2 className="text-lg font-semibold mb-2">{t("products:actions.confirmDelete")}</h2>
+          <h2 className="text-base font-semibold text-polaris-text mb-2">{t("products:actions.confirmDelete")}</h2>
           {deleteTarget && (
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-polaris-text-subdued mb-4">
               {t("products:actions.confirmDeleteMessage", { name: deleteTarget.name })}
             </p>
           )}

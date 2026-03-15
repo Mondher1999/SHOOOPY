@@ -13,10 +13,11 @@ import { RatingStars } from "@/components/products/RatingStars";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
 import logger from "@/lib/logger";
 import { useState } from "react";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 function WishlistSkeleton() {
   return (
@@ -42,6 +43,7 @@ export default function WishlistPage() {
   const { wishlist, isLoading, removeItem, reload } = useWishlist();
   const { addItem: addToCart, openDrawer } = useCart();
   const { toast } = useToast();
+  const formatPrice = useFormatPrice();
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
   const handleRemove = async (productId: string, productName: string) => {
@@ -148,10 +150,10 @@ export default function WishlistPage() {
                   />
 
                   <div className="flex items-center gap-2 mt-1.5">
-                    <span className="font-semibold">${product.price.toFixed(2)}</span>
+                    <span className="font-semibold">{formatPrice(product.price)}</span>
                     {product.compareAtPrice && product.compareAtPrice > product.price && (
                       <span className="text-xs text-muted-foreground line-through">
-                        ${product.compareAtPrice.toFixed(2)}
+                        {formatPrice(product.compareAtPrice)}
                       </span>
                     )}
                   </div>

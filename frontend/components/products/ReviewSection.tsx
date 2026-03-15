@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RatingStars } from "@/components/products/RatingStars";
@@ -19,10 +18,12 @@ import {
 } from "@/services/review-service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useActiveTheme } from "@/hooks/useActiveTheme";
+import { cn } from "@/lib/utils";
 import logger from "@/lib/logger";
 import type { Review, ReviewsResponse, ReviewEligibility, RatingDistributionItem } from "@/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 interface ReviewSectionProps {
   productId: string;
@@ -35,21 +36,23 @@ interface ReviewSectionProps {
 function RatingDistribution({
   distribution,
   total,
+  textMuted,
 }: {
   distribution: RatingDistributionItem[];
   total: number;
+  textMuted: string;
 }) {
   return (
     <div className="space-y-1.5">
       {distribution.map((item) => (
         <div key={item.rating} className="flex items-center gap-2 text-sm">
-          <span className="w-6 text-right text-muted-foreground">{item.rating}</span>
+          <span className={cn("w-6 text-right", textMuted)}>{item.rating}</span>
           <RatingStars rating={item.rating} size="sm" />
           <Progress
             value={total > 0 ? (item.count / total) * 100 : 0}
             className="flex-1 h-2"
           />
-          <span className="w-8 text-right text-muted-foreground text-xs">{item.count}</span>
+          <span className={cn("w-8 text-right text-xs", textMuted)}>{item.count}</span>
         </div>
       ))}
     </div>
@@ -63,11 +66,17 @@ function ReviewCard({
   currentUserId,
   onDelete,
   onEdit,
+  text,
+  textMuted,
+  surface,
 }: {
   review: Review;
   currentUserId: string | null;
   onDelete: (id: string) => void;
   onEdit: () => void;
+  text: string;
+  textMuted: string;
+  surface: string;
 }) {
   const { t } = useTranslation("reviews");
   const isOwner = currentUserId && review.user.id === currentUserId;
@@ -79,7 +88,7 @@ function ReviewCard({
     <article className="py-4">
       <div className="flex items-start gap-3">
         {/* Avatar */}
-        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+        <div className={cn("flex-shrink-0 h-10 w-10 rounded-full overflow-hidden flex items-center justify-center", surface)}>
           {avatarUrl ? (
             <img
               src={avatarUrl}
@@ -87,7 +96,7 @@ function ReviewCard({
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="text-sm font-medium text-muted-foreground">
+            <span className={cn("text-sm font-medium", textMuted)}>
               {review.user.name.charAt(0).toUpperCase()}
             </span>
           )}
@@ -95,22 +104,22 @@ function ReviewCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm">{review.user.name}</span>
+            <span className={cn("font-medium text-sm", text)}>{review.user.name}</span>
             {review.isVerified && (
               <Badge variant="secondary" className="text-xs gap-1">
                 <BadgeCheck className="h-3 w-3" aria-hidden="true" />
                 {t("verifiedPurchase")}
               </Badge>
             )}
-            <span className="text-xs text-muted-foreground">
+            <span className={cn("text-xs", textMuted)}>
               {new Date(review.createdAt).toLocaleDateString()}
             </span>
           </div>
 
           <RatingStars rating={review.rating} size="sm" className="mt-1" />
 
-          <h4 className="font-medium text-sm mt-2">{review.title}</h4>
-          <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">
+          <h4 className={cn("font-medium text-sm mt-2", text)}>{review.title}</h4>
+          <p className={cn("text-sm mt-1 whitespace-pre-line", textMuted)}>
             {review.comment}
           </p>
 
@@ -174,6 +183,7 @@ export function ReviewSection({ productId, averageRating, reviewCount }: ReviewS
   const { t } = useTranslation("reviews");
   const { user } = useAuth();
   const { toast } = useToast();
+  const theme = useActiveTheme();
 
   const [data, setData] = useState<ReviewsResponse | null>(null);
   const [eligibility, setEligibility] = useState<ReviewEligibility | null>(null);
@@ -253,22 +263,22 @@ export function ReviewSection({ productId, averageRating, reviewCount }: ReviewS
 
   return (
     <section className="mt-12" aria-labelledby="reviews-heading">
-      <h2 id="reviews-heading" className="text-xl font-bold mb-6">
+      <h2 id="reviews-heading" className={cn("text-xl font-bold mb-6", theme.text, theme.headingClass)}>
         {t("title")} ({pagination.total})
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Rating Summary */}
-        <Card>
+        <Card className={cn(theme.surface, theme.border)}>
           <CardContent className="pt-6">
             <div className="text-center mb-4">
-              <div className="text-4xl font-bold">{averageRating.toFixed(1)}</div>
+              <div className={cn("text-4xl font-bold", theme.text)}>{averageRating.toFixed(1)}</div>
               <RatingStars rating={averageRating} size="md" className="justify-center mt-1" />
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className={cn("text-sm mt-1", theme.textMuted)}>
                 {t("basedOn", { count: reviewCount })}
               </p>
             </div>
-            <RatingDistribution distribution={distribution} total={pagination.total} />
+            <RatingDistribution distribution={distribution} total={pagination.total} textMuted={theme.textMuted} />
 
             {/* Write Review CTA */}
             {eligibility?.canReview && (
@@ -277,13 +287,13 @@ export function ReviewSection({ productId, averageRating, reviewCount }: ReviewS
               </div>
             )}
             {eligibility?.existingReview && (
-              <p className="text-xs text-muted-foreground mt-3">{t("alreadyReviewed")}</p>
+              <p className={cn("text-xs mt-3", theme.textMuted)}>{t("alreadyReviewed")}</p>
             )}
             {user && eligibility && !eligibility.hasDeliveredOrder && (
-              <p className="text-xs text-muted-foreground mt-3">{t("mustPurchase")}</p>
+              <p className={cn("text-xs mt-3", theme.textMuted)}>{t("mustPurchase")}</p>
             )}
             {!user && (
-              <p className="text-xs text-muted-foreground mt-3">{t("loginToReview")}</p>
+              <p className={cn("text-xs mt-3", theme.textMuted)}>{t("loginToReview")}</p>
             )}
           </CardContent>
         </Card>
@@ -294,23 +304,26 @@ export function ReviewSection({ productId, averageRating, reviewCount }: ReviewS
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-2">
               <Button
-                variant={sort === "-createdAt" ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
                 onClick={() => { setSort("-createdAt"); setPage(1); }}
+                className={cn(sort === "-createdAt" ? cn(theme.badgeBg, theme.badgeText, "hover:opacity-90") : theme.btnOutline)}
               >
                 {t("sortNewest")}
               </Button>
               <Button
-                variant={sort === "-rating" ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
                 onClick={() => { setSort("-rating"); setPage(1); }}
+                className={cn(sort === "-rating" ? cn(theme.badgeBg, theme.badgeText, "hover:opacity-90") : theme.btnOutline)}
               >
                 {t("sortHighest")}
               </Button>
               <Button
-                variant={sort === "rating" ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
                 onClick={() => { setSort("rating"); setPage(1); }}
+                className={cn(sort === "rating" ? cn(theme.badgeBg, theme.badgeText, "hover:opacity-90") : theme.btnOutline)}
               >
                 {t("sortLowest")}
               </Button>
@@ -319,8 +332,8 @@ export function ReviewSection({ productId, averageRating, reviewCount }: ReviewS
 
           {reviews.length === 0 ? (
             <div className="text-center py-12">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
-              <p className="text-muted-foreground">{t("noReviews")}</p>
+              <MessageSquare className={cn("h-12 w-12 mx-auto mb-3", theme.textMuted)} aria-hidden="true" />
+              <p className={theme.textMuted}>{t("noReviews")}</p>
               {eligibility?.canReview && (
                 <div className="mt-3">
                   <ReviewForm productId={productId} onSuccess={handleReviewSuccess} />
@@ -337,6 +350,9 @@ export function ReviewSection({ productId, averageRating, reviewCount }: ReviewS
                     currentUserId={user?.id ?? null}
                     onDelete={handleDelete}
                     onEdit={handleReviewSuccess}
+                    text={theme.text}
+                    textMuted={theme.textMuted}
+                    surface={theme.surface}
                   />
                 ))}
               </div>
@@ -345,23 +361,25 @@ export function ReviewSection({ productId, averageRating, reviewCount }: ReviewS
               {pagination.pages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     disabled={page <= 1}
                     onClick={() => setPage((p) => p - 1)}
                     aria-label={t("prevPage")}
+                    className={theme.btnOutline}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm text-muted-foreground">
+                  <span className={cn("text-sm", theme.textMuted)}>
                     {t("pageOf", { page: pagination.page, pages: pagination.pages })}
                   </span>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     disabled={page >= pagination.pages}
                     onClick={() => setPage((p) => p + 1)}
                     aria-label={t("nextPage")}
+                    className={theme.btnOutline}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

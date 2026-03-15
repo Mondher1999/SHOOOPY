@@ -46,10 +46,10 @@ Create `backend/.env` with the following variables.
 
 | Variable | Required | Description | Example value |
 |---|---|---|---|
-| `PORT` | No | Express server port | `5000` |
+| `PORT` | No | Express server port | `5001` |
 | `MONGODB_URI` | Yes | MongoDB connection string | `mongodb://localhost:27017/shopflow_db` |
 | `NODE_ENV` | No | Environment flag | `development` or `production` |
-| `FRONTEND_URL` | Yes | Frontend base URL — used in email links | `http://localhost:3000` |
+| `FRONTEND_URL` | Yes | Frontend base URL — used in email links | `http://localhost:3002` |
 | `JWT_ACCESS_SECRET` | Yes | Secret for signing access tokens (15 min TTL). Use a long random string. | `openssl rand -hex 32` |
 | `JWT_REFRESH_SECRET` | Yes | Secret for signing refresh tokens (7d TTL). Must be different from access secret. | `openssl rand -hex 32` |
 | `SMTP_HOST` | No* | SMTP server hostname | `smtp.mailtrap.io` |
@@ -58,6 +58,13 @@ Create `backend/.env` with the following variables.
 | `SMTP_USER` | No* | SMTP auth username | `your-mailtrap-user` |
 | `SMTP_PASS` | No* | SMTP auth password | `your-mailtrap-pass` |
 | `SMTP_FROM` | No | Sender address | `noreply@shopflow.com` |
+| `JWT_ACCESS_EXPIRES` | No | Access token time-to-live | `15m` or `30d` |
+| `JWT_REFRESH_EXPIRES` | No | Refresh token time-to-live | `7d` |
+| `JWT_REFRESH_MAX_AGE_MS` | No | Refresh token max age in milliseconds | `604800000` |
+| `PASSWORD_RESET_TOKEN_EXPIRES_MIN` | No | Password reset token expiry in minutes | `15` |
+| `ADMIN_EMAIL` | No | Default admin email address | `admin@shopflow.com` |
+| `EMAIL_FROM` | No | Sender display name and email | `ShopFlow <noreply@shopflow.com>` |
+| `SETTINGS_ENCRYPTION_KEY` | No | Key for encrypting SMTP password in DB (32-byte hex string) | `openssl rand -hex 32` |
 
 *SMTP vars are optional in development. When not set, emails are logged to the console instead of sent. **Configure SMTP before production.**
 
@@ -66,7 +73,7 @@ Create `backend/.env` with the following variables.
 ### Example `backend/.env`
 
 ```env
-PORT=5000
+PORT=5001
 MONGODB_URI=mongodb://localhost:27017/shopflow_db
 JWT_ACCESS_SECRET=replace_with_a_strong_random_secret_at_least_32_chars
 JWT_REFRESH_SECRET=replace_with_a_different_strong_random_secret
@@ -80,7 +87,7 @@ SMTP_PORT=465
 SMTP_USER=noreply@shopflow.com
 SMTP_PASS=your_smtp_password_here
 EMAIL_FROM=ShopFlow <noreply@shopflow.com>
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3002
 NODE_ENV=development
 ADMIN_EMAIL=admin@shopflow.com
 ```
@@ -102,7 +109,7 @@ Create `frontend/.env.local` with your frontend configuration variables. Variabl
 
 ```env
 # Add your frontend environment variables here
-# NEXT_PUBLIC_API_URL=http://localhost:5000
+# NEXT_PUBLIC_API_URL=http://localhost:5001
 ```
 
 ---
@@ -120,11 +127,11 @@ npm run dev
 
 Output should include:
 ```
-Server running on port 5000
-Health check: http://127.0.0.1:5000/health
+Server running on port 5001
+Health check: http://127.0.0.1:5001/health
 ```
 
-Verify with: `curl http://localhost:5000/health`
+Verify with: `curl http://localhost:5001/health`
 
 ### Terminal 2 -- Frontend
 
@@ -135,16 +142,16 @@ npm run dev
 
 Output should include:
 ```
-- Local: http://localhost:3000
+- Local: http://localhost:3002
 ```
 
-Open `http://localhost:3000` in your browser.
+Open `http://localhost:3002` in your browser.
 
 ### How they connect
 
-In development, the frontend calls the backend directly at `http://localhost:5000`. No proxy configuration is needed.
+In development, the frontend calls the backend directly at `http://localhost:5001`. No proxy configuration is needed.
 
-In production, nginx sits in front. The frontend is served from the root, and any request to `/api/*` is proxied to the backend at port 5000. The frontend resolves the API base to `/api` when `NODE_ENV === "production"`.
+In production, nginx sits in front. The frontend is served from the root, and any request to `/api/*` is proxied to the backend at port 5001. The frontend resolves the API base to `/api` when `NODE_ENV === "production"`.
 
 ---
 
@@ -223,9 +230,9 @@ server {
     listen 80;
     server_name shopflow.com www.shopflow.com;
 
-    # Frontend (Next.js on port 3000)
+    # Frontend (Next.js on port 3002)
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -233,10 +240,10 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # Backend API (Express on port 5000)
+    # Backend API (Express on port 5001)
     location /api/ {
         rewrite ^/api(/.*)$ $1 break;
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:5001;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -266,7 +273,7 @@ The backend CORS origin list is defined in `backend/server.js`. Update the `cors
 ```js
 const corsOptions = {
   origin: [
-    "http://localhost:3000",
+    "http://localhost:3002",
     "https://shopflow.com",
     // Add additional origins as needed
   ],

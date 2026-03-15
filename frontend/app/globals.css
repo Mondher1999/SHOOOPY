@@ -58,6 +58,295 @@
   }
 }
 
+/* ── Polaris admin override ────────────────────────────────
+   Maps shadcn CSS variables to Shopify Polaris tokens so
+   every Card, Button, Input, Badge etc. inside the admin
+   layout automatically renders in the Polaris color scheme.
+
+   Also resets store-side theme variables (--allure-*, fonts)
+   that ThemeInjector sets on <html> so they don't leak into
+   admin pages. This is why previous design changes appeared
+   to "not stick" — the store theme was overriding admin CSS.
+   ──────────────────────────────────────────────────────── */
+.admin-polaris {
+  /* ── shadcn variable remap to Shopify Polaris ──
+     Source of truth: design-system/MASTER.md
+     Primary = #008060 (green), NOT blue              */
+  --background: 0 0% 95%;           /* #F1F1F1  polaris-bg */
+  --foreground: 200 4% 13%;         /* #202223  polaris-text */
+  --card: 0 0% 100%;                /* #FFFFFF  polaris-surface */
+  --card-foreground: 200 4% 13%;    /* #202223  polaris-text */
+  --popover: 0 0% 100%;             /* #FFFFFF  polaris-surface */
+  --popover-foreground: 200 4% 13%;
+  --primary: 160 100% 25%;          /* #008060  polaris-primary (GREEN) */
+  --primary-foreground: 0 0% 100%;  /* white text on green */
+  --secondary: 0 0% 96.5%;          /* #F6F6F7  polaris-surface-hovered */
+  --secondary-foreground: 200 4% 13%;
+  --muted: 0 0% 96.5%;              /* #F6F6F7 */
+  --muted-foreground: 210 4% 44%;   /* #6D7175  polaris-text-subdued */
+  --accent: 0 0% 96.5%;             /* #F6F6F7  polaris-surface-hovered */
+  --accent-foreground: 200 4% 13%;
+  --destructive: 9 89% 45%;         /* #D72C0D  polaris-critical */
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 89%;               /* #E3E3E3  polaris-border */
+  --input: 210 3% 80%;              /* #C9CCCF  polaris input/button border */
+  --ring: 160 100% 25%;             /* #008060  polaris-primary (GREEN) */
+
+  /* ── Polaris component tokens (used by Tailwind polaris-* classes) ──
+     These CSS vars let Tailwind colors switch between light/dark.     */
+  --polaris-bg: #F1F1F1;
+  --polaris-surface: #FFFFFF;
+  --polaris-surface-hovered: #F6F6F7;
+  --polaris-text: #202223;
+  --polaris-text-subdued: #6D7175;
+  --polaris-icon: #5C5F62;
+  --polaris-icon-subdued: #8C9196;
+  --polaris-border: #E3E3E3;
+  --polaris-border-hovered: #C9CCCF;
+  --polaris-border-subdued: #EBEBEB;
+  --polaris-primary: #008060;
+  --polaris-primary-hovered: #006E52;
+  --polaris-primary-pressed: #005C43;
+  --polaris-success: #008060;
+  --polaris-success-light: #AEE9D1;
+  --polaris-critical: #D72C0D;
+  --polaris-critical-light: #FED3D1;
+  --polaris-warning: #B98900;
+  --polaris-warning-light: #FFEA8A;
+  --polaris-info: #2C6ECB;
+  --polaris-info-light: #A4E8F2;
+  --polaris-highlight: #E4E5E7;
+  --polaris-nav-bg: #1A1C1D;
+  --polaris-nav-item-hover: #26282A;
+  --polaris-nav-item-active: #2A2C2E;
+
+  /* ── Reset store theme font leaks ──
+     ThemeInjector sets inline font-size + font vars on <html>.
+     Without this reset, admin rem-based sizes break when the
+     store theme uses a custom base font size.                */
+  font-size: 16px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Inter";
+  --font-body: "Inter";
+
+  /* ── Neutralize allure variables from ThemeInjector ──
+     ThemeInjector sets --allure-* on <html> for the store
+     color palette. These leak into admin because CSS custom
+     properties cascade. Reset them to Polaris equivalents.  */
+  --allure-bg: #F1F1F1;
+  --allure-bg-alt: #FFFFFF;
+  --allure-bg-section: #F1F1F1;
+  --allure-text: #202223;
+  --allure-text-muted: #6D7175;
+  --allure-text-on-dark: #FFFFFF;
+  --allure-dark: #1A1C1D;
+  --allure-border: #E3E3E3;
+  --allure-border-dark: #1A1C1D;
+  --allure-sale: #D72C0D;
+  --allure-base-font-size: 16px;
+  --allure-heading-letter-spacing: 0em;
+  --allure-heading-text-transform: none;
+
+  /* Default to light color scheme — overridden in .dark below */
+  color-scheme: light;
+}
+
+/* ── Polaris admin DARK mode ─────────────────────────────────
+   .dark is now applied directly on the admin root div alongside
+   .admin-polaris — NOT on <html> — so dark mode never leaks
+   into store-facing templates.
+   ──────────────────────────────────────────────────────────── */
+.admin-polaris.dark {
+  --background: 220 13% 10%;            /* #1A1C20  dark bg */
+  --foreground: 210 20% 90%;            /* #DDE3EA  light text */
+  --card: 220 12% 14%;                  /* #222630  dark surface */
+  --card-foreground: 210 20% 90%;       /* #DDE3EA  light text */
+  --popover: 220 12% 14%;              /* #222630  dark surface */
+  --popover-foreground: 210 20% 90%;
+  --primary: 160 100% 25%;              /* #008060  polaris-primary (GREEN — same) */
+  --primary-foreground: 0 0% 100%;      /* white text on green */
+  --secondary: 220 12% 18%;             /* #282D36  dark surface hovered */
+  --secondary-foreground: 210 20% 90%;
+  --muted: 220 12% 18%;                /* #282D36 */
+  --muted-foreground: 210 10% 58%;      /* #8C9196  subdued text */
+  --accent: 220 12% 18%;               /* #282D36  dark surface hovered */
+  --accent-foreground: 210 20% 90%;
+  --destructive: 0 72% 51%;            /* #E5484D  lighter red for dark bg */
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 10% 22%;               /* #333842  dark border */
+  --input: 220 8% 30%;                 /* #454B54  dark input border */
+  --ring: 160 100% 25%;                /* #008060  polaris-primary (GREEN) */
+
+  /* Polaris component tokens — dark equivalents */
+  --polaris-bg: #1A1C20;
+  --polaris-surface: #222630;
+  --polaris-surface-hovered: #282D36;
+  --polaris-text: #DDE3EA;
+  --polaris-text-subdued: #8C9196;
+  --polaris-icon: #9CA3AF;
+  --polaris-icon-subdued: #6B7280;
+  --polaris-border: #333842;
+  --polaris-border-hovered: #454B54;
+  --polaris-border-subdued: #2A2F38;
+  --polaris-primary: #008060;
+  --polaris-primary-hovered: #00A67D;
+  --polaris-primary-pressed: #008060;
+  --polaris-success: #008060;
+  --polaris-success-light: #1A3A2A;
+  --polaris-critical: #E5484D;
+  --polaris-critical-light: #3A1A1A;
+  --polaris-warning: #D4A100;
+  --polaris-warning-light: #3A3010;
+  --polaris-info: #4B8CE8;
+  --polaris-info-light: #1A2A3A;
+  --polaris-highlight: #333842;
+  --polaris-nav-bg: #0F1115;
+  --polaris-nav-item-hover: #1A1E25;
+  --polaris-nav-item-active: #1E2330;
+
+  /* Allure variables — dark equivalents */
+  --allure-bg: #1A1C20;
+  --allure-bg-alt: #222630;
+  --allure-bg-section: #1A1C20;
+  --allure-text: #DDE3EA;
+  --allure-text-muted: #8C9196;
+  --allure-text-on-dark: #FFFFFF;
+  --allure-dark: #0F1115;
+  --allure-border: #333842;
+  --allure-border-dark: #0F1115;
+  --allure-sale: #E5484D;
+
+  color-scheme: dark;
+}
+
+/* ── Polaris component overrides for admin ──────────────────
+   shadcn/ui components use store-friendly defaults (p-6, rounded-md).
+   The design-system/MASTER.md specifies tighter Polaris spacing.
+   These rules scope overrides to .admin-polaris so the store is
+   unaffected.
+   ──────────────────────────────────────────────────────────── */
+
+/* Card: p-4 (16px) per Polaris, not p-6 (24px).
+   CardTitle: 14px/600 per Polaris, not text-2xl. */
+.admin-polaris [data-slot="card-header"] {
+  padding: 16px;
+  padding-bottom: 8px;
+}
+.admin-polaris [data-slot="card-header"] h3 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+.admin-polaris [data-slot="card-content"] {
+  padding: 16px;
+  padding-top: 0;
+}
+.admin-polaris [data-slot="card-footer"] {
+  padding: 16px;
+  padding-top: 0;
+}
+
+/* Button: rounded (4px) per Polaris, not rounded-md (6px) */
+.admin-polaris button,
+.admin-polaris [role="button"] {
+  border-radius: 4px;
+}
+/* Preserve pill shape for badges */
+.admin-polaris .rounded-full {
+  border-radius: 9999px;
+}
+
+/* Input / Select — exact Polaris tokens
+   --p-color-input-border        rgba(138,138,138,1)
+   --p-color-input-border-active rgba(26,26,26,1)
+   --p-color-input-bg-surface    rgba(253,253,253,1)
+*/
+.admin-polaris input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.admin-polaris select,
+.admin-polaris textarea {
+  border-radius: 8px;
+  border-color: rgba(138,138,138,1);   /* --p-color-input-border */
+  background-color: rgba(253,253,253,1); /* --p-color-input-bg-surface */
+  font-size: 13px;                     /* bodyMd --p-font-size-325 */
+  color: rgba(48,48,48,1);             /* --p-color-text */
+}
+/* Kill the green Tailwind focus-visible ring injected by shadcn Input */
+.admin-polaris input:focus-visible,
+.admin-polaris select:focus-visible,
+.admin-polaris textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.admin-polaris input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.admin-polaris select:focus,
+.admin-polaris textarea:focus {
+  border-color: rgba(26,26,26,1) !important;  /* --p-color-input-border-active */
+  box-shadow: 0 0 0 2px rgba(26,26,26,0.08) !important;
+  outline: none !important;
+}
+
+/* Dialog: p-5 (20px), rounded-xl (12px), max-w-[620px] */
+.admin-polaris [role="dialog"] {
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 620px;
+}
+
+/* Table header: --p-space-table-cell-padding = 6px per Polaris spec */
+.admin-polaris th {
+  background-color: var(--polaris-surface-hovered);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--polaris-text-subdued);
+  padding: 6px 12px;
+  height: auto;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Table cell: --p-space-table-cell-padding = 6px per Polaris spec */
+.admin-polaris td {
+  padding: 6px 12px;
+  font-size: 13px;
+  line-height: 1.3;
+  vertical-align: middle;
+}
+
+/* Table row hover */
+.admin-polaris tbody tr:hover {
+  background-color: var(--polaris-surface-hovered);
+}
+
+/* Table row border — subtle divider */
+.admin-polaris tbody tr {
+  border-bottom: 1px solid var(--polaris-border-subdued);
+}
+
+/* Compact product name + SKU in table */
+.admin-polaris td p {
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Card shadow — real Polaris: subtle 1px ring + soft drop */
+.admin-polaris [data-slot="card"] {
+  box-shadow: 0 0 0 1px rgba(63, 63, 68, 0.05), 0 1px 3px 0 rgba(63, 63, 68, 0.15);
+}
+
+/* ── Dark mode overrides for non-variable Polaris colors ──────── */
+.admin-polaris.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.admin-polaris.dark select,
+.admin-polaris.dark textarea {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+.admin-polaris.dark [data-slot="card"] {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

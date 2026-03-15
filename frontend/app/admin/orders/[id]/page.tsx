@@ -13,8 +13,11 @@ import {
   User,
   AlertCircle,
   Clock,
+  Truck,
+  Printer,
 } from "lucide-react";
 import { getOrderByIdAdminAPI, updateOrderStatusAPI } from "@/services/order-service";
+import { sendToDeliveryAPI, trackShipmentAPI, cancelShipmentAPI } from "@/services/shipping-service";
 import { StatusBadge } from "@/components/orders/StatusBadge";
 import { StatusTimeline } from "@/components/orders/StatusTimeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,19 +43,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
 import logger from "@/lib/logger";
 import type { AdminOrder, OrderStatus } from "@/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
-const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  pending:    ["confirmed", "cancelled"],
-  confirmed:  ["processing", "cancelled"],
-  processing: ["shipped"],
-  shipped:    ["delivered"],
-  delivered:  [],
-  cancelled:  [],
-};
+const ALL_STATUSES: OrderStatus[] = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
 
 export default function AdminOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +65,49 @@ export default function AdminOrderDetailPage() {
   const [statusNote, setStatusNote] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isShipping, setIsShipping] = useState(false);
+
+  const handleSendToDelivery = async () => {
+    setIsShipping(true);
+    try {
+      const res = await sendToDeliveryAPI(id);
+      setOrder(res.data);
+      toast({ title: t("admin.shippingSent") });
+    } catch (err) {
+      logger.error("sendToDelivery error:", err);
+      toast({ title: t("admin.shippingError"), variant: "destructive" });
+    } finally {
+      setIsShipping(false);
+    }
+  };
+
+  const handleTrackShipment = async () => {
+    setIsShipping(true);
+    try {
+      const res = await trackShipmentAPI(id);
+      setOrder(res.data);
+      toast({ title: t("admin.trackingUpdated") });
+    } catch (err) {
+      logger.error("trackShipment error:", err);
+      toast({ title: t("admin.trackingError"), variant: "destructive" });
+    } finally {
+      setIsShipping(false);
+    }
+  };
+
+  const handleCancelShipment = async () => {
+    setIsShipping(true);
+    try {
+      const res = await cancelShipmentAPI(id);
+      setOrder(res.data);
+      toast({ title: t("admin.shipmentCancelled") });
+    } catch (err) {
+      logger.error("cancelShipment error:", err);
+      toast({ title: t("admin.shipmentCancelError"), variant: "destructive" });
+    } finally {
+      setIsShipping(false);
+    }
+  };
 
   const fetchOrder = useCallback(async () => {
     setIsLoading(true);
@@ -87,10 +127,10 @@ export default function AdminOrderDetailPage() {
     fetchOrder();
   }, [fetchOrder]);
 
-  const allowedTransitions = order ? VALID_TRANSITIONS[order.status] || [] : [];
+  const allowedTransitions = order ? ALL_STATUSES.filter((s) => s !== order.status) : [];
 
   const handleStatusSubmit = () => {
-    if (!newStatus || !statusNote.trim()) return;
+    if (!newStatus) return;
     setShowConfirm(true);
   };
 
@@ -111,8 +151,7 @@ export default function AdminOrderDetailPage() {
     }
   };
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+  const formatPrice = useFormatPrice();
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("en-US", {
@@ -122,7 +161,7 @@ export default function AdminOrderDetailPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="space-y-4 p-4 lg:p-8">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-64 w-full" />
@@ -133,7 +172,7 @@ export default function AdminOrderDetailPage() {
   // Error state
   if (error || !order) {
     return (
-      <div className="space-y-4 p-4 lg:p-8">
+      <div className="space-y-4">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/admin/orders">
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -150,7 +189,7 @@ export default function AdminOrderDetailPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 lg:p-8">
+    <div className="space-y-5">
       {/* Header */}
       <div>
         <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
@@ -161,10 +200,18 @@ export default function AdminOrderDetailPage() {
         </Button>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold">{order.orderNumber}</h1>
+            <h1 className="text-xl font-semibold text-polaris-text">{order.orderNumber}</h1>
             <StatusBadge status={order.status} />
           </div>
-          <p className="text-sm text-muted-foreground">{formatDate(order.createdAt)}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-polaris-text-subdued">{formatDate(order.createdAt)}</p>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/admin/orders/${id}/invoice`}>
+                <Printer className="h-3.5 w-3.5 mr-1.5" />
+                {t("admin.printInvoice")}
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -181,7 +228,38 @@ export default function AdminOrderDetailPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Shipping Actions */}
+      {order && (order.status === "processing" || order.status === "shipped") && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              {t("admin.shippingActions")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            {order.status === "processing" && (
+              <Button onClick={handleSendToDelivery} disabled={isShipping}>
+                <Truck className="h-4 w-4 mr-2" />
+                {t("admin.sendToDelivery")}
+              </Button>
+            )}
+            {order.status === "shipped" && (
+              <>
+                <Button onClick={handleTrackShipment} disabled={isShipping}>
+                  <Package className="h-4 w-4 mr-2" />
+                  {t("admin.trackShipment")}
+                </Button>
+                <Button variant="destructive" onClick={handleCancelShipment} disabled={isShipping}>
+                  {t("admin.cancelShipment")}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left column */}
         <div className="lg:col-span-2 space-y-4">
           {/* Update Status (only if transitions available) */}
@@ -220,7 +298,7 @@ export default function AdminOrderDetailPage() {
                 </div>
                 <Button
                   onClick={handleStatusSubmit}
-                  disabled={!newStatus || !statusNote.trim()}
+                  disabled={!newStatus}
                 >
                   {t("admin.submitStatus")}
                 </Button>
@@ -239,7 +317,7 @@ export default function AdminOrderDetailPage() {
             <CardContent className="space-y-3">
               {order.items.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-3">
-                  <div className="relative h-14 w-14 shrink-0 rounded-md overflow-hidden bg-muted">
+                  <div className="relative h-14 w-14 shrink-0 rounded-md overflow-hidden bg-polaris-surface-hovered">
                     {item.image ? (
                       <Image
                         src={`${BASE_URL}${item.image}`}
@@ -250,18 +328,18 @@ export default function AdminOrderDetailPage() {
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <Package className="h-6 w-6 text-muted-foreground" />
+                        <Package className="h-6 w-6 text-polaris-text-subdued" />
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("detail.qty", { count: item.quantity })} &times; {formatCurrency(item.price)}
+                    <p className="text-xs text-polaris-text-subdued">
+                      {t("detail.qty", { count: item.quantity })} &times; {formatPrice(item.price)}
                     </p>
                   </div>
                   <p className="text-sm font-medium shrink-0">
-                    {formatCurrency(item.price * item.quantity)}
+                    {formatPrice(item.price * item.quantity)}
                   </p>
                 </div>
               ))}
@@ -283,7 +361,7 @@ export default function AdminOrderDetailPage() {
                     <StatusBadge status={entry.status as OrderStatus} className="mt-0.5 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm">{entry.note}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(entry.date)}</p>
+                      <p className="text-xs text-polaris-text-subdued">{formatDate(entry.date)}</p>
                     </div>
                   </div>
                 ))}
@@ -304,7 +382,7 @@ export default function AdminOrderDetailPage() {
             </CardHeader>
             <CardContent className="text-sm space-y-1">
               <p className="font-medium">{order.user.name}</p>
-              <p className="text-muted-foreground">{order.user.email}</p>
+              <p className="text-polaris-text-subdued">{order.user.email}</p>
             </CardContent>
           </Card>
 
@@ -318,13 +396,13 @@ export default function AdminOrderDetailPage() {
             </CardHeader>
             <CardContent className="text-sm space-y-1">
               <p className="font-medium">{order.shippingAddress.fullName}</p>
-              <p className="text-muted-foreground">{order.shippingAddress.phone}</p>
-              <p className="text-muted-foreground">{order.shippingAddress.street}</p>
-              <p className="text-muted-foreground">
+              <p className="text-polaris-text-subdued">{order.shippingAddress.phone}</p>
+              <p className="text-polaris-text-subdued">{order.shippingAddress.street}</p>
+              <p className="text-polaris-text-subdued">
                 {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
                 {order.shippingAddress.postalCode}
               </p>
-              <p className="text-muted-foreground">{order.shippingAddress.country}</p>
+              <p className="text-polaris-text-subdued">{order.shippingAddress.country}</p>
             </CardContent>
           </Card>
 
@@ -338,19 +416,19 @@ export default function AdminOrderDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("detail.subtotal")}</span>
-                <span>{formatCurrency(order.totalPrice - order.shippingCost)}</span>
+                <span className="text-polaris-text-subdued">{t("detail.subtotal")}</span>
+                <span>{formatPrice(order.totalPrice - order.shippingCost)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("detail.shipping")}</span>
-                <span>{order.shippingCost === 0 ? t("detail.free") : formatCurrency(order.shippingCost)}</span>
+                <span className="text-polaris-text-subdued">{t("detail.shipping")}</span>
+                <span>{order.shippingCost === 0 ? t("detail.free") : formatPrice(order.shippingCost)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-semibold text-base">
                 <span>{t("detail.total")}</span>
-                <span>{formatCurrency(order.totalPrice)}</span>
+                <span>{formatPrice(order.totalPrice)}</span>
               </div>
-              <p className="text-xs text-muted-foreground pt-1">
+              <p className="text-xs text-polaris-text-subdued pt-1">
                 {t("detail.paymentMethod")}: {t("detail.cod")}
               </p>
             </CardContent>
@@ -363,7 +441,7 @@ export default function AdminOrderDetailPage() {
                 <CardTitle className="text-base">{t("detail.notes")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{order.notes}</p>
+                <p className="text-sm text-polaris-text-subdued">{order.notes}</p>
               </CardContent>
             </Card>
           )}
@@ -382,10 +460,12 @@ export default function AdminOrderDetailPage() {
               })}
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-md bg-muted p-3 text-sm">
-            <p className="font-medium">{t("admin.note")}:</p>
-            <p className="text-muted-foreground">{statusNote}</p>
-          </div>
+          {statusNote.trim() && (
+            <div className="rounded-md bg-polaris-surface-hovered p-3 text-sm">
+              <p className="font-medium">{t("admin.note")}:</p>
+              <p className="text-polaris-text-subdued">{statusNote}</p>
+            </div>
+          )}
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setShowConfirm(false)}>
               {t("admin.cancelAction")}

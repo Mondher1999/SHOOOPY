@@ -1,23 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { CategoryNode, ProductQueryParams } from "@/types";
-
-interface FilterState {
-  category?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  inStock?: boolean;
-  rating?: number;
-}
+import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { useActiveTheme } from "@/hooks/useActiveTheme";
+import type { CategoryNode, FilterState } from "@/types";
 
 interface ProductFiltersProps {
   categories: CategoryNode[];
@@ -27,18 +20,20 @@ interface ProductFiltersProps {
   className?: string;
 }
 
-const RATING_OPTIONS = [4, 3, 2, 1] as const;
-
 function CategoryTreeItem({
   node,
   selected,
   onSelect,
   depth = 0,
+  accent,
+  textMuted,
 }: {
   node: CategoryNode;
   selected: string | undefined;
   onSelect: (id: string | undefined) => void;
   depth?: number;
+  accent: string;
+  textMuted: string;
 }) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.children.length > 0;
@@ -56,9 +51,9 @@ function CategoryTreeItem({
             aria-expanded={expanded}
           >
             {expanded ? (
-              <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+              <ChevronDown className={cn("h-3 w-3", textMuted)} aria-hidden="true" />
             ) : (
-              <ChevronRight className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+              <ChevronRight className={cn("h-3 w-3", textMuted)} aria-hidden="true" />
             )}
           </button>
         ) : (
@@ -69,7 +64,7 @@ function CategoryTreeItem({
           onClick={() => onSelect(isSelected ? undefined : node.id)}
           className={cn(
             "flex-1 text-left text-sm py-1 px-1 rounded hover:bg-muted transition-colors",
-            isSelected && "font-semibold text-primary"
+            isSelected && cn("font-semibold", accent)
           )}
         >
           {node.name}
@@ -84,6 +79,8 @@ function CategoryTreeItem({
               selected={selected}
               onSelect={onSelect}
               depth={depth + 1}
+              accent={accent}
+              textMuted={textMuted}
             />
           ))}
         </ul>
@@ -100,31 +97,42 @@ export function ProductFilters({
   className,
 }: ProductFiltersProps) {
   const { t } = useTranslation("products");
+  const formatPrice = useFormatPrice();
+  const theme = useActiveTheme();
 
   const activeCount = [
     filters.category,
     filters.minPrice !== undefined || filters.maxPrice !== undefined,
     filters.inStock,
-    filters.rating,
   ].filter(Boolean).length;
 
-  const priceRange: [number, number] = [
+  const committedRange: [number, number] = [
     filters.minPrice ?? 0,
     filters.maxPrice ?? maxPriceLimit,
   ];
+
+  // Local state for smooth slider dragging — only commits to parent on release
+  const [localPrice, setLocalPrice] = useState<[number, number]>(committedRange);
+
+  // Sync local state when filters are reset externally (e.g. "Clear all")
+  useEffect(() => {
+    setLocalPrice(committedRange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.minPrice, filters.maxPrice]);
 
   return (
     <aside
       className={cn("space-y-5", className)}
       aria-label={t("catalog.filtersLabel")}
+      suppressHydrationWarning
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-          <h2 className="font-semibold text-sm">{t("catalog.filtersLabel")}</h2>
+          <SlidersHorizontal className={cn("h-4 w-4", theme.text)} aria-hidden="true" />
+          <h2 className={cn("font-semibold text-sm", theme.text, theme.headingClass)} suppressHydrationWarning>{t("catalog.filtersLabel")}</h2>
           {activeCount > 0 && (
-            <Badge variant="secondary" className="text-xs h-5 px-1.5">
+            <Badge className={cn("text-xs h-5 px-1.5", theme.badgeBg, theme.badgeText)}>
               {activeCount}
             </Badge>
           )}
@@ -133,7 +141,7 @@ export function ProductFilters({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 text-xs px-2 text-muted-foreground"
+            className={cn("h-6 text-xs px-2", theme.textMuted)}
             onClick={() => onFiltersChange({})}
           >
             <X className="h-3 w-3 mr-1" aria-hidden="true" />
@@ -142,12 +150,12 @@ export function ProductFilters({
         )}
       </div>
 
-      <Separator />
+      <div className={cn("h-px w-full", theme.separator)} />
 
       {/* Category Filter */}
       {categories.length > 0 && (
         <section aria-labelledby="filter-category-heading">
-          <h3 id="filter-category-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+          <h3 id="filter-category-heading" className={cn("text-xs font-semibold uppercase tracking-wider mb-2", theme.textMuted)}>
             {t("catalog.filterCategory")}
           </h3>
           <ul className="space-y-0.5">
@@ -157,25 +165,56 @@ export function ProductFilters({
                 node={cat}
                 selected={filters.category}
                 onSelect={(id) => onFiltersChange({ ...filters, category: id })}
+                accent={theme.accent}
+                textMuted={theme.textMuted}
               />
             ))}
           </ul>
         </section>
       )}
 
-      <Separator />
+      <div className={cn("h-px w-full", theme.separator)} />
 
       {/* Price Range */}
       <section aria-labelledby="filter-price-heading">
-        <h3 id="filter-price-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t("catalog.filterPrice")}
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 id="filter-price-heading" className={cn("text-xs font-semibold uppercase tracking-wider", theme.textMuted)}>
+            {t("catalog.filterPrice")}
+          </h3>
+          {(filters.minPrice !== undefined || filters.maxPrice !== undefined) && (
+            <button
+              type="button"
+              onClick={() => onFiltersChange({ ...filters, minPrice: undefined, maxPrice: undefined })}
+              className={cn("text-xs transition-colors", theme.textMuted)}
+              aria-label="Reset price filter"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Price badges — show live position while dragging */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className={cn("flex-1 rounded-md px-3 py-1.5 text-center", theme.surface)}>
+            <p className={cn("text-[10px] mb-0.5", theme.textMuted)}>{t("catalog.priceMin", { defaultValue: "Min" })}</p>
+            <p className={cn("text-sm font-semibold tabular-nums", theme.text)}>{formatPrice(localPrice[0])}</p>
+          </div>
+          <div className={cn("h-px w-3 flex-shrink-0", theme.separator)} />
+          <div className={cn("flex-1 rounded-md px-3 py-1.5 text-center", theme.surface)}>
+            <p className={cn("text-[10px] mb-0.5", theme.textMuted)}>{t("catalog.priceMax", { defaultValue: "Max" })}</p>
+            <p className={cn("text-sm font-semibold tabular-nums", theme.text)}>
+              {formatPrice(localPrice[1])}{localPrice[1] >= maxPriceLimit && "+"}
+            </p>
+          </div>
+        </div>
+
         <Slider
           min={0}
           max={maxPriceLimit}
-          step={1}
-          value={priceRange}
-          onValueChange={([min, max]) =>
+          step={Math.max(1, Math.floor(maxPriceLimit / 100))}
+          value={localPrice}
+          onValueChange={(v) => setLocalPrice(v as [number, number])}
+          onValueCommit={([min, max]) =>
             onFiltersChange({
               ...filters,
               minPrice: min > 0 ? min : undefined,
@@ -183,50 +222,10 @@ export function ProductFilters({
             })
           }
           aria-label={t("catalog.filterPrice")}
-          className="mb-3"
         />
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>${priceRange[0]}</span>
-          <span>${priceRange[1]}{priceRange[1] >= maxPriceLimit && "+"}</span>
-        </div>
       </section>
 
-      <Separator />
-
-      {/* Rating Filter */}
-      <section aria-labelledby="filter-rating-heading">
-        <h3 id="filter-rating-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          {t("catalog.filterRating")}
-        </h3>
-        <div className="space-y-1.5" role="radiogroup" aria-labelledby="filter-rating-heading">
-          {RATING_OPTIONS.map((stars) => {
-            const isSelected = filters.rating === stars;
-            return (
-              <button
-                key={stars}
-                type="button"
-                role="radio"
-                aria-checked={isSelected}
-                onClick={() =>
-                  onFiltersChange({
-                    ...filters,
-                    rating: isSelected ? undefined : stars,
-                  })
-                }
-                className={cn(
-                  "flex items-center gap-1.5 w-full text-left text-sm py-1 px-1 rounded hover:bg-muted transition-colors",
-                  isSelected && "font-semibold text-primary"
-                )}
-              >
-                <span aria-hidden="true">{"★".repeat(stars)}{"☆".repeat(4 - stars)}</span>
-                <span className="text-xs text-muted-foreground">{t("catalog.filterRatingAndUp", { stars })}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <Separator />
+      <div className={cn("h-px w-full", theme.separator)} />
 
       {/* In Stock Filter */}
       <section aria-labelledby="filter-stock-heading">
@@ -239,7 +238,7 @@ export function ProductFilters({
               onFiltersChange({ ...filters, inStock: checked === true ? true : undefined })
             }
           />
-          <span className="text-sm">{t("catalog.filterStock")}</span>
+          <span className={cn("text-sm", theme.text)}>{t("catalog.filterStock")}</span>
         </label>
       </section>
     </aside>

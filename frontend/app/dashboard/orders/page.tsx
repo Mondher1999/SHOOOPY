@@ -3,22 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Package, Eye, XCircle, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
-import { getMyOrdersAPI, cancelOrderAPI } from "@/services/order-service";
+import { Package, Eye, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { getMyOrdersAPI } from "@/services/order-service";
 import { StatusBadge } from "@/components/orders/StatusBadge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
 import logger from "@/lib/logger";
 import type { Order, PaginationInfo } from "@/types";
 
@@ -32,8 +24,6 @@ export default function CustomerOrdersPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
-  const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchOrders = useCallback(async (page: number) => {
     setIsLoading(true);
@@ -54,24 +44,7 @@ export default function CustomerOrdersPage() {
     fetchOrders(1);
   }, [fetchOrders]);
 
-  const handleCancel = async () => {
-    if (!cancelTarget) return;
-    setIsCancelling(true);
-    try {
-      await cancelOrderAPI(cancelTarget.id);
-      toast({ title: t("cancelSuccess") });
-      setCancelTarget(null);
-      fetchOrders(pagination.page);
-    } catch (err) {
-      logger.error("cancelOrder error:", err);
-      toast({ title: t("cancelError"), variant: "destructive" });
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+  const formatPrice = useFormatPrice();
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -80,9 +53,9 @@ export default function CustomerOrdersPage() {
   if (isLoading && orders.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">{t("myOrders.title")}</h1>
+        <h1 className="text-xl font-semibold text-polaris-text">{t("myOrders.title")}</h1>
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 w-full" />
+          <Skeleton key={i} className="h-24 w-full rounded-lg" />
         ))}
       </div>
     );
@@ -92,7 +65,7 @@ export default function CustomerOrdersPage() {
   if (error) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">{t("myOrders.title")}</h1>
+        <h1 className="text-xl font-semibold text-polaris-text">{t("myOrders.title")}</h1>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
@@ -106,119 +79,93 @@ export default function CustomerOrdersPage() {
   if (orders.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">{t("myOrders.title")}</h1>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium text-muted-foreground">{t("myOrders.empty")}</p>
-            <Button asChild className="mt-4">
-              <Link href="/products">{t("myOrders.shopNow")}</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <h1 className="text-xl font-semibold text-polaris-text">{t("myOrders.title")}</h1>
+        <div className="bg-polaris-surface border border-polaris-border rounded-lg shadow-sm p-12 flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-full bg-[#F1F1F1] flex items-center justify-center mb-4">
+            <Package className="h-6 w-6 text-polaris-icon-subdued" />
+          </div>
+          <p className="text-sm font-medium text-polaris-text mb-1">{t("myOrders.empty")}</p>
+          <p className="text-xs text-polaris-text-subdued mb-4">Your orders will appear here once you place one.</p>
+          <Link
+            href="/products"
+            className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-polaris-primary text-white hover:bg-polaris-primary-hovered transition-colors"
+          >
+            {t("myOrders.shopNow")}
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">{t("myOrders.title")}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-polaris-text">{t("myOrders.title")}</h1>
+        <span className="text-xs text-polaris-text-subdued">{pagination.total} order{pagination.total !== 1 ? "s" : ""}</span>
+      </div>
 
       {/* Order cards */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {orders.map((order) => (
-          <Card key={order.id} className="hover:border-primary/50 transition-colors">
-            <CardContent className="p-4">
+          <div
+            key={order.id}
+            className="bg-polaris-surface border border-polaris-border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 {/* Left: order info */}
-                <div className="space-y-1 min-w-0">
+                <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm font-semibold">{order.orderNumber}</span>
+                    <span className="font-mono text-sm font-semibold text-polaris-text">{order.orderNumber}</span>
                     <StatusBadge status={order.status} />
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-polaris-text-subdued">
                     {formatDate(order.createdAt)} &middot; {order.items.length}{" "}
                     {order.items.length === 1 ? t("myOrders.item") : t("myOrders.items")}
                   </p>
-                  <p className="text-sm font-medium">{formatCurrency(order.totalPrice)}</p>
+                  <p className="text-sm font-semibold text-polaris-text">{formatPrice(order.totalPrice)}</p>
                 </div>
 
                 {/* Right: actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboard/orders/${order.id}`}>
-                      <Eye className="h-4 w-4 mr-1" />
-                      {t("myOrders.viewDetails")}
-                    </Link>
-                  </Button>
-                  {["pending", "confirmed"].includes(order.status) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setCancelTarget(order)}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      {t("myOrders.cancel")}
-                    </Button>
-                  )}
+                <div className="shrink-0">
+                  <Link
+                    href={`/dashboard/orders/${order.id}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-polaris-border text-sm font-medium text-polaris-text bg-polaris-surface hover:bg-polaris-surface-hovered transition-colors"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    {t("myOrders.viewDetails")}
+                  </Link>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
       {/* Pagination */}
       {pagination.pages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             disabled={pagination.page <= 1}
             onClick={() => fetchOrders(pagination.page - 1)}
             aria-label={t("pagination.prev")}
+            className="p-1.5 rounded-md border border-polaris-border text-polaris-text disabled:opacity-40 hover:bg-polaris-surface-hovered transition-colors disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground">
+          </button>
+          <span className="text-xs text-polaris-text-subdued">
             {t("pagination.pageOf", { page: pagination.page, pages: pagination.pages })}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             disabled={pagination.page >= pagination.pages}
             onClick={() => fetchOrders(pagination.page + 1)}
             aria-label={t("pagination.next")}
+            className="p-1.5 rounded-md border border-polaris-border text-polaris-text disabled:opacity-40 hover:bg-polaris-surface-hovered transition-colors disabled:cursor-not-allowed"
           >
             <ChevronRight className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
-
-      {/* Cancel confirmation dialog */}
-      <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("cancelDialog.title")}</DialogTitle>
-            <DialogDescription>
-              {t("cancelDialog.description", { orderNumber: cancelTarget?.orderNumber })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setCancelTarget(null)}>
-              {t("cancelDialog.keep")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancel}
-              disabled={isCancelling}
-            >
-              {isCancelling ? t("cancelDialog.cancelling") : t("cancelDialog.confirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

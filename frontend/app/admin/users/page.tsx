@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { MoreHorizontal, AlertCircle } from "lucide-react";
+import { MoreHorizontal, AlertCircle, Search } from "lucide-react";
 import { getAllUsersAPI, updateUserRoleAPI, banUserAPI } from "@/services/user-service";
 import type { AuthUser } from "@/services/auth-service";
 import type { PaginationInfo } from "@/services/user-service";
@@ -17,13 +17,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Alert } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import logger from "@/lib/logger";
 
 type RoleChangeState = { user: AuthUser; newRole: "customer" | "admin" } | null;
 type BanState = { user: AuthUser } | null;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 export default function AdminUsersPage() {
   const { t } = useTranslation(["dashboard", "common"]);
@@ -122,7 +124,7 @@ export default function AdminUsersPage() {
       header: t("dashboard:admin.users.columns.name"),
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold overflow-hidden flex-shrink-0">
+          <div className="h-8 w-8 rounded-full bg-polaris-surface-hovered flex items-center justify-center text-xs font-semibold overflow-hidden flex-shrink-0">
             {row.avatar ? (
               <img
                 src={`${API_URL}${row.avatar}`}
@@ -146,14 +148,14 @@ export default function AdminUsersPage() {
       key: "email",
       header: t("dashboard:admin.users.columns.email"),
       render: (row) => (
-        <span className="text-muted-foreground truncate max-w-[180px] block">{row.email}</span>
+        <span className="text-polaris-text-subdued truncate max-w-[180px] block">{row.email}</span>
       ),
     },
     {
       key: "role",
       header: t("dashboard:admin.users.columns.role"),
       render: (row) => (
-        <Badge variant={row.role === "admin" ? "default" : "secondary"}>
+        <Badge variant={row.role === "admin" ? "info" : "secondary"}>
           {t(`dashboard:admin.users.roles.${row.role}`)}
         </Badge>
       ),
@@ -173,14 +175,14 @@ export default function AdminUsersPage() {
       key: "createdAt",
       header: t("dashboard:admin.users.columns.joined"),
       render: (row) => (
-        <span className="text-muted-foreground text-xs">
+        <span className="text-polaris-text-subdued text-xs">
           {new Date(row.createdAt).toLocaleDateString()}
         </span>
       ),
     },
     {
       key: "actions",
-      header: t("dashboard:admin.users.columns.actions"),
+      header: "",
       className: "w-12",
       render: (row) => (
         <DropdownMenu>
@@ -219,10 +221,10 @@ export default function AdminUsersPage() {
   ];
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">{t("dashboard:admin.users.title")}</h1>
-        <p className="text-muted-foreground text-sm mt-1">{t("dashboard:admin.users.subtitle")}</p>
+        <h1 className="text-xl font-semibold text-polaris-text">{t("dashboard:admin.users.title")}</h1>
+        <p className="text-sm text-polaris-text-subdued mt-1">{t("dashboard:admin.users.subtitle")}</p>
       </div>
 
       {error && (
@@ -232,26 +234,40 @@ export default function AdminUsersPage() {
         </Alert>
       )}
 
-      <DataTable
-        columns={columns}
-        data={users}
-        isLoading={isLoading}
-        pagination={pagination}
-        onPageChange={(page) => fetchUsers(page)}
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder={t("dashboard:admin.users.searchPlaceholder")}
-        emptyMessage={t("dashboard:admin.users.empty")}
-      />
+      <Card>
+        <div style={{ position: "relative", padding: "16px", paddingBottom: "12px", maxWidth: "420px" }}>
+          <Search style={{ position: "absolute", left: "28px", top: "50%", transform: "translateY(-50%)", width: "14px", height: "14px", color: "rgba(138,138,138,1)" }} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("dashboard:admin.users.searchPlaceholder")}
+            aria-label={t("dashboard:admin.users.searchPlaceholder")}
+            style={{ width: "100%", boxSizing: "border-box", height: "36px", paddingLeft: "34px", paddingRight: "12px", fontSize: "13px", borderRadius: "8px", border: "1px solid rgba(227,227,227,1)", background: "#FFFFFF", color: "rgba(48,48,48,1)", outline: "none" }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(26,26,26,1)"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(26,26,26,0.08)"; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(138,138,138,1)"; e.currentTarget.style.boxShadow = "none"; }}
+          />
+        </div>
+        <DataTable
+          columns={columns}
+          data={users}
+          isLoading={isLoading}
+          pagination={pagination}
+          onPageChange={(page) => fetchUsers(page)}
+          emptyMessage={t("dashboard:admin.users.empty")}
+          embedded
+          className="px-4 pb-4"
+        />
+      </Card>
 
       {/* Role change confirmation dialog */}
       <Dialog open={!!roleDialog} onOpenChange={(open) => !open && setRoleDialog(null)}>
         <DialogContent>
-          <h2 className="text-lg font-semibold mb-2">
+          <h2 className="text-base font-semibold text-polaris-text mb-2">
             {t("dashboard:admin.users.actions.changeRole")}
           </h2>
           {roleDialog && (
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-polaris-text-subdued mb-4">
               Change <strong>{roleDialog.user.name}</strong> to{" "}
               <strong>{t(`dashboard:admin.users.roles.${roleDialog.newRole}`)}</strong>?
             </p>
@@ -270,13 +286,13 @@ export default function AdminUsersPage() {
       {/* Ban confirmation dialog */}
       <Dialog open={!!banDialog} onOpenChange={(open) => !open && setBanDialog(null)}>
         <DialogContent>
-          <h2 className="text-lg font-semibold mb-2">
+          <h2 className="text-base font-semibold text-polaris-text mb-2">
             {banDialog?.user.isActive
               ? t("dashboard:admin.users.confirmBan")
               : t("dashboard:admin.users.confirmUnban")}
           </h2>
           {banDialog && (
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-polaris-text-subdued mb-4">
               User: <strong>{banDialog.user.name}</strong>
             </p>
           )}

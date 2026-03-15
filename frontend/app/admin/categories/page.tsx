@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil, Trash2, AlertCircle, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, AlertCircle, ChevronDown, ChevronRight, EyeOff } from "lucide-react";
 import {
   getAllCategoriesAPI,
   createCategoryAPI,
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
@@ -37,6 +37,210 @@ const emptyForm: CategoryFormState = {
   isActive: true,
 };
 
+// ── CategoryListRow ─────────────────────────────────────────────────────────
+// Extracted as a standalone component so webpack generates a separate chunk,
+// busting browser cache when this file changes (prevents stale rendering).
+// Uses inline styles for all critical colors — avoids CSS-variable specificity
+// battles inside .admin-polaris (see globals.css Problem 1 notes).
+interface RowProps {
+  cat: Category;
+  depth: number;
+  hasChildren: boolean;
+  isExpanded: boolean;
+  isLast: boolean;
+  onToggleExpand: (id: string) => void;
+  onToggleActive: (cat: Category) => void;
+  onAddChild: (parentId: string) => void;
+  onEdit: (cat: Category) => void;
+  onDelete: (cat: Category) => void;
+}
+
+function CategoryListRow({
+  cat,
+  depth,
+  hasChildren,
+  isExpanded,
+  isLast,
+  onToggleExpand,
+  onToggleActive,
+  onAddChild,
+  onEdit,
+  onDelete,
+}: RowProps) {
+  const { t } = useTranslation("categories");
+  const indentPx = depth * 28;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        minHeight: "52px",
+        paddingTop: "8px",
+        paddingBottom: "8px",
+        paddingRight: "12px",
+        paddingLeft: `${12 + indentPx}px`,
+        gap: "6px",
+        background: "transparent",
+        transition: "background-color 0.15s",
+      }}
+      className={`group hover:bg-polaris-surface-hovered ${isLast ? "" : "border-b border-polaris-border-subdued"}`}
+    >
+      {/* Expand/collapse chevron — only visible on root categories with children */}
+      <button
+        type="button"
+        onClick={() => hasChildren && onToggleExpand(cat.id)}
+        style={{
+          width: "20px",
+          height: "20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          cursor: hasChildren ? "pointer" : "default",
+          color: "var(--polaris-icon)",
+          background: "none",
+          border: "none",
+          padding: 0,
+          visibility: hasChildren ? "visible" : "hidden",
+          borderRadius: "4px",
+        }}
+        aria-label={isExpanded ? t("tree.collapse") : t("tree.expand")}
+        aria-expanded={hasChildren ? isExpanded : undefined}
+      >
+        {isExpanded ? (
+          <ChevronDown style={{ width: "14px", height: "14px" }} />
+        ) : (
+          <ChevronRight style={{ width: "14px", height: "14px" }} />
+        )}
+      </button>
+
+      {/* Eye-off indicator for hidden/inactive categories */}
+      <div style={{ width: "16px", flexShrink: 0, display: "flex", justifyContent: "center" }}>
+        {!cat.isActive && (
+          <EyeOff style={{ width: "13px", height: "13px", color: "var(--polaris-icon-subdued)" }} />
+        )}
+      </div>
+
+      {/* Name + optional description */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+          <span
+            style={{
+              fontSize: "14px",
+              fontWeight: depth === 0 ? 500 : 400,
+              color: cat.isActive ? "var(--polaris-text)" : "var(--polaris-text-subdued)",
+              lineHeight: "20px",
+            }}
+          >
+            {cat.name}
+          </span>
+          <Badge variant={cat.isActive ? "success" : "secondary"}>
+            {cat.isActive ? t("status.active") : t("status.inactive")}
+          </Badge>
+        </div>
+        {cat.description && (
+          <p
+            style={{
+              fontSize: "12px",
+              color: "var(--polaris-text-subdued)",
+              margin: 0,
+              lineHeight: "16px",
+              marginTop: "1px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "480px",
+            }}
+          >
+            {cat.description}
+          </p>
+        )}
+      </div>
+
+      {/* Right-side actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: "2px", flexShrink: 0 }}>
+        {/* Active/inactive toggle */}
+        <Switch
+          checked={cat.isActive}
+          onCheckedChange={() => onToggleActive(cat)}
+          aria-label={cat.isActive ? t("actions.hidden") : t("actions.visible")}
+        />
+
+        {/* Add subcategory */}
+        <button
+          type="button"
+          onClick={() => onAddChild(cat.id)}
+          style={{
+            width: "28px",
+            height: "28px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "4px",
+            border: "none",
+            background: "none",
+            color: "var(--polaris-icon)",
+            cursor: "pointer",
+          }}
+          className="hover:bg-polaris-surface-hovered transition-colors"
+          title={t("actions.addChild")}
+          aria-label={t("actions.addChild")}
+        >
+          <Plus style={{ width: "13px", height: "13px" }} />
+        </button>
+
+        {/* Edit */}
+        <button
+          type="button"
+          onClick={() => onEdit(cat)}
+          style={{
+            width: "28px",
+            height: "28px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "4px",
+            border: "none",
+            background: "none",
+            color: "var(--polaris-icon)",
+            cursor: "pointer",
+          }}
+          className="hover:bg-polaris-surface-hovered transition-colors"
+          title={t("actions.edit")}
+          aria-label={t("actions.edit")}
+        >
+          <Pencil style={{ width: "13px", height: "13px" }} />
+        </button>
+
+        {/* Delete */}
+        <button
+          type="button"
+          onClick={() => onDelete(cat)}
+          style={{
+            width: "28px",
+            height: "28px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "4px",
+            border: "none",
+            background: "none",
+            color: "var(--polaris-critical)",
+            cursor: "pointer",
+          }}
+          className="hover:bg-polaris-critical-light transition-colors"
+          title={t("actions.delete")}
+          aria-label={t("actions.delete")}
+        >
+          <Trash2 style={{ width: "13px", height: "13px" }} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminCategoriesPage() {
   const { t } = useTranslation(["categories", "common"]);
   const { toast } = useToast();
@@ -44,6 +248,7 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -61,7 +266,11 @@ export default function AdminCategoriesPage() {
     setError(null);
     try {
       const res = await getAllCategoriesAPI();
-      setCategories(res.data);
+      const cats: Category[] = res.data;
+      setCategories(cats);
+      // Auto-expand all root categories on first load
+      const rootIds = cats.filter((c) => !c.parent).map((c) => c.id);
+      setExpandedIds(new Set(rootIds));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t("common:errors.generic");
       setError(msg);
@@ -71,16 +280,46 @@ export default function AdminCategoriesPage() {
     }
   }, [t]);
 
-  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
-  const openCreate = () => {
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Optimistic toggle: flip locally, call API, revert if it fails
+  const handleToggleActive = useCallback(
+    async (cat: Category) => {
+      setCategories((prev) =>
+        prev.map((c) => (c.id === cat.id ? { ...c, isActive: !c.isActive } : c))
+      );
+      try {
+        await updateCategoryAPI(cat.id, { isActive: !cat.isActive });
+      } catch (err) {
+        setCategories((prev) =>
+          prev.map((c) => (c.id === cat.id ? { ...c, isActive: cat.isActive } : c))
+        );
+        toast({ title: t("common:errors.generic"), variant: "destructive" });
+        logger.error("toggleActive failed:", err);
+      }
+    },
+    [toast, t]
+  );
+
+  const openCreate = useCallback((parentId = "") => {
     setEditTarget(null);
-    setFormState(emptyForm);
+    setFormState({ ...emptyForm, parent: parentId });
     setFormError(null);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const openEdit = (cat: Category) => {
+  const openEdit = useCallback((cat: Category) => {
     setEditTarget(cat);
     setFormState({
       name: cat.name,
@@ -91,7 +330,7 @@ export default function AdminCategoriesPage() {
     });
     setFormError(null);
     setDialogOpen(true);
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,7 +348,6 @@ export default function AdminCategoriesPage() {
         image: formState.image.trim() || null,
         isActive: formState.isActive,
       };
-
       if (editTarget) {
         await updateCategoryAPI(editTarget.id, payload);
         toast({ title: t("categories:actions.successUpdated") });
@@ -117,7 +355,6 @@ export default function AdminCategoriesPage() {
         await createCategoryAPI(payload);
         toast({ title: t("categories:actions.successCreated") });
       }
-
       setDialogOpen(false);
       fetchCategories();
     } catch (err: unknown) {
@@ -146,25 +383,48 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const getParentName = (cat: Category) => {
-    if (!cat.parent) return null;
-    const parentId = typeof cat.parent === "string" ? cat.parent : (cat.parent as Category).id;
-    return categories.find((c) => c.id === parentId)?.name ?? null;
-  };
+  // Pre-compute which categories have children (O(n) lookup table)
+  const hasChildrenMap = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    categories.forEach((c) => {
+      const pid = typeof c.parent === "string" ? c.parent : (c.parent as Category)?.id;
+      if (pid) map[pid] = true;
+    });
+    return map;
+  }, [categories]);
+
+  // Build a flat ordered display list: root → expanded children (depth-first)
+  const displayList = useMemo(() => {
+    const result: Array<{ cat: Category; depth: number }> = [];
+    const addItem = (cat: Category, depth: number) => {
+      result.push({ cat, depth });
+      if (expandedIds.has(cat.id)) {
+        const children = categories.filter((c) => {
+          const pid = typeof c.parent === "string" ? c.parent : (c.parent as Category)?.id;
+          return pid === cat.id;
+        });
+        children.forEach((child) => addItem(child, depth + 1));
+      }
+    };
+    categories.filter((c) => !c.parent).forEach((cat) => addItem(cat, 0));
+    return result;
+  }, [categories, expandedIds]);
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="space-y-5">
+      {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t("categories:title")}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{t("categories:subtitle")}</p>
+          <h1 className="text-xl font-semibold text-polaris-text">{t("categories:title")}</h1>
+          <p className="text-sm text-polaris-text-subdued mt-1">{t("categories:subtitle")}</p>
         </div>
-        <Button onClick={openCreate}>
+        <Button onClick={() => openCreate()}>
           <Plus className="h-4 w-4 mr-2" />
           {t("categories:addButton")}
         </Button>
       </div>
 
+      {/* Error banner */}
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -172,123 +432,64 @@ export default function AdminCategoriesPage() {
         </Alert>
       )}
 
-      {/* Loading state */}
+      {/* Loading skeletons — mimic the list rows */}
       {isLoading && (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+        <div className="bg-polaris-surface border border-polaris-border rounded-lg overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className={`px-3 py-3.5 ${i < 4 ? "border-b border-polaris-border-subdued" : ""}`}>
+              <Skeleton className="h-5 w-48" />
+            </div>
           ))}
         </div>
       )}
 
       {/* Empty state */}
       {!isLoading && categories.length === 0 && !error && (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <p>{t("categories:empty")}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Category list — grouped by parent */}
-      {!isLoading && categories.length > 0 && (
-        <div className="space-y-3">
-          {/* Root categories first */}
-          {categories
-            .filter((cat) => !cat.parent)
-            .map((cat) => {
-              const children = categories.filter((c) => {
-                const pid = typeof c.parent === "string" ? c.parent : (c.parent as Category)?.id;
-                return pid === cat.id;
-              });
-              return (
-                <Card key={cat.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base">{cat.name}</CardTitle>
-                        <Badge variant={cat.isActive ? "success" : "secondary"}>
-                          {cat.isActive
-                            ? t("categories:status.active")
-                            : t("categories:status.inactive")}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(cat)}
-                          aria-label={t("categories:actions.edit")}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteTarget(cat)}
-                          aria-label={t("categories:actions.delete")}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                    {cat.description && (
-                      <p className="text-xs text-muted-foreground">{cat.description}</p>
-                    )}
-                  </CardHeader>
-
-                  {/* Subcategories */}
-                  {children.length > 0 && (
-                    <CardContent className="pt-0 space-y-2">
-                      {children.map((child) => (
-                        <div
-                          key={child.id}
-                          className="flex items-center justify-between pl-4 py-1 border-l-2 border-muted"
-                        >
-                          <div className="flex items-center gap-2">
-                            <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">{child.name}</span>
-                            <Badge
-                              variant={child.isActive ? "success" : "secondary"}
-                              className="text-xs"
-                            >
-                              {child.isActive
-                                ? t("categories:status.active")
-                                : t("categories:status.inactive")}
-                            </Badge>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEdit(child)}
-                              aria-label={t("categories:actions.edit")}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeleteTarget(child)}
-                              aria-label={t("categories:actions.delete")}
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  )}
-                </Card>
-              );
-            })}
+        <div className="bg-polaris-surface border border-polaris-border rounded-lg shadow-sm py-12 px-6 text-center">
+          <p className="text-sm text-polaris-text-subdued">{t("categories:empty")}</p>
         </div>
       )}
 
-      {/* Create / Edit Dialog */}
+      {/* ── One card per root category ────────────────────────────────── */}
+      {!isLoading && displayList.length > 0 && (() => {
+        // Split flat displayList into groups by root (depth === 0)
+        const groups: Array<typeof displayList> = [];
+        displayList.forEach((item) => {
+          if (item.depth === 0) groups.push([item]);
+          else groups[groups.length - 1]?.push(item);
+        });
+        return (
+          <div className="space-y-3">
+            {groups.map((group) => (
+              <div
+                key={group[0].cat.id}
+                className="bg-polaris-surface border border-polaris-border rounded-lg shadow-sm overflow-hidden"
+              >
+                {group.map(({ cat, depth }, index) => (
+                  <CategoryListRow
+                    key={cat.id}
+                    cat={cat}
+                    depth={depth}
+                    hasChildren={!!hasChildrenMap[cat.id]}
+                    isExpanded={expandedIds.has(cat.id)}
+                    isLast={index === group.length - 1}
+                    onToggleExpand={toggleExpand}
+                    onToggleActive={handleToggleActive}
+                    onAddChild={openCreate}
+                    onEdit={openEdit}
+                    onDelete={(c) => setDeleteTarget(c)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* ── Create / Edit Dialog ─────────────────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && setDialogOpen(false)}>
         <DialogContent>
-          <h2 className="text-lg font-semibold mb-4">
+          <h2 className="text-base font-semibold text-polaris-text mb-4">
             {editTarget ? t("categories:form.editTitle") : t("categories:form.createTitle")}
           </h2>
 
@@ -385,21 +586,19 @@ export default function AdminCategoriesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation */}
+      {/* ── Delete confirmation ──────────────────────────────────────────── */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
-          <h2 className="text-lg font-semibold mb-2">{t("categories:actions.confirmDelete")}</h2>
+          <h2 className="text-base font-semibold text-polaris-text mb-2">
+            {t("categories:actions.confirmDelete")}
+          </h2>
           {deleteTarget && (
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-polaris-text-subdued mb-4">
               {t("categories:actions.confirmDeleteMessage", { name: deleteTarget.name })}
             </p>
           )}
           <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteTarget(null)}
-              disabled={isDeleting}
-            >
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
               {t("common:actions.cancel")}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>

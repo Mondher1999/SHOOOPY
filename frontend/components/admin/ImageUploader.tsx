@@ -154,10 +154,10 @@ export default function ImageUploader({ productId, onUploaded, className }: Imag
             : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
         )}
       >
-        <UploadCloud className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
+        <UploadCloud className="h-10 w-10 text-polaris-text-subdued" aria-hidden="true" />
         <div className="text-center">
           <p className="text-sm font-medium">{t("upload.dropZoneTitle")}</p>
-          <p className="text-xs text-muted-foreground mt-1">{t("upload.dropZoneHint")}</p>
+          <p className="text-xs text-polaris-text-subdued mt-1">{t("upload.dropZoneHint")}</p>
         </div>
         <input
           ref={inputRef}
@@ -209,7 +209,7 @@ export default function ImageUploader({ productId, onUploaded, className }: Imag
                   </p>
                 )}
                 {item.status === "queued" && (
-                  <p className="text-xs text-muted-foreground">{t("upload.statusQueued")}</p>
+                  <p className="text-xs text-polaris-text-subdued">{t("upload.statusQueued")}</p>
                 )}
               </div>
 

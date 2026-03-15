@@ -695,6 +695,35 @@ export interface SmtpSettings {
   fromEmail: string;
 }
 
+// ─── Navigation ─────────────────────────────────────────────────────────
+export type BuiltinPage =
+  | "shop"
+  | "categories"
+  | "new-arrivals"
+  | "contact"
+  | "faq"
+  | "terms"
+  | "privacy"
+  | "shipping-policy"
+  | "refund-policy"
+  | "wishlist";
+
+export interface NavigationItem {
+  id: string;
+  type: "builtin" | "custom";
+  builtinPage: BuiltinPage | "";
+  label: string;
+  labelFr: string;
+  href: string;
+  enabled: boolean;
+  openInNewTab: boolean;
+  children?: NavigationItem[];
+}
+
+export interface NavigationSettings {
+  mainMenu: NavigationItem[];
+}
+
 // ─── Header Settings ────────────────────────────────────────────────────
 export type HeaderVariant = "classic" | "minimal" | "centered" | "bold" | "elegant" | "zen" | "playful" | "tech" | "artisan" | "magazine";
 
@@ -724,6 +753,7 @@ export interface SiteSettings {
   seo: SEOSettings;
   maintenance: MaintenanceSettings;
   homepage: HomepageSettings;
+  navigation: NavigationSettings;
   header: HeaderSettings;
   footer: FooterSettings;
   emailTemplates: EmailTemplateSettings;

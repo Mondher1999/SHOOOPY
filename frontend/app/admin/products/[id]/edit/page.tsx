@@ -32,17 +32,26 @@ export default function EditProductPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-40 w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 items-start">
+          <div className="space-y-4">
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <Skeleton className="h-40 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-28 w-full rounded-lg" />
+            <Skeleton className="h-36 w-full rounded-lg" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6 lg:p-8 max-w-3xl mx-auto">
+      <div>
         <Alert variant="destructive" role="alert">
           <p className="text-sm">{error}</p>
         </Alert>

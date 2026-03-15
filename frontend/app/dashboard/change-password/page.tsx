@@ -61,18 +61,18 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">{t("dashboard:changePassword.title")}</h1>
-        <p className="text-muted-foreground text-sm mt-1">
+        <h1 className="text-xl font-semibold text-polaris-text">{t("dashboard:changePassword.title")}</h1>
+        <p className="text-sm text-polaris-text-subdued mt-0.5">
           {t("dashboard:changePassword.subtitle")}
         </p>
       </div>
 
-      <Card className="max-w-md">
+      <Card className="max-w-md bg-polaris-surface border-polaris-border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg">{t("dashboard:changePassword.title")}</CardTitle>
-          <CardDescription>{t("dashboard:changePassword.subtitle")}</CardDescription>
+          <CardTitle className="text-sm font-semibold text-polaris-text">{t("dashboard:changePassword.title")}</CardTitle>
+          <CardDescription className="text-polaris-text-subdued">{t("dashboard:changePassword.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           {success && (

@@ -1,0 +1,82 @@
+{
+  "nav": {
+    "myAccount": "Mon compte",
+    "profile": "Profil",
+    "security": "Sécurité",
+    "orders": "Commandes",
+    "wishlist": "Liste de souhaits",
+    "users": "Utilisateurs",
+    "adminDashboard": "Panneau admin",
+    "backToWebsite": "Retour au site",
+    "continueShopping": "Continuer mes achats"
+  },
+  "profile": {
+    "title": "Mon profil",
+    "subtitle": "Gérez les informations de votre compte",
+    "nameLabel": "Nom complet",
+    "emailLabel": "Adresse e-mail",
+    "avatarLabel": "Photo de profil",
+    "avatarChange": "Changer la photo",
+    "avatarHint": "Accepte tous les formats d'image · Max 5 Mo",
+    "submitButton": "Enregistrer les modifications",
+    "submitting": "Enregistrement...",
+    "successMessage": "Profil mis à jour avec succès",
+    "errorEmailTaken": "Cet e-mail est déjà utilisé"
+  },
+  "changePassword": {
+    "title": "Changer le mot de passe",
+    "subtitle": "Mettez à jour votre mot de passe pour sécuriser votre compte",
+    "currentPasswordLabel": "Mot de passe actuel",
+    "newPasswordLabel": "Nouveau mot de passe",
+    "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+    "submitButton": "Mettre à jour le mot de passe",
+    "submitting": "Mise à jour...",
+    "successMessage": "Mot de passe modifié avec succès",
+    "errorCurrentPassword": "Le mot de passe actuel est incorrect",
+    "errorSamePassword": "Le nouveau mot de passe doit être différent du mot de passe actuel"
+  },
+  "admin": {
+    "users": {
+      "title": "Gestion des utilisateurs",
+      "subtitle": "Consulter et gérer tous les utilisateurs de la plateforme",
+      "searchPlaceholder": "Rechercher par nom ou e-mail...",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "role": "Rôle",
+        "status": "Statut",
+        "joined": "Inscrit le",
+        "actions": "Actions"
+      },
+      "roles": {
+        "customer": "Client",
+        "admin": "Admin"
+      },
+      "status": {
+        "active": "Actif",
+        "banned": "Banni"
+      },
+      "actions": {
+        "changeRole": "Changer le rôle",
+        "ban": "Bannir l'utilisateur",
+        "unban": "Débannir l'utilisateur"
+      },
+      "empty": "Aucun utilisateur trouvé",
+      "confirmBan": "Bannir cet utilisateur ?",
+      "confirmUnban": "Débannir cet utilisateur ?",
+      "successRoleChanged": "Rôle de l'utilisateur mis à jour",
+      "successBanned": "Utilisateur banni",
+      "successUnbanned": "Utilisateur débanni"
+    }
+  },
+  "validation": {
+    "nameRequired": "Le nom est requis",
+    "emailRequired": "L'adresse e-mail est requise",
+    "emailInvalid": "Veuillez entrer une adresse e-mail valide",
+    "currentPasswordRequired": "Le mot de passe actuel est requis",
+    "newPasswordRequired": "Le nouveau mot de passe est requis",
+    "newPasswordMinLength": "Le nouveau mot de passe doit comporter au moins 8 caractères",
+    "confirmPasswordRequired": "Veuillez confirmer votre mot de passe",
+    "passwordsMustMatch": "Les mots de passe ne correspondent pas"
+  }
+}

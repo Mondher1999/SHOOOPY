@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Menu, Search, ExternalLink, Sun, Moon } from "lucide-react";
+import { Menu, ExternalLink, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { cn } from "@/lib/utils";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 interface AdminTopBarProps {
   onMenuClick: () => void;
@@ -20,12 +22,7 @@ export function AdminTopBar({ onMenuClick }: AdminTopBarProps) {
   const { theme, toggleTheme } = useTheme();
 
   const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
+    ? user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
     : "?";
 
   return (
@@ -39,7 +36,7 @@ export function AdminTopBar({ onMenuClick }: AdminTopBarProps) {
         <Menu className="h-5 w-5 text-polaris-icon" />
       </button>
 
-      {/* Store chip — links back to storefront */}
+      {/* Voir la boutique — desktop */}
       <Link
         href="/"
         className={cn(
@@ -65,24 +62,7 @@ export function AdminTopBar({ onMenuClick }: AdminTopBarProps) {
         <ExternalLink className="h-5 w-5 text-polaris-icon" />
       </Link>
 
-      {/* Search bar */}
-      <div className="flex-1 max-w-[480px]">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-polaris-icon-subdued" />
-          <input
-            type="text"
-            placeholder={t("topbar.searchPlaceholder")}
-            className={cn(
-              "w-full h-9 pl-9 pr-3 text-sm rounded bg-polaris-bg border border-polaris-border",
-              "placeholder:text-polaris-text-subdued text-polaris-text",
-              "focus:outline-none focus:ring-1 focus:ring-polaris-primary focus:border-polaris-primary",
-              "transition-colors"
-            )}
-          />
-        </div>
-      </div>
-
-      {/* Spacer */}
+      {/* Push right items to far right */}
       <div className="flex-1" />
 
       {/* Language switcher */}
@@ -94,29 +74,31 @@ export function AdminTopBar({ onMenuClick }: AdminTopBarProps) {
         aria-label={theme === "dark" ? t("topbar.switchToLight") : t("topbar.switchToDark")}
         className="relative h-8 w-8 rounded flex items-center justify-center text-polaris-icon hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
       >
-        <Sun
-          className={cn(
-            "h-[18px] w-[18px] absolute transition-all duration-300",
-            theme === "dark" ? "rotate-0 scale-100 opacity-100" : "rotate-90 scale-0 opacity-0"
-          )}
-        />
-        <Moon
-          className={cn(
-            "h-[18px] w-[18px] absolute transition-all duration-300",
-            theme === "light" ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0"
-          )}
-        />
+        <Sun className={cn("h-[18px] w-[18px] absolute transition-all duration-300", theme === "dark" ? "rotate-0 scale-100 opacity-100" : "rotate-90 scale-0 opacity-0")} />
+        <Moon className={cn("h-[18px] w-[18px] absolute transition-all duration-300", theme === "light" ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0")} />
       </button>
 
-      {/* Store branding — logo + name + admin label */}
-      <div className="hidden md:flex items-center gap-2.5 shrink-0 pl-1 border-l border-polaris-border ml-1">
-        {settings?.store?.logoEnabled && settings?.store?.logo && (
-          <img
-            src={settings.store.logo}
-            alt={settings.store.name}
-            className="h-7 w-auto max-w-[40px] object-contain rounded"
-          />
-        )}
+      {/* Store branding — logo (circle) + name + "Administration" */}
+      <div className="hidden md:flex items-center gap-2 shrink-0">
+        {/* Logo: circular container — shows store logo if configured, else initials */}
+        <div
+          className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden"
+          style={{ border: "2px solid var(--polaris-primary, #008060)" }}
+        >
+          {settings?.store?.logoEnabled && settings?.store?.logo ? (
+            <img
+              src={settings.store.logo?.startsWith("/") ? `${BASE_URL}${settings.store.logo}` : settings.store.logo}
+              alt={settings.store.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className="text-xs font-bold text-polaris-primary">
+              {(settings?.store?.name || "S").charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
+
+        {/* Store name + subtitle */}
         <div className="flex flex-col leading-tight">
           <span className="text-sm font-semibold text-polaris-text truncate max-w-[140px]">
             {settings?.store?.name || "ShopFlow"}
@@ -128,10 +110,8 @@ export function AdminTopBar({ onMenuClick }: AdminTopBarProps) {
       </div>
 
       {/* User avatar */}
-      <div className="flex items-center gap-2 shrink-0">
-        <div className="h-8 w-8 rounded-full bg-polaris-primary flex items-center justify-center text-xs font-semibold text-white shrink-0">
-          {initials}
-        </div>
+      <div className="h-8 w-8 rounded-full bg-polaris-primary flex items-center justify-center text-xs font-semibold text-white shrink-0">
+        {initials}
       </div>
     </header>
   );

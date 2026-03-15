@@ -12,9 +12,14 @@ import {
 
 const LANGUAGES = [
   { code: "en", label: "English" },
+  { code: "fr", label: "Français" },
 ] as const;
 
-export function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  iconClassName?: string;
+}
+
+export function LanguageSwitcher({ iconClassName }: LanguageSwitcherProps) {
   const { t, i18n } = useTranslation("common");
 
   const handleChangeLanguage = (code: string) => {
@@ -28,8 +33,9 @@ export function LanguageSwitcher() {
           variant="ghost"
           size="icon"
           aria-label={t("language.label")}
+          suppressHydrationWarning
         >
-          <Globe className="h-5 w-5" aria-hidden="true" />
+          <Globe className={iconClassName || "h-5 w-5"} aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

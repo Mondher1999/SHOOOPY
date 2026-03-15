@@ -8,13 +8,9 @@ import { useTranslation } from "react-i18next";
 import { Camera, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { updateProfileAPI } from "@/services/user-service";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import logger from "@/lib/logger";
 
 const schema = z.object({
@@ -27,7 +23,15 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
+const inputClasses = cn(
+  "w-full h-9 px-3 text-sm rounded border border-[#C9CCCF] bg-polaris-surface text-polaris-text",
+  "placeholder:text-polaris-text-subdued",
+  "focus:outline-none focus:ring-1 focus:ring-polaris-primary focus:border-polaris-primary"
+);
+
+const cardClasses = "bg-polaris-surface border border-polaris-border rounded-lg shadow-sm";
 
 export default function ProfilePage() {
   const { user, refreshUser, isLoading: authLoading } = useAuth();
@@ -50,11 +54,8 @@ export default function ProfilePage() {
     defaultValues: { name: "", email: "" },
   });
 
-  // Populate form once user data is available
   useEffect(() => {
-    if (user) {
-      reset({ name: user.name, email: user.email });
-    }
+    if (user) reset({ name: user.name, email: user.email });
   }, [user, reset]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,8 +78,7 @@ export default function ProfilePage() {
       setAvatarFile(null);
       toast({ title: t("dashboard:profile.successMessage") });
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : t("common:errors.generic");
+      const msg = err instanceof Error ? err.message : t("common:errors.generic");
       setServerError(msg);
       logger.error("updateProfile failed:", err);
     } finally {
@@ -86,151 +86,156 @@ export default function ProfilePage() {
     }
   };
 
-  // Current avatar URL (preview takes priority, then server avatar, then null)
   const avatarSrc = avatarPreview
     ? avatarPreview
     : user?.avatar
     ? `${API_URL}${user.avatar}`
     : null;
 
-  // Initials fallback
   const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
+    ? user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
     : "?";
 
   if (authLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <Skeleton className="h-24 w-24 rounded-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-32" />
-          </CardContent>
-        </Card>
+      <div className="space-y-5">
+        <div>
+          <Skeleton className="h-7 w-40 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className={cn(cardClasses, "p-6 space-y-4")}>
+          <Skeleton className="h-20 w-20 rounded-full" />
+          <Skeleton className="h-9 w-32" />
+        </div>
+        <div className={cn(cardClasses, "p-6 space-y-4")}>
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-32" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Page heading */}
       <div>
-        <h1 className="text-2xl font-bold">{t("dashboard:profile.title")}</h1>
-        <p className="text-muted-foreground text-sm mt-1">{t("dashboard:profile.subtitle")}</p>
+        <h1 className="text-xl font-semibold text-polaris-text">{t("dashboard:profile.title")}</h1>
+        <p className="text-sm text-polaris-text-subdued mt-0.5">{t("dashboard:profile.subtitle")}</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t("dashboard:profile.avatarLabel")}</CardTitle>
-          <CardDescription>{t("dashboard:profile.avatarHint")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-6">
-            {/* Avatar */}
-            <div
-              className="relative h-20 w-20 rounded-full bg-muted flex items-center justify-center overflow-hidden ring-2 ring-border cursor-pointer group"
-              onClick={() => fileInputRef.current?.click()}
-              role="button"
-              aria-label={t("dashboard:profile.avatarChange")}
-              tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
-            >
-              {avatarSrc ? (
-                <img
-                  src={avatarSrc}
-                  alt={t("dashboard:profile.avatarLabel")}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-xl font-semibold text-muted-foreground">{initials}</span>
-              )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Camera className="h-6 w-6 text-white" />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {t("dashboard:profile.avatarChange")}
-              </Button>
-              <p className="text-xs text-muted-foreground">{t("dashboard:profile.avatarHint")}</p>
+      {/* Avatar card */}
+      <div className={cn(cardClasses, "p-6")}>
+        <h2 className="text-sm font-semibold text-polaris-text mb-4">{t("dashboard:profile.avatarLabel")}</h2>
+        <div className="flex items-center gap-5">
+          {/* Avatar circle */}
+          <div
+            className="relative h-20 w-20 rounded-full bg-polaris-surface-hovered flex items-center justify-center overflow-hidden ring-2 ring-polaris-border cursor-pointer group shrink-0"
+            onClick={() => fileInputRef.current?.click()}
+            role="button"
+            aria-label={t("dashboard:profile.avatarChange")}
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+          >
+            {avatarSrc ? (
+              <img src={avatarSrc} alt={t("dashboard:profile.avatarLabel")} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xl font-semibold text-polaris-text-subdued">{initials}</span>
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Camera className="h-5 w-5 text-white" />
             </div>
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            aria-label={t("dashboard:profile.avatarChange")}
-            onChange={handleAvatarChange}
-          />
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t("dashboard:profile.title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {serverError && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <p className="ml-2 text-sm">{serverError}</p>
-            </Alert>
-          )}
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-8 px-3 text-sm font-medium rounded border border-[#C9CCCF] text-polaris-text bg-polaris-surface hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
+            >
+              {t("dashboard:profile.avatarChange")}
+            </button>
+            <p className="text-xs text-polaris-text-subdued">{t("dashboard:profile.avatarHint")}</p>
+          </div>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          aria-label={t("dashboard:profile.avatarChange")}
+          onChange={handleAvatarChange}
+        />
+      </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <div className="space-y-1">
-              <Label htmlFor="name">{t("dashboard:profile.nameLabel")}</Label>
-              <Input
-                id="name"
-                {...register("name")}
-                aria-describedby={errors.name ? "name-error" : undefined}
-                aria-invalid={!!errors.name}
-              />
-              {errors.name && (
-                <p id="name-error" role="alert" className="text-xs text-destructive">
-                  {t(errors.name.message as string)}
-                </p>
-              )}
-            </div>
+      {/* Profile form card */}
+      <div className={cn(cardClasses, "p-6")}>
+        <h2 className="text-sm font-semibold text-polaris-text mb-4">{t("dashboard:profile.title")}</h2>
 
-            <div className="space-y-1">
-              <Label htmlFor="email">{t("dashboard:profile.emailLabel")}</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register("email")}
-                aria-describedby={errors.email ? "email-error" : undefined}
-                aria-invalid={!!errors.email}
-              />
-              {errors.email && (
-                <p id="email-error" role="alert" className="text-xs text-destructive">
-                  {t(errors.email.message as string)}
-                </p>
-              )}
-            </div>
+        {serverError && (
+          <div
+            role="alert"
+            className="flex items-center gap-2 mb-4 px-3 py-2 rounded border border-polaris-critical-light bg-[#FFF4F4] text-polaris-critical text-sm"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{serverError}</span>
+          </div>
+        )}
 
-            <Button type="submit" disabled={isSubmitting} className="min-w-[140px]">
-              {isSubmitting
-                ? t("dashboard:profile.submitting")
-                : t("dashboard:profile.submitButton")}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          {/* Name */}
+          <div className="space-y-1">
+            <label htmlFor="name" className="block text-sm font-medium text-polaris-text">
+              {t("dashboard:profile.nameLabel")}
+            </label>
+            <input
+              id="name"
+              className={inputClasses}
+              {...register("name")}
+              aria-describedby={errors.name ? "name-error" : undefined}
+              aria-invalid={!!errors.name}
+            />
+            {errors.name && (
+              <p id="name-error" role="alert" className="text-xs text-polaris-critical">
+                {t(errors.name.message as string)}
+              </p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="space-y-1">
+            <label htmlFor="email" className="block text-sm font-medium text-polaris-text">
+              {t("dashboard:profile.emailLabel")}
+            </label>
+            <input
+              id="email"
+              type="email"
+              className={inputClasses}
+              {...register("email")}
+              aria-describedby={errors.email ? "email-error" : undefined}
+              aria-invalid={!!errors.email}
+            />
+            {errors.email && (
+              <p id="email-error" role="alert" className="text-xs text-polaris-critical">
+                {t(errors.email.message as string)}
+              </p>
+            )}
+          </div>
+
+          {/* Submit */}
+          <div className="pt-1 border-t border-polaris-border mt-2 flex justify-end">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-medium rounded bg-polaris-primary text-white hover:bg-polaris-primary-hovered disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isSubmitting ? t("dashboard:profile.submitting") : t("dashboard:profile.submitButton")}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

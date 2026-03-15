@@ -30,10 +30,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
 import logger from "@/lib/logger";
 import type { Order } from "@/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 export default function CustomerOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -80,8 +81,7 @@ export default function CustomerOrderDetailPage() {
     }
   };
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+  const formatPrice = useFormatPrice();
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("en-US", {
@@ -135,16 +135,6 @@ export default function CustomerOrderDetailPage() {
           </div>
           <p className="text-sm text-muted-foreground">{formatDate(order.createdAt)}</p>
         </div>
-        {canCancel && (
-          <Button
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setShowCancel(true)}
-          >
-            <XCircle className="h-4 w-4 mr-1" />
-            {t("myOrders.cancel")}
-          </Button>
-        )}
       </div>
 
       {/* Status Timeline */}
@@ -191,11 +181,11 @@ export default function CustomerOrderDetailPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {t("detail.qty", { count: item.quantity })} &times; {formatCurrency(item.price)}
+                      {t("detail.qty", { count: item.quantity })} &times; {formatPrice(item.price)}
                     </p>
                   </div>
                   <p className="text-sm font-medium shrink-0">
-                    {formatCurrency(item.price * item.quantity)}
+                    {formatPrice(item.price * item.quantity)}
                   </p>
                 </div>
               ))}
@@ -258,16 +248,16 @@ export default function CustomerOrderDetailPage() {
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("detail.subtotal")}</span>
-                <span>{formatCurrency(order.totalPrice - order.shippingCost)}</span>
+                <span>{formatPrice(order.totalPrice - order.shippingCost)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("detail.shipping")}</span>
-                <span>{order.shippingCost === 0 ? t("detail.free") : formatCurrency(order.shippingCost)}</span>
+                <span>{order.shippingCost === 0 ? t("detail.free") : formatPrice(order.shippingCost)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-semibold text-base">
                 <span>{t("detail.total")}</span>
-                <span>{formatCurrency(order.totalPrice)}</span>
+                <span>{formatPrice(order.totalPrice)}</span>
               </div>
               <p className="text-xs text-muted-foreground pt-1">
                 {t("detail.paymentMethod")}: {t("detail.cod")}

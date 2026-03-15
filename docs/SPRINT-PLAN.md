@@ -83,7 +83,7 @@
 | Create `middleware.ts` with security headers (CSP, X-Frame-Options, etc.) | 2 |
 
 **Acceptance Criteria**:
-- [ ] Landing page renders at `localhost:3000`
+- [ ] Landing page renders at `localhost:3002`
 - [ ] axiosInstance points to backend URL from environment variable
 - [ ] Security headers present on all responses (check with browser DevTools)
 - [ ] No console.log in any file — only logger

@@ -22,6 +22,13 @@ export async function getCategoryByIdAPI(id: string): Promise<{ success: true; d
   return response.data;
 }
 
+export async function getCategoryBySlugAPI(slug: string): Promise<{ success: true; data: Category }> {
+  const response = await axiosInstance.get<{ success: true; data: Category }>(
+    `/api/categories/slug/${slug}`
+  );
+  return response.data;
+}
+
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
 export async function createCategoryAPI(data: {

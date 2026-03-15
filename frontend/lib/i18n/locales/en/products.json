@@ -2,6 +2,9 @@
   "title": "Products",
   "subtitle": "Manage your product catalog",
   "addButton": "Add Product",
+  "exportCSV": "Export CSV",
+  "importCSV": "Import CSV",
+  "importSuccess": "{{count}} products imported successfully",
   "searchPlaceholder": "Search by name...",
   "filterCategory": "All categories",
   "empty": "No products found",
@@ -85,7 +88,9 @@
     "deleteConfirmButton": "Delete",
     "deletingButton": "Deleting...",
     "sortableHint": "Drag thumbnails to reorder. The first image is used as the primary product image.",
-    "saveFirstHint": "Save the product first, then you can upload images on the edit page."
+    "saveFirstHint": "Save the product first, then you can upload images on the edit page.",
+    "tagImageAriaLabel": "Tag image {{idx}} with variant",
+    "tagTitle": "Tag variant"
   },
   "validation": {
     "nameRequired": "Product name is required",
@@ -138,6 +143,36 @@
     "imageAlt": "{{name}} image {{idx}}",
     "imagePrev": "Previous image",
     "imageNext": "Next image",
-    "thumbnailsLabel": "Product images"
+    "thumbnailsLabel": "Product images",
+    "quickView": "Quick view"
+  },
+  "buyNow": {
+    "button": "Buy Now",
+    "title": "Complete your order",
+    "description": "Fill in the form to place your order",
+    "couponLabel": "Discount code",
+    "shippingOptions": "Shipping options",
+    "homeDelivery": "Home delivery",
+    "nameLabel": "Name",
+    "namePlaceholder": "Name",
+    "phoneLabel": "Phone",
+    "phonePlaceholder": "Phone",
+    "addressLabel": "Address",
+    "addressPlaceholder": "Address",
+    "deliveryInfo": "Delivery Information",
+    "codNotice": "Cash on Delivery — pay when you receive your order",
+    "submitButton": "BUY NOW",
+    "placing": "Placing order...",
+    "fillAllFields": "Please fill in all required fields",
+    "loginRequired": "Please log in to place an order",
+    "outOfStock": "Out of stock: {{names}}",
+    "errorPlacing": "Error placing order. Please try again."
+  },
+  "quickView": {
+    "ariaLabel": "Quick view: {{name}}",
+    "close": "Close",
+    "prevImage": "Previous image",
+    "nextImage": "Next image",
+    "viewFull": "View Full Details"
   }
 }

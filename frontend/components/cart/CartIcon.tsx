@@ -17,6 +17,7 @@ export function CartIcon() {
       aria-label={t("cartIconAriaLabel", { count: totalItems })}
       className="relative"
       onClick={openDrawer}
+      suppressHydrationWarning
     >
       <ShoppingCart className="h-5 w-5" aria-hidden="true" />
       {totalItems > 0 && (

@@ -149,7 +149,8 @@ export const placeOrder = async (req, res) => {
 };
 
 // ─── POST /api/orders/buy-now ──────────────────────────────────────────────────
-// Direct single-product order — bypasses cart. Inline address (name + phone + address text).
+// Quick order: adds the chosen product to cart, then creates an order with ALL
+// cart items (existing + new). Uses inline address (name + phone + address text).
 export const buyNow = async (req, res) => {
   try {
     const { productId, quantity = 1, fullName, phone, address, couponCode, selectedOptions } = req.body;
@@ -167,16 +168,64 @@ export const buyNow = async (req, res) => {
     }
 
     const qty = Math.max(1, parseInt(quantity) || 1);
-    if (qty > product.stock) {
+
+    // ── Add (or merge) the Buy Now product into the user's cart ──
+    let cart = await Cart.findOne({ user: req.user._id });
+    if (!cart) {
+      cart = await Cart.create({ user: req.user._id, items: [] });
+    }
+    const existingIdx = cart.items.findIndex(
+      (i) => i.product.toString() === productId
+    );
+    if (existingIdx >= 0) {
+      cart.items[existingIdx].quantity += qty;
+      cart.items[existingIdx].price = product.price;
+    } else {
+      cart.items.push({ product: product._id, quantity: qty, price: product.price });
+    }
+    await cart.save();
+
+    // ── Re-fetch cart with populated product data ──
+    cart = await Cart.findOne({ user: req.user._id }).populate({
+      path: "items.product",
+      select: "name images stock price isActive",
+    });
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({ success: false, error: "Cart is empty" });
+    }
+
+    // ── Validate stock for ALL items ──
+    const outOfStock = [];
+    for (const item of cart.items) {
+      const p = item.product;
+      if (!p || !p.isActive) {
+        outOfStock.push({ name: p?.name ?? "Unknown product", available: 0, requested: item.quantity });
+        continue;
+      }
+      if (item.quantity > p.stock) {
+        outOfStock.push({ name: p.name, available: p.stock, requested: item.quantity });
+      }
+    }
+    if (outOfStock.length > 0) {
       return res.status(400).json({
         success: false,
         error: "Some items are out of stock",
-        data: { outOfStock: [{ name: product.name, available: product.stock, requested: qty }] },
+        data: { outOfStock },
       });
     }
 
-    // Calculate pricing
-    const subtotal = product.price * qty;
+    // ── Build order items from full cart ──
+    const orderItems = cart.items.map((item) => ({
+      product: item.product._id,
+      name: item.product.name,
+      quantity: item.quantity,
+      price: item.price,
+      image: item.product.images?.[0]?.thumbnail ?? "",
+    }));
+
+    // ── Calculate totals ──
+    const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
     let discount = 0;
 
     if (couponCode) {
@@ -192,7 +241,6 @@ export const buyNow = async (req, res) => {
             }
             discount = Math.min(discount, subtotal);
             discount = Math.round(discount * 100) / 100;
-            // Increment usage
             await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
           }
         }
@@ -207,13 +255,7 @@ export const buyNow = async (req, res) => {
     const order = await Order.create({
       user: req.user._id,
       orderNumber,
-      items: [{
-        product: product._id,
-        name: product.name,
-        quantity: qty,
-        price: product.price,
-        image: product.images?.[0]?.thumbnail ?? "",
-      }],
+      items: orderItems,
       shippingAddress: {
         fullName: fullName.trim(),
         phone: phone.trim(),
@@ -231,8 +273,16 @@ export const buyNow = async (req, res) => {
       statusHistory: [{ status: "pending", date: new Date(), note: "Buy Now order placed" }],
     });
 
-    // Decrement stock
-    await Product.findByIdAndUpdate(productId, { $inc: { stock: -qty } });
+    // ── Decrement stock for ALL items ──
+    await Promise.all(
+      cart.items.map((item) =>
+        Product.findByIdAndUpdate(item.product._id, { $inc: { stock: -item.quantity } })
+      )
+    );
+
+    // ── Clear cart ──
+    cart.items = [];
+    await cart.save();
 
     sendOrderNotification("placed", order).catch(() => {});
 

@@ -17,6 +17,9 @@
   "actions": {
     "edit": "Edit",
     "delete": "Delete",
+    "addChild": "Add subcategory",
+    "hidden": "Deactivate category",
+    "visible": "Activate category",
     "confirmDelete": "Delete category?",
     "confirmDeleteMessage": "Delete \"{{name}}\"? This cannot be undone.",
     "successDeleted": "Category deleted",
@@ -44,7 +47,9 @@
   },
   "tree": {
     "rootLabel": "Root categories",
-    "subcategoriesLabel": "Subcategories"
+    "subcategoriesLabel": "Subcategories",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "catalog": {
     "title": "Shop by Category",

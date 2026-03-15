@@ -82,6 +82,19 @@
     "confirmUpdate": "Confirm",
     "updating": "Updating...",
     "statusUpdated": "Order status updated successfully",
-    "statusUpdateError": "Failed to update order status. Please try again."
+    "statusUpdateError": "Failed to update order status. Please try again.",
+    "shippingActions": "Shipping Actions",
+    "sendToDelivery": "Send to Delivery",
+    "trackShipment": "Track Shipment",
+    "cancelShipment": "Cancel Shipment",
+    "shippingSent": "Order sent to delivery provider",
+    "shippingError": "Failed to send to delivery. Please try again.",
+    "trackingUpdated": "Tracking information updated",
+    "trackingError": "Failed to fetch tracking info. Please try again.",
+    "shipmentCancelled": "Shipment cancelled successfully",
+    "shipmentCancelError": "Failed to cancel shipment. Please try again.",
+    "exportCSV": "Export CSV",
+    "printInvoice": "Print invoice",
+    "createOrder": "Create Order"
   }
 }

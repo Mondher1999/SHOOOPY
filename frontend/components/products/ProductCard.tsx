@@ -13,10 +13,11 @@ import { cn } from "@/lib/utils";
 import { WishlistButton } from "@/components/products/WishlistButton";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
 import logger from "@/lib/logger";
 import type { Product } from "@/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 interface ProductCardProps {
   product: Product;
@@ -72,6 +73,7 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
   const { t: tCart } = useTranslation("cart");
   const { addItem, openDrawer } = useCart();
   const { toast } = useToast();
+  const formatPrice = useFormatPrice();
   const [adding, setAdding] = useState(false);
 
   const inStock = product.stock > 0;
@@ -140,10 +142,10 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
               )}
               <StarRating average={product.ratings.average} count={product.ratings.count} />
               <div className="flex items-center gap-2 mt-1">
-                <span className="font-semibold text-sm">${product.price.toFixed(2)}</span>
+                <span className="font-semibold text-sm">{formatPrice(product.price)}</span>
                 {hasDiscount && (
                   <span className="text-xs text-muted-foreground line-through">
-                    ${product.compareAtPrice!.toFixed(2)}
+                    {formatPrice(product.compareAtPrice!)}
                   </span>
                 )}
                 <Badge variant={inStock ? "default" : "secondary"} className="text-xs py-0">
@@ -182,7 +184,7 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
         <div className="relative aspect-square overflow-hidden bg-muted">
           {primaryImage ? (
             <Image
-              src={`${BASE_URL}${primaryImage.thumbnail}`}
+              src={`${BASE_URL}${primaryImage.medium}`}
               alt={product.name}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -215,10 +217,10 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
         <StarRating average={product.ratings.average} count={product.ratings.count} />
 
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="font-semibold">${product.price.toFixed(2)}</span>
+          <span className="font-semibold">{formatPrice(product.price)}</span>
           {hasDiscount && (
             <span className="text-xs text-muted-foreground line-through">
-              ${product.compareAtPrice!.toFixed(2)}
+              {formatPrice(product.compareAtPrice!)}
             </span>
           )}
         </div>

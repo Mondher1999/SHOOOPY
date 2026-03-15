@@ -1,0 +1,92 @@
+{
+  "showcaseTitle": "Mode Vitrine",
+  "showcaseMessage": "Cette boutique est actuellement en mode vitrine. Le paiement est temporairement indisponible.",
+  "browsProducts": "Parcourir les produits",
+  "checkout": {
+    "title": "Paiement",
+    "stepsLabel": "Étapes de paiement",
+    "stepAddress": "Adresse de livraison",
+    "stepReview": "Vérification de commande",
+    "stepConfirm": "Confirmer et payer",
+    "stepDone": "terminée",
+    "stepCurrent": "actuelle",
+    "continue": "Continuer",
+    "back": "Retour",
+    "errorPlacing": "Impossible de passer la commande. Veuillez réessayer.",
+    "errorOutOfStock": "Certains articles sont en rupture de stock : {{names}}. Veuillez mettre à jour votre panier."
+  },
+  "addressSelector": {
+    "title": "Sélectionner l'adresse de livraison",
+    "default": "Par défaut",
+    "addNew": "Ajouter une nouvelle adresse",
+    "newAddressTitle": "Nouvelle adresse",
+    "noAddresses": "Vous n'avez pas d'adresse enregistrée. Ajoutez-en une ci-dessous pour continuer.",
+    "errorLoading": "Impossible de charger les adresses. Veuillez réessayer."
+  },
+  "addressForm": {
+    "fullName": "Nom complet",
+    "fullNameMin": "Le nom doit comporter au moins 2 caractères",
+    "phone": "Numéro de téléphone",
+    "phoneMin": "Le téléphone doit comporter au moins 7 caractères",
+    "street": "Adresse",
+    "streetMin": "L'adresse doit comporter au moins 5 caractères",
+    "city": "Ville",
+    "cityMin": "La ville doit comporter au moins 2 caractères",
+    "state": "Région / Province",
+    "stateMin": "La région doit comporter au moins 2 caractères",
+    "postalCode": "Code postal",
+    "postalCodeMin": "Le code postal doit comporter au moins 3 caractères",
+    "country": "Pays",
+    "countryMin": "Le pays doit comporter au moins 2 caractères",
+    "label": "Libellé de l'adresse",
+    "labelHome": "Domicile",
+    "labelWork": "Travail",
+    "labelOther": "Autre",
+    "save": "Enregistrer l'adresse",
+    "errorCreating": "Impossible d'enregistrer l'adresse. Veuillez réessayer."
+  },
+  "orderSummary": {
+    "title": "Récapitulatif de commande",
+    "itemsLabel": "Articles de votre commande",
+    "productImageAlt": "Image du produit {{name}}",
+    "qty": "Qté : {{count}}",
+    "subtotal": "Sous-total",
+    "shipping": "Livraison",
+    "freeShipping": "Gratuite",
+    "total": "Total",
+    "discount": "Réduction",
+    "couponPlaceholder": "Code promo",
+    "applyCoupon": "Appliquer",
+    "removeCoupon": "Retirer",
+    "couponInvalid": "Code promo invalide ou expiré"
+  },
+  "cod": {
+    "methodTitle": "Paiement à la livraison",
+    "methodDesc": "Payez en espèces à la réception de votre commande",
+    "note": "Préparez le montant exact lors de la livraison. Aucun paiement en ligne requis.",
+    "amountDue": "Montant dû à la livraison",
+    "termsLabel": "J'accepte de payer le montant en espèces à la livraison",
+    "termsDesc": "En cochant cette case, vous confirmez votre commande et acceptez de payer le montant total à la livraison.",
+    "placeOrder": "Passer la commande",
+    "placing": "Commande en cours..."
+  },
+  "success": {
+    "title": "Commande passée !",
+    "subtitle": "Merci pour votre commande. Nous la traiterons sous peu.",
+    "orderNumber": "Numéro de commande",
+    "items": "{{count}} article(s)",
+    "shippingTo": "Livraison à",
+    "total": "Total",
+    "codNote": "Vous paierez en espèces à la livraison.",
+    "viewOrders": "Voir mes commandes",
+    "continueShopping": "Continuer mes achats",
+    "status": {
+      "pending": "En attente",
+      "confirmed": "Confirmée",
+      "processing": "En traitement",
+      "shipped": "Expédiée",
+      "delivered": "Livrée",
+      "cancelled": "Annulée"
+    }
+  }
+}

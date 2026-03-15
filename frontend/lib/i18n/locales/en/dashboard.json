@@ -1,11 +1,13 @@
 {
   "nav": {
+    "myAccount": "My Account",
     "profile": "Profile",
     "security": "Security",
     "orders": "Orders",
     "wishlist": "Wishlist",
     "users": "Users",
-    "adminDashboard": "Admin Panel"
+    "adminDashboard": "Admin Panel",
+    "backToWebsite": "Back to Store"
   },
   "profile": {
     "title": "My Profile",

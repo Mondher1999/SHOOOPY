@@ -14,6 +14,21 @@ export async function placeOrderAPI(addressId: string, notes?: string): Promise<
   return res.data;
 }
 
+export interface BuyNowPayload {
+  productId: string;
+  quantity: number;
+  fullName: string;
+  phone: string;
+  address: string;
+  couponCode?: string;
+  selectedOptions?: Record<string, string | string[]>;
+}
+
+export async function buyNowAPI(payload: BuyNowPayload): Promise<OrderResponse> {
+  const res = await axiosInstance.post<OrderResponse>("/api/orders/buy-now", payload);
+  return res.data;
+}
+
 export async function getMyOrdersAPI(page = 1, limit = 10): Promise<OrderListResponse> {
   const res = await axiosInstance.get<OrderListResponse>("/api/orders/my-orders", {
     params: { page, limit },
@@ -79,5 +94,55 @@ export async function getOrderStatsAPI(days = 30): Promise<OrderStatsResponse> {
   const res = await axiosInstance.get<OrderStatsResponse>("/api/orders/stats", {
     params: { days },
   });
+  return res.data;
+}
+
+// ─── Admin: Manual order creation ────────────────────────────────────────────
+
+export interface CreateOrderAdminPayload {
+  userId?: string;
+  items: { productId: string; quantity: number }[];
+  shippingAddress: {
+    fullName: string;
+    phone: string;
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    label?: string;
+  };
+  notes?: string;
+  notifyCustomer?: boolean;
+}
+
+export async function createOrderAdminAPI(
+  payload: CreateOrderAdminPayload
+): Promise<AdminOrderResponse> {
+  const res = await axiosInstance.post<AdminOrderResponse>("/api/orders/admin", payload);
+  return res.data;
+}
+
+export interface AddressItem {
+  id: string;
+  fullName: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  label: string;
+  isDefault: boolean;
+}
+
+type AddressListResponse = { success: true; data: AddressItem[] };
+
+export async function getUserAddressesAdminAPI(
+  userId: string
+): Promise<AddressListResponse> {
+  const res = await axiosInstance.get<AddressListResponse>(
+    `/api/addresses/admin/${userId}`
+  );
   return res.data;
 }
