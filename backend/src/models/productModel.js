@@ -14,6 +14,7 @@ const productSchema = new Schema(
         thumbnail: { type: String, required: true },
         medium:    { type: String, required: true },
         large:     { type: String, required: true },
+        variantMap: { type: Map, of: String },
       },
     ],
     stock: { type: Number, default: 0, min: 0 },
@@ -24,6 +25,7 @@ const productSchema = new Schema(
       count: { type: Number, default: 0 },
     },
     isActive: { type: Boolean, default: true },
+    productType: { type: String, default: null },
     attributes: { type: Map, of: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }

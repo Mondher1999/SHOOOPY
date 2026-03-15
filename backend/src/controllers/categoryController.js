@@ -78,6 +78,20 @@ export const getCategoryById = async (req, res) => {
   }
 };
 
+// ─── Public: Get single category by slug ─────────────────────────────────────
+export const getCategoryBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const category = await Category.findOne({ slug }).populate("parent", "name slug").lean();
+    if (!category) return res.status(404).json({ success: false, error: "Category not found" });
+
+    res.status(200).json({ success: true, data: withId(category) });
+  } catch (error) {
+    logger.error("getCategoryBySlug error:", error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};
+
 // ─── Admin: Create category ──────────────────────────────────────────────────
 export const createCategory = async (req, res) => {
   try {

@@ -1,4 +1,5 @@
 import Address from "../models/addressModel.js";
+import User from "../models/userModel.js";
 import logger from "../utils/logger.js";
 
 const MAX_ADDRESSES = 5;
@@ -7,7 +8,9 @@ const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 // ─── GET /api/addresses ───────────────────────────────────────────────────────
 export const getAddresses = async (req, res) => {
   try {
-    const addresses = await Address.find({ user: req.user._id }).sort({ isDefault: -1, createdAt: -1 }).lean();
+    const raw = await Address.find({ user: req.user._id }).sort({ isDefault: -1, createdAt: -1 }).lean();
+    // .lean() bypasses toJSON transform — manually add `id` so frontend types match
+    const addresses = raw.map((a) => ({ ...a, id: a._id.toString() }));
     res.status(200).json({ success: true, data: addresses });
   } catch (error) {
     logger.error("getAddresses error:", error);
@@ -146,6 +149,30 @@ export const setDefaultAddress = async (req, res) => {
     res.status(200).json({ success: true, data: address });
   } catch (error) {
     logger.error("setDefaultAddress error:", error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};
+
+// ─── ADMIN: GET /api/addresses/admin/:userId ────────────────────────────────
+// Returns addresses belonging to a specific user (for manual order creation).
+export const getAddressesAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!isObjectId(userId)) {
+      return res.status(400).json({ success: false, error: "Invalid userId format" });
+    }
+
+    // Verify user exists
+    const user = await User.findById(userId).select("_id").lean();
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    const raw = await Address.find({ user: userId }).sort({ isDefault: -1, createdAt: -1 }).lean();
+    const addresses = raw.map((a) => ({ ...a, id: a._id.toString() }));
+    res.status(200).json({ success: true, data: addresses });
+  } catch (error) {
+    logger.error("getAddressesAdmin error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
   }
 };

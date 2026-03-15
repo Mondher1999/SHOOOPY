@@ -471,7 +471,7 @@ export function passwordResetTemplate(name, resetUrl, config = {}, lang = "en") 
 export function welcomeEmailTemplate(name, config = {}, lang = "en") {
   const shopName = config.shopName || DEFAULT_SHOP_NAME;
   const subjects = config.subjects || {};
-  const shopUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const shopUrl = process.env.FRONTEND_URL || "http://localhost:3002";
   const s = getStrings(lang);
 
   const subject = subjects.welcomeSubject
@@ -503,7 +503,7 @@ export function orderConfirmationTemplate(order, customerName, config = {}, lang
   const shopName = config.shopName || DEFAULT_SHOP_NAME;
   const subjects = config.subjects || {};
   const currency = config.currency || "USD";
-  const trackUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/dashboard/orders/${order._id || order.id}`;
+  const trackUrl = `${process.env.FRONTEND_URL || "http://localhost:3002"}/dashboard/orders/${order._id || order.id}`;
   const s = getStrings(lang);
 
   const subject = subjects.orderConfirmationSubject
@@ -537,7 +537,7 @@ export function orderShippedTemplate(order, customerName, config = {}, lang = "e
   const shopName = config.shopName || DEFAULT_SHOP_NAME;
   const subjects = config.subjects || {};
   const currency = config.currency || "USD";
-  const trackUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/dashboard/orders/${order._id || order.id}`;
+  const trackUrl = `${process.env.FRONTEND_URL || "http://localhost:3002"}/dashboard/orders/${order._id || order.id}`;
   const s = getStrings(lang);
 
   const subject = subjects.orderShippedSubject
@@ -568,7 +568,7 @@ export function orderDeliveredTemplate(order, customerName, config = {}, lang = 
   const shopName = config.shopName || DEFAULT_SHOP_NAME;
   const subjects = config.subjects || {};
   const currency = config.currency || "USD";
-  const reviewUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/products`;
+  const reviewUrl = `${process.env.FRONTEND_URL || "http://localhost:3002"}/products`;
   const s = getStrings(lang);
 
   const subject = subjects.orderDeliveredSubject
@@ -597,7 +597,7 @@ export function orderCancelledTemplate(order, customerName, cancelledBy, config 
   const shopName = config.shopName || DEFAULT_SHOP_NAME;
   const subjects = config.subjects || {};
   const currency = config.currency || "USD";
-  const shopUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/products`;
+  const shopUrl = `${process.env.FRONTEND_URL || "http://localhost:3002"}/products`;
   const s = getStrings(lang);
 
   const byText = cancelledBy === "admin" ? s.orderCancelledByAdmin : s.orderCancelledByCustomer;

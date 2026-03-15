@@ -314,6 +314,32 @@ const settingsSchema = new Schema(
       announcementText: { type: String, default: "" },
     },
 
+    // ─── Navigation ────────────────────────────────────────────────────
+    navigation: {
+      mainMenu: [{
+        id:           { type: String, required: true },
+        type:         { type: String, enum: ["builtin", "custom"], default: "builtin" },
+        builtinPage:  { type: String, default: "" },
+        label:        { type: String, default: "" },
+        labelFr:      { type: String, default: "" },
+        href:         { type: String, default: "" },
+        enabled:      { type: Boolean, default: true },
+        openInNewTab: { type: Boolean, default: false },
+        children: [{
+          id:           { type: String, required: true },
+          type:         { type: String, enum: ["builtin", "custom"], default: "builtin" },
+          builtinPage:  { type: String, default: "" },
+          label:        { type: String, default: "" },
+          labelFr:      { type: String, default: "" },
+          href:         { type: String, default: "" },
+          enabled:      { type: Boolean, default: true },
+          openInNewTab: { type: Boolean, default: false },
+          _id: false,
+        }],
+        _id: false,
+      }],
+    },
+
     // ─── Header ───────────────────────────────────────────────────────
     header: {
       enabled: { type: Boolean, default: true },

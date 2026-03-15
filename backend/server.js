@@ -22,6 +22,14 @@ import orderRoutes from "./src/routes/orderRoutes.js";
 import reviewRoutes from "./src/routes/reviewRoutes.js";
 import wishlistRoutes from "./src/routes/wishlistRoutes.js";
 import dashboardRoutes from "./src/routes/dashboardRoutes.js";
+import settingsRoutes from "./src/routes/settingsRoutes.js";
+import contactRoutes from "./src/routes/contactRoutes.js";
+import couponRoutes from "./src/routes/couponRoutes.js";
+import faqRoutes from "./src/routes/faqRoutes.js";
+import subscriberRoutes from "./src/routes/subscriberRoutes.js";
+import shippingRoutes from "./src/routes/shippingRoutes.js";
+import redirectRoutes from "./src/routes/redirectRoutes.js";
+import exportRoutes from "./src/routes/exportRoutes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,25 +43,25 @@ app.use(helmet());
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://localhost:3002",
     credentials: true,
   })
 );
 
-// Global rate limit: 100 requests per 15 minutes per IP
+// Global rate limit: 500 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: "Too many requests, please try again later." },
 });
 app.use(globalLimiter);
 
-// Auth-specific rate limit: 10 requests per 15 minutes per IP
+// Auth-specific rate limit: 50 requests per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: "Too many authentication attempts, please try again later." },
@@ -69,7 +77,10 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // ─── Static Files — uploaded avatars ────────────────────────────────────────
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", (req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+}, express.static(path.join(__dirname, "uploads")));
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 app.use("/health", healthRoutes);
@@ -84,6 +95,14 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/contacts", contactRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/faq", faqRoutes);
+app.use("/api/subscribers", subscriberRoutes);
+app.use("/api/shipping", shippingRoutes);
+app.use("/api/redirects", redirectRoutes);
+app.use("/api/export", exportRoutes);
 
 // ─── Global Error Handler ───────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
@@ -93,7 +112,7 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Start Server ───────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 connectDB().then(() => {
   app.listen(PORT, () => {

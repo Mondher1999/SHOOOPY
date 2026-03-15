@@ -1,7 +1,9 @@
 import Order from "../models/orderModel.js";
 import Cart from "../models/cartModel.js";
 import Product from "../models/productModel.js";
+import Coupon from "../models/couponModel.js";
 import Address from "../models/addressModel.js";
+import User from "../models/userModel.js";
 import logger from "../utils/logger.js";
 import { escapeRegex } from "../utils/sanitize.js";
 import { sendOrderNotification } from "../utils/notificationService.js";
@@ -14,7 +16,7 @@ const VALID_TRANSITIONS = {
   confirmed:  ["processing", "cancelled"],
   processing: ["shipped"],
   shipped:    ["delivered"],
-  delivered:  [],
+  delivered:  ["cancelled"],
   cancelled:  [],
 };
 
@@ -146,6 +148,101 @@ export const placeOrder = async (req, res) => {
   }
 };
 
+// ─── POST /api/orders/buy-now ──────────────────────────────────────────────────
+// Direct single-product order — bypasses cart. Inline address (name + phone + address text).
+export const buyNow = async (req, res) => {
+  try {
+    const { productId, quantity = 1, fullName, phone, address, couponCode, selectedOptions } = req.body;
+
+    if (!productId || !fullName || !phone || !address) {
+      return res.status(400).json({ success: false, error: "Missing required fields" });
+    }
+    if (!isObjectId(productId)) {
+      return res.status(400).json({ success: false, error: "Invalid productId format" });
+    }
+
+    const product = await Product.findById(productId).lean();
+    if (!product || !product.isActive) {
+      return res.status(404).json({ success: false, error: "Product not found" });
+    }
+
+    const qty = Math.max(1, parseInt(quantity) || 1);
+    if (qty > product.stock) {
+      return res.status(400).json({
+        success: false,
+        error: "Some items are out of stock",
+        data: { outOfStock: [{ name: product.name, available: product.stock, requested: qty }] },
+      });
+    }
+
+    // Calculate pricing
+    const subtotal = product.price * qty;
+    let discount = 0;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase().trim(), isActive: true }).lean();
+      if (coupon && (!coupon.expiresAt || new Date(coupon.expiresAt) >= new Date())) {
+        if (!(coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses)) {
+          if (!(coupon.minOrderAmount > 0 && subtotal < coupon.minOrderAmount)) {
+            if (coupon.type === "percentage") {
+              discount = (subtotal * coupon.value) / 100;
+              if (coupon.maxDiscount > 0 && discount > coupon.maxDiscount) discount = coupon.maxDiscount;
+            } else {
+              discount = coupon.value;
+            }
+            discount = Math.min(discount, subtotal);
+            discount = Math.round(discount * 100) / 100;
+            // Increment usage
+            await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
+          }
+        }
+      }
+    }
+
+    const shippingCost = 0;
+    const totalPrice = subtotal + shippingCost - discount;
+
+    const orderNumber = await generateOrderNumber();
+
+    const order = await Order.create({
+      user: req.user._id,
+      orderNumber,
+      items: [{
+        product: product._id,
+        name: product.name,
+        quantity: qty,
+        price: product.price,
+        image: product.images?.[0]?.thumbnail ?? "",
+      }],
+      shippingAddress: {
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        street: address.trim(),
+        city: "-",
+        state: "-",
+        postalCode: "-",
+        country: "-",
+        label: "home",
+      },
+      paymentMethod: "COD",
+      totalPrice,
+      shippingCost,
+      notes: selectedOptions ? JSON.stringify(selectedOptions) : "",
+      statusHistory: [{ status: "pending", date: new Date(), note: "Buy Now order placed" }],
+    });
+
+    // Decrement stock
+    await Product.findByIdAndUpdate(productId, { $inc: { stock: -qty } });
+
+    sendOrderNotification("placed", order).catch(() => {});
+
+    res.status(201).json({ success: true, data: order });
+  } catch (error) {
+    logger.error("buyNow error:", error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};
+
 // ─── GET /api/orders/my-orders ────────────────────────────────────────────────
 export const getMyOrders = async (req, res) => {
   try {
@@ -164,10 +261,12 @@ export const getMyOrders = async (req, res) => {
       Order.countDocuments(filter),
     ]);
 
+    const mapped = orders.map((o) => ({ ...o, id: o._id.toString() }));
+
     res.status(200).json({
       success: true,
       data: {
-        orders,
+        orders: mapped,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       },
     });
@@ -190,7 +289,7 @@ export const getOrderById = async (req, res) => {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
 
-    res.status(200).json({ success: true, data: order });
+    res.status(200).json({ success: true, data: { ...order, id: order._id.toString() } });
   } catch (error) {
     logger.error("getOrderById error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -295,10 +394,14 @@ export const getAllOrdersAdmin = async (req, res) => {
       Order.countDocuments(filter),
     ]);
 
+    // .lean() bypasses toJSON transform — manually add id so the frontend
+    // receives the expected { id, _id, ... } shape matching the AdminOrder type.
+    const mapped = orders.map((o) => ({ ...o, id: o._id.toString() }));
+
     res.status(200).json({
       success: true,
       data: {
-        orders,
+        orders: mapped,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       },
     });
@@ -325,7 +428,7 @@ export const getOrderByIdAdmin = async (req, res) => {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
 
-    res.status(200).json({ success: true, data: order });
+    res.status(200).json({ success: true, data: { ...order, id: order._id.toString() } });
   } catch (error) {
     logger.error("getOrderByIdAdmin error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -346,10 +449,7 @@ export const updateOrderStatus = async (req, res) => {
     if (!status) {
       return res.status(400).json({ success: false, error: "Missing required field: status" });
     }
-    if (!note || !note.trim()) {
-      return res.status(400).json({ success: false, error: "Missing required field: note" });
-    }
-    if (note.trim().length > 500) {
+    if (note && note.trim().length > 500) {
       return res.status(400).json({ success: false, error: "Note must be 500 characters or less" });
     }
 
@@ -358,16 +458,7 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
 
-    // Validate transition
-    const allowed = VALID_TRANSITIONS[order.status];
-    if (!allowed || !allowed.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        error: `Cannot transition from "${order.status}" to "${status}". Allowed transitions: ${(allowed || []).join(", ") || "none (terminal status)"}`,
-      });
-    }
-
-    // Restore stock if admin cancels
+// Restore stock if admin cancels
     if (status === "cancelled") {
       await Promise.all(
         order.items.map((item) =>
@@ -394,7 +485,7 @@ export const updateOrderStatus = async (req, res) => {
     // Re-fetch with populated user for consistent admin response
     const updated = await Order.findById(id).populate("user", "name email").lean();
 
-    res.status(200).json({ success: true, data: updated });
+    res.status(200).json({ success: true, data: { ...updated, id: updated._id.toString() } });
   } catch (error) {
     logger.error("updateOrderStatus error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -477,6 +568,150 @@ export const getOrderStats = async (req, res) => {
     });
   } catch (error) {
     logger.error("getOrderStats error:", error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};
+
+// ─── ADMIN: POST /api/orders/admin ──────────────────────────────────────────
+// Manual order creation — admin places order on behalf of a customer.
+// Order starts at "confirmed" status (admin-placed, skips pending).
+export const createOrderAdmin = async (req, res) => {
+  try {
+    const { userId, items, shippingAddress, notes, notifyCustomer } = req.body;
+
+    // ── Validate required fields ──────────────────────────────────────────
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, error: "At least one item is required" });
+    }
+    if (!shippingAddress) {
+      return res.status(400).json({ success: false, error: "Missing required field: shippingAddress" });
+    }
+
+    const requiredAddressFields = ["fullName", "phone", "street", "city", "state", "postalCode", "country"];
+    for (const field of requiredAddressFields) {
+      if (!shippingAddress[field] || !shippingAddress[field].trim()) {
+        return res.status(400).json({ success: false, error: `Missing required address field: ${field}` });
+      }
+    }
+
+    // ── Validate items format ─────────────────────────────────────────────
+    for (const item of items) {
+      if (!item.productId || !isObjectId(item.productId)) {
+        return res.status(400).json({ success: false, error: "Each item must have a valid productId" });
+      }
+      if (!item.quantity || item.quantity < 1) {
+        return res.status(400).json({ success: false, error: "Each item must have a quantity >= 1" });
+      }
+    }
+
+    // ── Resolve order owner (customer or admin fallback) ─────────────────
+    let orderUserId = req.user._id; // default: admin's own ID
+    let customer = null;
+
+    if (userId) {
+      if (!isObjectId(userId)) {
+        return res.status(400).json({ success: false, error: "Invalid userId format" });
+      }
+      customer = await User.findById(userId).select("name email").lean();
+      if (!customer) {
+        return res.status(404).json({ success: false, error: "Customer not found" });
+      }
+      orderUserId = userId;
+    }
+
+    // ── Fetch all products & validate stock ───────────────────────────────
+    const productIds = items.map((i) => i.productId);
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+
+    const productMap = new Map();
+    for (const p of products) {
+      productMap.set(p._id.toString(), p);
+    }
+
+    const outOfStock = [];
+    const orderItems = [];
+
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      if (!product || !product.isActive) {
+        return res.status(404).json({
+          success: false,
+          error: `Product not found or inactive: ${item.productId}`,
+        });
+      }
+
+      const qty = Math.max(1, parseInt(item.quantity) || 1);
+      if (qty > product.stock) {
+        outOfStock.push({ name: product.name, available: product.stock, requested: qty });
+        continue;
+      }
+
+      orderItems.push({
+        product: product._id,
+        name: product.name,
+        quantity: qty,
+        price: product.price,
+        image: product.images?.[0]?.thumbnail ?? "",
+      });
+    }
+
+    if (outOfStock.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Some items are out of stock",
+        data: { outOfStock },
+      });
+    }
+
+    // ── Calculate totals ──────────────────────────────────────────────────
+    const itemsTotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const shippingCost = 0;
+
+    const orderNumber = await generateOrderNumber();
+
+    // ── Create order ──────────────────────────────────────────────────────
+    const order = await Order.create({
+      user: orderUserId,
+      orderNumber,
+      items: orderItems,
+      shippingAddress: {
+        fullName:   shippingAddress.fullName.trim(),
+        phone:      shippingAddress.phone.trim(),
+        street:     shippingAddress.street.trim(),
+        city:       shippingAddress.city.trim(),
+        state:      shippingAddress.state.trim(),
+        postalCode: shippingAddress.postalCode.trim(),
+        country:    shippingAddress.country.trim(),
+        label:      shippingAddress.label || "home",
+      },
+      paymentMethod: "COD",
+      totalPrice: itemsTotal + shippingCost,
+      shippingCost,
+      notes: notes || "",
+      status: "confirmed",
+      statusHistory: [
+        { status: "confirmed", date: new Date(), note: "Manual order created by admin" },
+      ],
+    });
+
+    // ── Decrement stock ───────────────────────────────────────────────────
+    await Promise.all(
+      orderItems.map((item) =>
+        Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } })
+      )
+    );
+
+    // ── Optionally notify customer (only if a real customer was selected) ─
+    if (notifyCustomer && customer) {
+      sendOrderNotification("placed", order).catch(() => {});
+    }
+
+    // Re-fetch with populated user for consistent admin response
+    const populated = await Order.findById(order._id).populate("user", "name email").lean();
+
+    res.status(201).json({ success: true, data: { ...populated, id: populated._id.toString() } });
+  } catch (error) {
+    logger.error("createOrderAdmin error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
   }
 };

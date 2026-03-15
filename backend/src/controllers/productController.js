@@ -2,6 +2,7 @@ import Product from "../models/productModel.js";
 import Category from "../models/categoryModel.js";
 import logger from "../utils/logger.js";
 import cache from "../utils/cache.js";
+import { escapeRegex } from "../utils/sanitize.js";
 const VALID_OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 
 // lean() bypasses the Mongoose toJSON transform that adds `id`.
@@ -33,14 +34,24 @@ export const getAllProducts = async (req, res) => {
     const query = { isActive: true };
 
     // ── Filter: category (by ID or slug) ──────────────────────────────────
+    // Also includes products from direct subcategories so clicking a parent category
+    // shows all products stored under its children.
     if (category) {
+      let categoryId;
       if (VALID_OBJECT_ID.test(category)) {
-        query.category = category;
+        categoryId = category;
       } else {
         // Equality lookup by slug — no regex, no escaping needed
         const cat = await Category.findOne({ slug: category }).select("_id").lean();
-        if (cat) query.category = cat._id;
-        else query.category = null; // no match → return empty
+        if (cat) categoryId = cat._id.toString();
+        else { query.category = null; } // no match → return empty
+      }
+
+      if (categoryId) {
+        // Include products from direct subcategories as well
+        const children = await Category.find({ parent: categoryId }).select("_id").lean();
+        const childIds = children.map((c) => c._id.toString());
+        query.category = { $in: [categoryId, ...childIds] };
       }
     }
 
@@ -250,12 +261,14 @@ export const searchProducts = async (req, res) => {
 
     const limit = Math.min(10, Math.max(1, parseInt(req.query.limit) || 5));
 
-    // Use text index for relevance-scored search
-    const products = await Product.find(
-      { $text: { $search: q }, isActive: true },
-      { score: { $meta: "textScore" } }
-    )
-      .sort({ score: { $meta: "textScore" } })
+    const safeRegex = escapeRegex(q);
+    const products = await Product.find({
+      isActive: true,
+      $or: [
+        { name: { $regex: safeRegex, $options: "i" } },
+        { description: { $regex: safeRegex, $options: "i" } },
+      ],
+    })
       .limit(limit)
       .select("name slug price images ratings")
       .lean();

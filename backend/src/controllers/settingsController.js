@@ -93,6 +93,7 @@ export const updateSettings = async (req, res) => {
     const {
       store, orders, notifications, products, social, legal, seo,
       maintenance, homepage, header, footer, emailTemplates, smtp, typography, colorPalette,
+      navigation,
     } = req.body;
     const updates = {};
 
@@ -590,6 +591,39 @@ export const updateSettings = async (req, res) => {
       // Legacy announcement text
       if (homepage.announcementText !== undefined) {
         updates["homepage.announcementText"] = String(homepage.announcementText).trim();
+      }
+    }
+
+    // ── Navigation ─────────────────────────────────────────────────────
+    if (navigation) {
+      if (navigation.mainMenu !== undefined) {
+        if (!Array.isArray(navigation.mainMenu) || navigation.mainMenu.length > 20) {
+          return res.status(400).json({ success: false, error: "Navigation menu must be an array with max 20 items" });
+        }
+
+        const BUILTIN_PAGES = [
+          "shop", "categories", "new-arrivals", "contact", "faq",
+          "terms", "privacy", "shipping-policy", "refund-policy", "wishlist",
+        ];
+
+        const validateNavItem = (item) => ({
+          id: String(item.id || "").trim().slice(0, 50),
+          type: ["builtin", "custom"].includes(item.type) ? item.type : "builtin",
+          builtinPage: item.type === "builtin" && BUILTIN_PAGES.includes(item.builtinPage) ? item.builtinPage : "",
+          label: String(item.label || "").trim().slice(0, 100),
+          labelFr: String(item.labelFr || "").trim().slice(0, 100),
+          href: String(item.href || "").trim().slice(0, 500),
+          enabled: item.enabled !== false,
+          openInNewTab: Boolean(item.openInNewTab),
+        });
+
+        updates["navigation.mainMenu"] = navigation.mainMenu.map((item) => {
+          const validated = validateNavItem(item);
+          validated.children = Array.isArray(item.children)
+            ? item.children.slice(0, 10).map(validateNavItem)
+            : [];
+          return validated;
+        });
       }
     }
 
