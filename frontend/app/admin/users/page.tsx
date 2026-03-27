@@ -9,7 +9,7 @@ import type { PaginationInfo } from "@/services/user-service";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -263,9 +263,9 @@ export default function AdminUsersPage() {
       {/* Role change confirmation dialog */}
       <Dialog open={!!roleDialog} onOpenChange={(open) => !open && setRoleDialog(null)}>
         <DialogContent>
-          <h2 className="text-base font-semibold text-polaris-text mb-2">
+          <DialogTitle className="text-base font-semibold text-polaris-text mb-2">
             {t("dashboard:admin.users.actions.changeRole")}
-          </h2>
+          </DialogTitle>
           {roleDialog && (
             <p className="text-sm text-polaris-text-subdued mb-4">
               Change <strong>{roleDialog.user.name}</strong> to{" "}
@@ -286,11 +286,11 @@ export default function AdminUsersPage() {
       {/* Ban confirmation dialog */}
       <Dialog open={!!banDialog} onOpenChange={(open) => !open && setBanDialog(null)}>
         <DialogContent>
-          <h2 className="text-base font-semibold text-polaris-text mb-2">
+          <DialogTitle className="text-base font-semibold text-polaris-text mb-2">
             {banDialog?.user.isActive
               ? t("dashboard:admin.users.confirmBan")
               : t("dashboard:admin.users.confirmUnban")}
-          </h2>
+          </DialogTitle>
           {banDialog && (
             <p className="text-sm text-polaris-text-subdued mb-4">
               User: <strong>{banDialog.user.name}</strong>

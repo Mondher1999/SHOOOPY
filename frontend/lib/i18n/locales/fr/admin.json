@@ -113,6 +113,8 @@
     "error": "Impossible de charger les paramètres.",
     "saved": "Paramètres enregistrés avec succès",
     "saveError": "Échec de l'enregistrement des paramètres",
+    "invalidFileType": "Seuls les fichiers JPEG, PNG, WebP, GIF et ICO sont autorisés",
+    "fileTooLarge": "Le fichier doit faire moins de 5 Mo",
     "tabs": {
       "store": "Boutique",
       "orders": "Commandes",
@@ -233,7 +235,10 @@
       "sortNewest": "Plus récents",
       "sortPriceAsc": "Prix croissant",
       "sortPriceDesc": "Prix décroissant",
-      "sortRating": "Mieux notés"
+      "sortRating": "Mieux notés",
+      "productTypesTitle": "Types de produits activés",
+      "productTypesHelp": "Sélectionnez les types de produits que vous vendez. Les produits de types activés afficheront des champs d'attributs dynamiques.",
+      "productTypesNoneEnabled": "Aucun type de produit activé. Activez au moins un type pour utiliser les attributs dynamiques."
     },
     "email": {
       "orderConfirmationLabel": "Emails de confirmation de commande",
@@ -417,6 +422,10 @@
       "templateArtisanDesc": "Design chaleureux et artisanal avec des formes organiques, des tons terreux et une typographie authentique.",
       "templateMagazine": "Éditorial",
       "templateMagazineDesc": "Mise en page magazine avec une typographie dramatique, des grilles éditoriales et des accents rouge vif.",
+      "templateNoir": "Noir",
+      "templateNoirDesc": "Thème cinématique sombre avec des contrastes dramatiques, des visuels inspirés du cinéma et une ambiance luxueuse.",
+      "templateSurge": "Surge",
+      "templateSurgeDesc": "Page de vente haute conversion avec des déclencheurs d'urgence, preuve sociale et CTA percutants.",
 
       "modeTitle": "Mode de la page d'accueil",
       "modeHelp": "Choisissez entre une mise en page codée en dur ou les sections configurées par l'admin ci-dessous.",
@@ -450,7 +459,29 @@
         "categories": "Catégories",
         "socialProof": "Preuve sociale",
         "craftStory": "Histoire artisanale",
-        "editorial": "Éditorial"
+        "editorial": "Éditorial",
+        "noirCinematicHero": "Hero cinématique",
+        "noirBrandStatement": "Déclaration de marque",
+        "noirProductGallery": "Galerie de produits",
+        "noirBenefitsTriptych": "Triptyque d'avantages",
+        "noirStorySection": "Section histoire",
+        "noirTestimonials": "Témoignages",
+        "noirProductDetails": "Détails du produit",
+        "noirPurchaseSection": "Section achat",
+        "noirTrustFooter": "Pied de confiance",
+        "surgeAnnouncementBar": "Barre d'annonce",
+        "surgeHeroWithCta": "Hero avec CTA",
+        "surgeSocialProofBar": "Barre de preuve sociale",
+        "surgeProblemSolution": "Problème / Solution",
+        "surgeVideoDemo": "Démo vidéo",
+        "surgeBenefitsCarousel": "Carrousel d'avantages",
+        "surgeComparison": "Comparaison",
+        "surgeTestimonialsGrid": "Grille de témoignages",
+        "surgeMidPageCta": "CTA en milieu de page",
+        "surgeHowItWorks": "Comment ça marche",
+        "surgeFaqSection": "Section FAQ",
+        "surgeFinalCta": "CTA final",
+        "surgeGuaranteeBadge": "Badge de garantie"
       },
 
       "announcementSection": "Barre d'annonce",
@@ -848,6 +879,8 @@
     "confirmDesc": "Cette commande sera créée avec le statut « Confirmée » et le stock sera décrémenté.",
     "cancel": "Annuler",
     "confirm": "Créer la commande",
-    "createError": "Impossible de créer la commande. Veuillez réessayer."
+    "createError": "Impossible de créer la commande. Veuillez réessayer.",
+    "addToOrder": "Ajouter à la commande",
+    "loadingProduct": "Chargement du produit..."
   }
 }

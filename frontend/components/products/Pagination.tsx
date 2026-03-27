@@ -4,16 +4,20 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useActiveTheme } from "@/hooks/useActiveTheme";
+import type { ThemeStyles } from "@/hooks/useActiveTheme";
 import type { PaginationInfo } from "@/types";
 
 interface PaginationProps {
   pagination: PaginationInfo;
   onPageChange: (page: number) => void;
+  /** Override specific theme colors (e.g. for dark-background views) */
+  themeOverrides?: Partial<ThemeStyles>;
 }
 
-export function Pagination({ pagination, onPageChange }: PaginationProps) {
+export function Pagination({ pagination, onPageChange, themeOverrides }: PaginationProps) {
   const { t } = useTranslation("products");
-  const theme = useActiveTheme();
+  const baseTheme = useActiveTheme();
+  const theme = themeOverrides ? { ...baseTheme, ...themeOverrides } : baseTheme;
   const { page, pages, total } = pagination;
   if (pages <= 1) return null;
 

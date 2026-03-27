@@ -8,12 +8,19 @@ import Review from "../models/reviewModel.js";
 import PRODUCT_TYPE_CATALOG, { isValidProductType } from "../constants/productTypeCatalog.js";
 import logger from "../utils/logger.js";
 import cache from "../utils/cache.js";
+import { assertWithin } from "../utils/sanitize.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SETTINGS_CACHE_KEY = "settings:global";
 const SETTINGS_CACHE_TTL = 300; // 5 minutes
 
 const ENCRYPTION_KEY = process.env.SETTINGS_ENCRYPTION_KEY || process.env.JWT_ACCESS_SECRET || "default-dev-key-change-me";
+if (!process.env.SETTINGS_ENCRYPTION_KEY && !process.env.JWT_ACCESS_SECRET) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("FATAL: SETTINGS_ENCRYPTION_KEY must be set in production. Refusing to start with default key.");
+  }
+  logger.warn("SECURITY: Using default encryption key. Set SETTINGS_ENCRYPTION_KEY in production.");
+}
 
 // ─── Encryption helpers for SMTP password ────────────────────────────────────
 function encrypt(text) {
@@ -831,6 +838,7 @@ export const uploadSettingsFile = async (req, res) => {
     const ext = path.extname(req.file.originalname).toLowerCase();
     const filename = `${field}${ext}`;
     const filePath = path.join(uploadDir, filename);
+    assertWithin(filePath, uploadDir);
 
     // Write file
     fs.writeFileSync(filePath, req.file.buffer);

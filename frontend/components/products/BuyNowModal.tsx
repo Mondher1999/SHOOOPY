@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -9,14 +9,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import { buyNowAPI } from "@/services/order-service";
+import { buyNowAPI, guestBuyNowAPI } from "@/services/order-service";
 import { validateCouponAPI } from "@/services/coupon-service";
+import { calcTTC } from "@/lib/tva";
 import { isColorAttr, getColorValue } from "@/lib/colorMap";
 import logger from "@/lib/logger";
 import type { Product } from "@/types";
@@ -52,26 +54,39 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
   // Track items the user removed from this order
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
 
+  // Quantity for the Buy Now product
+  const [buyNowQuantity, setBuyNowQuantity] = useState(1);
+  const maxQty = product.stock > 0 ? product.stock : 99;
+
+  // Flatten selectedOptions: array values → first element (matches ProductDetailClient behavior)
+  const flatOptions = useMemo(() => {
+    if (!selectedOptions) return undefined;
+    return Object.entries(selectedOptions).reduce<Record<string, string>>((acc, [k, v]) => {
+      acc[k] = Array.isArray(v) ? v[0] : v;
+      return acc;
+    }, {});
+  }, [selectedOptions]);
+
   // Build combined items list: existing cart items + the Buy Now product
   const allItems = useMemo(() => {
-    const items: { id: string; name: string; price: number; quantity: number; image: string; isBuyNow: boolean }[] = [];
+    const items: { id: string; name: string; price: number; tva: number; quantity: number; image: string; isBuyNow: boolean }[] = [];
     // Add existing cart items (excluding removed ones)
     if (cart?.items) {
       for (const ci of cart.items) {
-        if (ci.product.id === product.id) continue;
+        // Skip the exact variant being bought (same product + same selectedOptions)
+        const ciOpts = JSON.stringify(ci.selectedOptions ?? {});
+        const currentOpts = JSON.stringify(flatOptions ?? {});
+        if (ci.product.id === product.id && ciOpts === currentOpts) continue;
         if (excludedIds.has(ci.product.id)) continue;
         const img = ci.product.images?.[0]?.thumbnail
           ? `${BASE_URL}${ci.product.images[0].thumbnail}`
           : "";
-        items.push({ id: ci.product.id, name: ci.product.name, price: ci.price, quantity: ci.quantity, image: img, isBuyNow: false });
+        items.push({ id: ci.product.id, name: ci.product.name, price: ci.price, tva: ci.tva ?? 0, quantity: ci.quantity, image: img, isBuyNow: false });
       }
     }
-    // Add the Buy Now product (merge quantity if already in cart)
-    const existingInCart = cart?.items?.find((ci) => ci.product.id === product.id);
-    const buyNowQty = (existingInCart?.quantity ?? 0) + 1;
-    items.push({ id: product.id, name: product.name, price: product.price, quantity: buyNowQty, image: thumbnail, isBuyNow: true });
+    items.push({ id: product.id, name: product.name, price: product.price, tva: product.tva ?? 0, quantity: buyNowQuantity, image: thumbnail, isBuyNow: true });
     return items;
-  }, [cart, product, thumbnail, excludedIds]);
+  }, [cart, product, thumbnail, excludedIds, buyNowQuantity, flatOptions]);
 
   // Form state
   const [fullName, setFullName] = useState("");
@@ -87,8 +102,22 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
   // Submit state
   const [placing, setPlacing] = useState(false);
 
-  // Calculations
-  const subtotal = allItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setBuyNowQuantity(1);
+      setExcludedIds(new Set());
+      setFullName("");
+      setPhone("");
+      setAddress("");
+      setCouponInput("");
+      setAppliedCoupon(null);
+      setCouponError("");
+    }
+  }, [open]);
+
+  // Calculations — all prices shown to customers are TTC (tax-inclusive)
+  const subtotal = allItems.reduce((sum, item) => sum + calcTTC(item.price, item.tva) * item.quantity, 0);
   const orderSettings = settings?.orders;
   let shippingCost = orderSettings?.defaultShippingCost ?? 0;
   if (orderSettings?.freeShippingThreshold && orderSettings.freeShippingThreshold > 0 && subtotal >= orderSettings.freeShippingThreshold) {
@@ -121,50 +150,72 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
       return;
     }
 
-    if (!user) {
-      toast({ title: t("buyNow.loginRequired"), variant: "destructive" });
-      router.push("/auth/login");
-      return;
-    }
-
     setPlacing(true);
     try {
-      const res = await buyNowAPI({
-        productId: product.id,
-        quantity: 1,
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        address: address.trim(),
-        couponCode: appliedCoupon?.code,
-        selectedOptions,
-        excludeProductIds: excludedIds.size > 0 ? [...excludedIds] : undefined,
-      });
+      let orderData: { orderNumber: string; id: string };
+
+      if (!user) {
+        // Guest: call guest buy-now API (no auth needed)
+        // Build items array from allItems (cart + buy-now product)
+        const guestItems = allItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          selectedOptions: item.isBuyNow ? (flatOptions ?? {}) : {},
+        }));
+
+        const res = await guestBuyNowAPI({
+          items: guestItems,
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+          couponCode: appliedCoupon?.code,
+        });
+        orderData = res.data;
+      } else {
+        // Authenticated: use existing buyNow API
+        const res = await buyNowAPI({
+          productId: product.id,
+          quantity: buyNowQuantity,
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+          couponCode: appliedCoupon?.code,
+          selectedOptions: flatOptions,
+          excludeProductIds: excludedIds.size > 0 ? [...excludedIds] : undefined,
+        });
+        orderData = res.data;
+        reloadCart();
+      }
 
       onOpenChange(false);
-      reloadCart();
-      router.push(`/checkout/success?orderNumber=${res.data.orderNumber}&orderId=${res.data.id}`);
+      router.push(`/checkout/success?orderNumber=${orderData.orderNumber}&orderId=${orderData.id}`);
     } catch (err: unknown) {
       logger.error("BuyNow placeOrder error:", err);
-      const errData = (err as { response?: { data?: { error?: string; data?: { outOfStock?: { name: string }[] } } } })?.response?.data;
-      if (errData?.data?.outOfStock) {
-        const names = errData.data.outOfStock.map((i) => i.name).join(", ");
+      // Handle both axios errors and fetchAPI errors
+      const axiosData = (err as { response?: { data?: { error?: string; data?: { outOfStock?: { name: string }[] } } } })?.response?.data;
+      const fetchMsg = err instanceof Error ? err.message : "";
+      const errorMsg = axiosData?.error || fetchMsg || t("buyNow.errorPlacing");
+      const outOfStock = axiosData?.data?.outOfStock;
+
+      if (outOfStock && outOfStock.length > 0) {
+        const names = outOfStock.map((i) => i.name).join(", ");
         toast({ title: t("buyNow.outOfStock", { names }), variant: "destructive" });
       } else {
-        toast({ title: errData?.error || t("buyNow.errorPlacing"), variant: "destructive" });
+        toast({ title: errorMsg, variant: "destructive" });
       }
     } finally {
       setPlacing(false);
     }
-  }, [fullName, phone, address, user, product.id, appliedCoupon, excludedIds, onOpenChange, reloadCart, router, toast, t, selectedOptions]);
+  }, [fullName, phone, address, user, product.id, appliedCoupon, excludedIds, buyNowQuantity, onOpenChange, reloadCart, allItems, flatOptions, router, toast, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         mobileSheet
-        className="max-h-[85dvh] sm:max-h-[90dvh] sm:max-w-xl sm:w-[calc(100%-2rem)] flex flex-col p-0 gap-0"
+        className="max-h-[90dvh] sm:max-h-[90dvh] sm:max-w-2xl sm:w-[calc(100%-2rem)] flex flex-col p-0 gap-0"
       >
-        <DialogHeader className="px-5 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:pt-5 pb-3 sm:pb-4 border-b flex-shrink-0">
-          <DialogTitle className="text-base sm:text-lg font-semibold text-left">
+        <DialogHeader className="px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] sm:pt-3 pb-2 sm:pb-3 border-b flex-shrink-0">
+          <DialogTitle className="text-sm sm:text-base font-semibold text-left">
             {t("buyNow.title")}
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -172,14 +223,14 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-5">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
           {/* ── All Items ── */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {allItems.map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
+              <div key={item.id} className="flex items-center gap-2.5">
                 {item.image && (
-                  <div className="relative h-14 w-14 flex-shrink-0 rounded-lg overflow-hidden bg-muted border">
-                    <div className="absolute -top-1 -right-1 z-10 bg-primary text-primary-foreground text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center">
+                  <div className="relative h-11 w-11 flex-shrink-0 rounded-md overflow-hidden bg-muted border">
+                    <div className="absolute -top-0.5 -right-0.5 z-10 bg-primary text-primary-foreground text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
                       {item.quantity}
                     </div>
                     <Image
@@ -187,12 +238,12 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
                       alt={item.name}
                       fill
                       className="object-cover"
-                      sizes="56px"
+                      sizes="44px"
                     />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm leading-tight truncate">{item.name}</p>
+                  <p className="font-medium text-xs leading-tight truncate">{item.name}</p>
                   {item.isBuyNow && selectedOptions && Object.keys(selectedOptions).length > 0 && (
                     <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
                       {Object.entries(selectedOptions).map(([key, rawVal], idx) => {
@@ -214,27 +265,52 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
                       })}
                     </p>
                   )}
-                  {item.quantity > 1 && (
+                  {!item.isBuyNow && item.quantity > 1 && (
                     <p className="text-xs text-muted-foreground mt-0.5">×{item.quantity}</p>
                   )}
                 </div>
-                <span className="font-semibold text-sm whitespace-nowrap">{formatPrice(item.price * item.quantity)}</span>
-                {!item.isBuyNow && (
-                  <button
-                    type="button"
-                    className="flex-shrink-0 p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    onClick={() => setExcludedIds((prev) => new Set(prev).add(item.id))}
-                    aria-label={t("buyNow.removeItem", { name: item.name })}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                {item.isBuyNow ? (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      className="h-6 w-6 min-h-[36px] min-w-[36px] rounded-full border flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                      onClick={() => setBuyNowQuantity((q) => Math.max(1, q - 1))}
+                      disabled={buyNowQuantity <= 1}
+                      aria-label={t("buyNow.decreaseQty")}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-5 text-center text-xs font-semibold">{buyNowQuantity}</span>
+                    <button
+                      type="button"
+                      className="h-6 w-6 min-h-[36px] min-w-[36px] rounded-full border flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                      onClick={() => setBuyNowQuantity((q) => Math.min(maxQty, q + 1))}
+                      disabled={buyNowQuantity >= maxQty}
+                      aria-label={t("buyNow.increaseQty")}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                    <span className="ml-1.5 font-semibold text-xs whitespace-nowrap">{formatPrice(calcTTC(item.price, item.tva) * item.quantity)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <span className="font-semibold text-xs whitespace-nowrap">{formatPrice(calcTTC(item.price, item.tva) * item.quantity)}</span>
+                    <button
+                      type="button"
+                      className="flex-shrink-0 p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      onClick={() => setExcludedIds((prev) => new Set(prev).add(item.id))}
+                      aria-label={t("buyNow.removeItem", { name: item.name })}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </>
                 )}
               </div>
             ))}
           </div>
 
           {/* ── Order Summary ── */}
-          <div className="rounded-lg border p-3 sm:p-4 space-y-2 text-sm">
+          <div className="rounded-md border p-2.5 sm:p-3 space-y-1.5 text-xs">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{tCheckout("orderSummary.subtotal")}</span>
               <span className="font-medium">{formatPrice(subtotal)}</span>
@@ -252,7 +328,7 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
               </div>
             )}
             <Separator />
-            <div className="flex justify-between font-bold text-base">
+            <div className="flex justify-between font-bold text-sm">
               <span>{tCheckout("orderSummary.total")}</span>
               <span>{formatPrice(total)}</span>
             </div>
@@ -260,15 +336,15 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
 
           {/* ── Coupon ── */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block">{t("buyNow.couponLabel")}</label>
-            <div className="flex gap-2">
+            <label className="text-xs font-medium mb-1 block">{t("buyNow.couponLabel")}</label>
+            <div className="flex gap-1.5">
               <div className="relative flex-1">
-                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                 <Input
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value)}
                   placeholder={tCheckout("orderSummary.couponPlaceholder")}
-                  className="pl-9 h-10"
+                  className="pl-8 h-8 text-xs"
                   disabled={!!appliedCoupon}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyCoupon(); } }}
                 />
@@ -277,7 +353,7 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 px-3"
+                  className="h-8 px-2.5 text-xs"
                   onClick={() => { setAppliedCoupon(null); setCouponInput(""); }}
                 >
                   {tCheckout("orderSummary.removeCoupon")}
@@ -286,12 +362,11 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-10 px-4 font-semibold text-white hover:text-white hover:opacity-90"
-                  style={{ backgroundColor: "#000" }}
+                  className="h-8 px-3 text-xs font-semibold bg-foreground text-background hover:text-background hover:opacity-90"
                   onClick={handleApplyCoupon}
                   disabled={validatingCoupon || !couponInput.trim()}
                 >
-                  {validatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : tCheckout("orderSummary.applyCoupon")}
+                  {validatingCoupon ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : tCheckout("orderSummary.applyCoupon")}
                 </Button>
               )}
             </div>
@@ -300,35 +375,36 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
 
           {/* ── Shipping Option ── */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block">{t("buyNow.shippingOptions")}</label>
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="h-5 w-5 rounded-full border-2 border-foreground flex items-center justify-center flex-shrink-0">
-                <div className="h-2.5 w-2.5 rounded-full bg-foreground" />
+            <label className="text-xs font-medium mb-1 block">{t("buyNow.shippingOptions")}</label>
+            <div className="flex items-center gap-2 rounded-md border p-2">
+              <div className="h-4 w-4 rounded-full border-2 border-foreground flex items-center justify-center flex-shrink-0">
+                <div className="h-2 w-2 rounded-full bg-foreground" />
               </div>
-              <Truck className="h-4 w-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
-              <span className="text-sm flex-1">{t("buyNow.homeDelivery")}</span>
-              <span className="text-sm font-semibold">
+              <Truck className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" aria-hidden="true" />
+              <span className="text-xs flex-1">{t("buyNow.homeDelivery")}</span>
+              <span className="text-xs font-semibold">
                 {shippingCost === 0 ? tCheckout("orderSummary.freeShipping") : formatPrice(shippingCost)}
               </span>
             </div>
           </div>
 
           {/* ── Customer Form ── */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Name */}
             <div>
-              <label htmlFor="buyNowName" className="text-sm font-medium mb-1 block">
+              <label htmlFor="buyNowName" className="text-xs font-medium mb-0.5 block">
                 {t("buyNow.nameLabel")}<span className="text-destructive">*</span>
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                 <Input
                   id="buyNowName"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder={t("buyNow.namePlaceholder")}
-                  className="pl-9 h-10"
+                  className="pl-8 h-8 text-xs"
                   required
+                  aria-required="true"
                   autoComplete="name"
                 />
               </div>
@@ -336,18 +412,19 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
 
             {/* Phone */}
             <div>
-              <label htmlFor="buyNowPhone" className="text-sm font-medium mb-1 block">
+              <label htmlFor="buyNowPhone" className="text-xs font-medium mb-0.5 block">
                 {t("buyNow.phoneLabel")}<span className="text-destructive">*</span>
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                 <Input
                   id="buyNowPhone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder={t("buyNow.phonePlaceholder")}
-                  className="pl-9 h-10"
+                  className="pl-8 h-8 text-xs"
                   required
+                  aria-required="true"
                   autoComplete="tel"
                   type="tel"
                 />
@@ -356,18 +433,19 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
 
             {/* Address */}
             <div>
-              <label htmlFor="buyNowAddress" className="text-sm font-medium mb-1 block">
+              <label htmlFor="buyNowAddress" className="text-xs font-medium mb-0.5 block">
                 {t("buyNow.addressLabel")}<span className="text-destructive">*</span>
               </label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                 <Input
                   id="buyNowAddress"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder={t("buyNow.addressPlaceholder")}
-                  className="pl-9 h-10"
+                  className="pl-8 h-8 text-xs"
                   required
+                  aria-required="true"
                   autoComplete="street-address"
                 />
               </div>
@@ -376,28 +454,28 @@ export function BuyNowModal({ product, open, onOpenChange, selectedOptions }: Bu
         </div>
 
         {/* ── Submit Button ── */}
-        <div className="border-t px-5 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+        <div className="border-t px-4 sm:px-5 py-2.5 sm:py-3 flex-shrink-0">
           <Button
             variant="ghost"
-            size="lg"
+            size="default"
             className={cn(
-              "w-full h-12 text-sm font-bold uppercase tracking-wide rounded-lg",
+              "w-full h-10 text-xs font-bold uppercase tracking-wide rounded-md",
               "text-white hover:text-white hover:opacity-90",
-              "shadow-lg transition-all duration-200 active:scale-[0.98]",
-              "disabled:opacity-100"
+              "shadow-md transition-all duration-200 active:scale-[0.98]",
+              "disabled:opacity-100",
+              "bg-foreground text-background hover:bg-foreground/90"
             )}
-            style={{ backgroundColor: "#000" }}
             disabled={placing || !fullName.trim() || !phone.trim() || !address.trim()}
             onClick={handleSubmit}
           >
             {placing ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+              <div className="flex items-center gap-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 {t("buyNow.placing")}
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+              <div className="flex items-center gap-1.5">
+                <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />
                 {t("buyNow.submitButton")} – {formatPrice(total)}
               </div>
             )}

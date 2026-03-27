@@ -1,6 +1,6 @@
 # Frontend Components and Services
 
-All frontend code lives in `{FRONTEND_DIR}/`. It is a Next.js 14 App Router application written in TypeScript.
+All frontend code lives in `{FRONTEND_DIR}/`. It is a Next.js 15 App Router application written in TypeScript.
 
 ---
 

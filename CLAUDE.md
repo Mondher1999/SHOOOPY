@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Identity
 
-ShopFlow is a full-stack e-commerce platform for Cash on Delivery orders. Roles: `customer`, `admin`. Languages: EN/FR. The frontend is Next.js 14 App Router + TypeScript + Tailwind CSS + shadcn/ui (`frontend/`). The backend is Express.js + MongoDB/Mongoose (`backend/`). Each directory has its own `CLAUDE.md` — read those before making changes.
+ShopFlow is a full-stack e-commerce platform for Cash on Delivery orders. Roles: `customer`, `admin`. Languages: EN/FR. The frontend is Next.js 15 App Router + TypeScript + Tailwind CSS + shadcn/ui (`frontend/`). The backend is Express.js + MongoDB/Mongoose (`backend/`). Each directory has its own `CLAUDE.md` — read those before making changes.
 
 ## Commands
 
@@ -61,6 +61,30 @@ All mutating routes (POST/PUT/PATCH/DELETE) need `protect` middleware. Role gate
 ### i18n
 All user-facing strings must use `t()` from `useTranslation`. Add keys to ALL language files (EN + FR). Never leave a namespace incomplete.
 
+### Frontend Import Order
+```tsx
+// 1. React
+import React, { useState, useEffect } from "react"
+// 2. Next.js
+import { useRouter } from "next/navigation"
+// 3. Third-party (react-i18next, framer-motion, react-hook-form, zod, recharts)
+import { useTranslation } from "react-i18next"
+// 4. Internal @/ aliases (components, utils, lib, contexts, services)
+import { Button } from "@/components/ui/button"
+// 5. Types (always `import type`)
+import type { Product } from "@/types/product"
+```
+
+### Frontend Component States
+Every data-fetching component must handle 4 states: loading (Skeleton), error (`role="alert"`), empty (`text-muted-foreground`), success (render data). Use `"use client"` only when hooks, events, or browser APIs are needed.
+
+### Styling
+- Tailwind CSS only — no inline styles, no hardcoded hex values
+- CSS variable tokens: `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`
+- `cn()` from `@/lib/utils` for conditional class merging
+- Mobile-first responsive: `sm:`, `md:`, `lg:` breakpoints
+- Forms use `react-hook-form` + `Zod` for validation
+
 ### Naming Conventions
 | Context | Convention | Example |
 |---|---|---|
@@ -116,7 +140,7 @@ MVC under `backend/src/`: `models/` → `controllers/` → `routes/` → `middle
 
 **In-memory cache** (`utils/cache.js`): TTL-based, `delByPrefix()` for parameterized key invalidation. Auto-invalidated on writes.
 
-### Frontend (Next.js 14 App Router)
+### Frontend (Next.js 15 App Router)
 
 **App Router layout:**
 ```
@@ -154,6 +178,8 @@ app/
 | `LoadingContext` | Global loading spinner |
 
 **Services** (`frontend/services/`): One file per domain, use `axiosInstance` or `fetchAPI`. Never call API directly from components.
+
+**Key frontend dependencies:** react-hook-form + Zod (forms), Framer Motion (animations), Recharts (admin charts), i18next + react-i18next (translations).
 
 ### Cross-Stack Data Flow
 Feature implementation order: **Model → Controller → Route → Frontend Service → UI Component → i18n keys**
@@ -222,6 +248,9 @@ res.status(500).json({ success: false, error: "Something went wrong" });
 - `docs/SETUP.md` — Environment variables (complete list), deployment steps, nginx config
 - `docs/API.md` — All API endpoints with request/response shapes
 - `docs/DATA-MODELS.md` — All Mongoose schemas with fields and relationships
+- `docs/ARCHITECTURE.md` — Backend middleware chain, MVC layout, auth flow, frontend routing
+- `docs/FRONTEND-COMPONENTS.md` — Pages, services, contexts, custom hooks, upload flow
+- `docs/SPRINT-PLAN.md` — Sprint roadmap with user stories and acceptance criteria
 
 ## Environment Variables
 See `docs/SETUP.md` for the complete list. Backend needs: `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, SMTP config, `FRONTEND_URL`. Frontend needs: vars in `.env.local`.

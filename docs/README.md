@@ -6,7 +6,7 @@
 
 | Directory | Description | Port |
 |---|---|---|
-| `{FRONTEND_DIR}/` | Next.js 14 App Router frontend (TypeScript, Tailwind, shadcn/ui) | {FRONTEND_PORT} |
+| `{FRONTEND_DIR}/` | Next.js 15 App Router frontend (TypeScript, Tailwind, shadcn/ui) | {FRONTEND_PORT} |
 | `{BACKEND_DIR}/` | Express.js backend (JavaScript, MongoDB/Mongoose) | {BACKEND_PORT} |
 
 ---
@@ -41,7 +41,7 @@
 ### Frontend
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 15 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS, shadcn/ui (Radix UI) |
 | HTTP client | Axios (with interceptor) + native fetch |

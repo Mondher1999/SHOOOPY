@@ -7,7 +7,8 @@
     "wishlist": "Wishlist",
     "users": "Users",
     "adminDashboard": "Admin Panel",
-    "backToWebsite": "Back to Store"
+    "backToWebsite": "Back to Store",
+    "continueShopping": "Continue shopping"
   },
   "profile": {
     "title": "My Profile",
@@ -20,7 +21,9 @@
     "submitButton": "Save changes",
     "submitting": "Saving...",
     "successMessage": "Profile updated successfully",
-    "errorEmailTaken": "This email is already in use"
+    "errorEmailTaken": "This email is already in use",
+    "invalidAvatarType": "Please select an image file",
+    "avatarTooLarge": "Avatar must be smaller than 2 MB"
   },
   "changePassword": {
     "title": "Change Password",
@@ -31,7 +34,8 @@
     "submitButton": "Update password",
     "submitting": "Updating...",
     "successMessage": "Password changed successfully",
-    "errorCurrentPassword": "Current password is incorrect"
+    "errorCurrentPassword": "Current password is incorrect",
+    "errorSamePassword": "New password must be different from current password"
   },
   "admin": {
     "users": {

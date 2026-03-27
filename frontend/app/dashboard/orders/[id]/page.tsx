@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { calcTTC, calcTotalTVA } from "@/lib/tva";
 import { isColorAttr, getColorValue } from "@/lib/colorMap";
 import logger from "@/lib/logger";
 import type { Order } from "@/types";
@@ -83,6 +84,9 @@ export default function CustomerOrderDetailPage() {
   };
 
   const formatPrice = useFormatPrice();
+  const totalTVA = order
+    ? calcTotalTVA(order.items.map((i) => ({ price: i.price, tva: i.tva ?? 0, quantity: i.quantity })))
+    : 0;
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("en-US", {
@@ -200,11 +204,11 @@ export default function CustomerOrderDetailPage() {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {t("detail.qty", { count: item.quantity })} &times; {formatPrice(item.price)}
+                      {t("detail.qty", { count: item.quantity })} &times; {formatPrice(calcTTC(item.price, item.tva ?? 0))}
                     </p>
                   </div>
                   <p className="text-sm font-medium shrink-0">
-                    {formatPrice(item.price * item.quantity)}
+                    {formatPrice(calcTTC(item.price, item.tva ?? 0) * item.quantity)}
                   </p>
                 </div>
               ))}
@@ -248,11 +252,6 @@ export default function CustomerOrderDetailPage() {
               <p className="font-medium">{order.shippingAddress.fullName}</p>
               <p className="text-muted-foreground">{order.shippingAddress.phone}</p>
               <p className="text-muted-foreground">{order.shippingAddress.street}</p>
-              <p className="text-muted-foreground">
-                {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
-                {order.shippingAddress.postalCode}
-              </p>
-              <p className="text-muted-foreground">{order.shippingAddress.country}</p>
             </CardContent>
           </Card>
 
@@ -269,6 +268,12 @@ export default function CustomerOrderDetailPage() {
                 <span className="text-muted-foreground">{t("detail.subtotal")}</span>
                 <span>{formatPrice(order.totalPrice - order.shippingCost)}</span>
               </div>
+              {totalTVA > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">{t("detail.tvaTotal")}</span>
+                  <span className="text-muted-foreground">{formatPrice(totalTVA)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("detail.shipping")}</span>
                 <span>{order.shippingCost === 0 ? t("detail.free") : formatPrice(order.shippingCost)}</span>

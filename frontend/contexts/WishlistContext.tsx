@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -64,15 +65,18 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // ─── Derived state ──────────────────────────────────────────────────────
-  const wishlistIds = new Set(
-    (wishlist?.items ?? []).map((item) => {
-      // item.product can be populated (object with id) or just a string
-      if (typeof item.product === "object" && item.product !== null) {
-        return item.product.id;
-      }
-      return String(item.product);
-    })
+  // ─── Derived state (memoized) ───────────────────────────────────────────
+  const wishlistIds = useMemo(
+    () => new Set(
+      (wishlist?.items ?? []).map((item) => {
+        // item.product can be populated (object with id) or just a string
+        if (typeof item.product === "object" && item.product !== null) {
+          return item.product.id;
+        }
+        return String(item.product);
+      })
+    ),
+    [wishlist?.items]
   );
 
   const totalItems = wishlist?.items?.length ?? 0;
@@ -122,20 +126,13 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
   const reload = fetchWishlist;
 
+  const value = useMemo(
+    () => ({ wishlist, isLoading, wishlistIds, totalItems, addItem, removeItem, toggleItem, clearAll, reload }),
+    [wishlist, isLoading, wishlistIds, totalItems, addItem, removeItem, toggleItem, clearAll, reload]
+  );
+
   return (
-    <WishlistContext.Provider
-      value={{
-        wishlist,
-        isLoading,
-        wishlistIds,
-        totalItems,
-        addItem,
-        removeItem,
-        toggleItem,
-        clearAll,
-        reload,
-      }}
-    >
+    <WishlistContext.Provider value={value}>
       {children}
     </WishlistContext.Provider>
   );

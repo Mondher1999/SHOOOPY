@@ -113,6 +113,8 @@
     "error": "Failed to load settings.",
     "saved": "Settings saved successfully",
     "saveError": "Failed to save settings",
+    "invalidFileType": "Only JPEG, PNG, WebP, GIF, and ICO files are allowed",
+    "fileTooLarge": "File must be smaller than 5 MB",
     "tabs": {
       "store": "Store",
       "orders": "Orders",
@@ -233,7 +235,10 @@
       "sortNewest": "Newest first",
       "sortPriceAsc": "Price: Low to High",
       "sortPriceDesc": "Price: High to Low",
-      "sortRating": "Highest rated"
+      "sortRating": "Highest rated",
+      "productTypesTitle": "Enabled Product Types",
+      "productTypesHelp": "Select the product types you sell. Products of enabled types will show dynamic attribute fields.",
+      "productTypesNoneEnabled": "No product types enabled. Enable at least one type to use dynamic product attributes."
     },
     "email": {
       "orderConfirmationLabel": "Order confirmation emails",
@@ -417,6 +422,10 @@
       "templateArtisanDesc": "Warm, handcrafted feel with organic shapes, earthy tones, and artisanal typography.",
       "templateMagazine": "Editorial",
       "templateMagazineDesc": "Magazine-style layout with dramatic typography, editorial grids, and bold red accents.",
+      "templateNoir": "Noir",
+      "templateNoirDesc": "Dark cinematic theme with dramatic contrasts, film-inspired visuals, and luxurious feel.",
+      "templateSurge": "Surge",
+      "templateSurgeDesc": "High-conversion landing page with urgency triggers, social proof, and strong CTAs.",
 
       "modeTitle": "Homepage Mode",
       "modeHelp": "Choose between a code-defined layout or the admin-configured sections below.",
@@ -450,7 +459,29 @@
         "categories": "Categories",
         "socialProof": "Social Proof",
         "craftStory": "Craft Story",
-        "editorial": "Editorial"
+        "editorial": "Editorial",
+        "noirCinematicHero": "Cinematic Hero",
+        "noirBrandStatement": "Brand Statement",
+        "noirProductGallery": "Product Gallery",
+        "noirBenefitsTriptych": "Benefits Triptych",
+        "noirStorySection": "Story Section",
+        "noirTestimonials": "Testimonials",
+        "noirProductDetails": "Product Details",
+        "noirPurchaseSection": "Purchase Section",
+        "noirTrustFooter": "Trust Footer",
+        "surgeAnnouncementBar": "Announcement Bar",
+        "surgeHeroWithCta": "Hero with CTA",
+        "surgeSocialProofBar": "Social Proof Bar",
+        "surgeProblemSolution": "Problem / Solution",
+        "surgeVideoDemo": "Video Demo",
+        "surgeBenefitsCarousel": "Benefits Carousel",
+        "surgeComparison": "Comparison",
+        "surgeTestimonialsGrid": "Testimonials Grid",
+        "surgeMidPageCta": "Mid-Page CTA",
+        "surgeHowItWorks": "How It Works",
+        "surgeFaqSection": "FAQ Section",
+        "surgeFinalCta": "Final CTA",
+        "surgeGuaranteeBadge": "Guarantee Badge"
       },
 
       "announcementSection": "Announcement Bar",
@@ -848,6 +879,8 @@
     "confirmDesc": "This order will be created with \"Confirmed\" status and stock will be decremented.",
     "cancel": "Cancel",
     "confirm": "Create Order",
-    "createError": "Failed to create order. Please try again."
+    "createError": "Failed to create order. Please try again.",
+    "addToOrder": "Add to order",
+    "loadingProduct": "Loading product..."
   }
 }

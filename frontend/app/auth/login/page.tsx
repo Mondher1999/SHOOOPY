@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,10 +24,12 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginForm() {
   const { t } = useTranslation("auth");
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -42,13 +44,25 @@ export default function LoginPage() {
     setServerError(null);
     try {
       await login(data.email, data.password);
-      router.push("/");
+      router.push(redirectTo);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error && "response" in error
-          ? (error as { response?: { data?: { error?: string } } }).response?.data?.error
-          : null;
-      setServerError(message || t("login.errorInvalidCredentials"));
+      const axiosErr = error as { response?: { data?: { error?: string }; status?: number } };
+      const serverMsg = axiosErr?.response?.data?.error || "";
+      const status = axiosErr?.response?.status;
+
+      let translated: string;
+      if (status === 429 && serverMsg.includes("Account locked")) {
+        const minutesMatch = serverMsg.match(/(\d+)\s*minute/);
+        translated = t("login.errorAccountLocked", { minutes: minutesMatch?.[1] || "15" });
+      } else if (status === 429) {
+        translated = t("login.errorTooManyAttempts");
+      } else if (serverMsg === "Account deactivated") {
+        translated = t("login.errorAccountDeactivated");
+      } else {
+        translated = t("login.errorInvalidCredentials");
+      }
+
+      setServerError(translated);
       logger.error("Login failed:", error);
     }
   };
@@ -63,7 +77,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <CardContent className="space-y-4">
           {serverError && (
-            <Alert variant="destructive" aria-live="polite">
+            <Alert variant="destructive" role="alert">
               <AlertDescription>{serverError}</AlertDescription>
             </Alert>
           )}
@@ -133,5 +147,13 @@ export default function LoginPage() {
         </CardFooter>
       </form>
     </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

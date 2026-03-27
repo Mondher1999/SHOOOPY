@@ -32,6 +32,7 @@ import { SearchBar } from "@/components/layout/SearchBar";
 import { fetchAPI } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { buildSocialLinks } from "@/lib/social-icons";
 import logger from "@/lib/logger";
 import type { Product, Category, CategoryNode } from "@/types";
@@ -85,10 +86,6 @@ const TRUST_KEYS = [
 
 /* ──────────────────────────── HELPERS ────────────────────────────── */
 
-function formatPrice(price: number): string {
-  return `${price.toLocaleString()} DT`;
-}
-
 function getProductImage(product: Product, size: "thumbnail" | "medium" | "large" | "original" = "medium"): string {
   const img = product.images?.[0];
   if (!img) return "/images/homepage/products/product-1.jpg";
@@ -124,7 +121,8 @@ interface ProductCardInlineProps {
   viewProductLabel: string;
 }
 
-function ProductCardInline({ product, badge, isShowcase, onAddToCart, addToCartLabel, viewProductLabel }: ProductCardInlineProps) {
+function ProductCardInline({ product, badge, isShowcase, viewProductLabel }: ProductCardInlineProps) {
+  const formatPrice = useFormatPrice();
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
   const discountPercent = hasDiscount
     ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
@@ -195,13 +193,6 @@ function ProductCardInline({ product, badge, isShowcase, onAddToCart, addToCartL
             e.currentTarget.style.backgroundColor = "transparent";
             e.currentTarget.style.borderColor = "#D1D5DB";
             e.currentTarget.style.color = C.grey;
-          }}
-          onClick={(e) => {
-            if (!isShowcase && inStock) {
-              e.preventDefault();
-              e.stopPropagation();
-              onAddToCart(product);
-            }
           }}
         >
           {viewProductLabel}

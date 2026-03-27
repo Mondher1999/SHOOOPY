@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Search, User, Heart, ShoppingBag, Menu, X, ChevronDown } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
@@ -9,10 +9,11 @@ import { SearchBar } from "@/components/layout/SearchBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
+
 import { useShowcase } from "@/hooks/useShowcase";
 import { useNavigation } from "@/hooks/useNavigation";
 import { StoreLogo } from "@/components/layout/StoreLogo";
+import { NavDropdown } from "@/components/layout/NavDropdown";
 
 export function ElegantHeader() {
   const { t } = useTranslation("common");
@@ -24,6 +25,16 @@ export function ElegantHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // Close mobile menu on Escape
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [mobileOpen]);
+
   return (
     <>
       <header className="sticky top-0 z-40 w-full border-b border-[#E8DDD0]">
@@ -32,11 +43,10 @@ export function ElegantHeader() {
         <div className="bg-[#2D2A26]">
           <div className="flex h-[32px] items-center justify-end px-6 lg:px-10 max-w-[1600px] mx-auto gap-4">
             <LanguageSwitcher />
-            <ThemeToggle />
 
             <button
               onClick={() => setSearchOpen((v) => !v)}
-              className="text-white/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none"
+              className="text-white/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
               aria-label={t("search.ariaLabel")}
             >
               {searchOpen
@@ -47,7 +57,7 @@ export function ElegantHeader() {
 
             <Link
               href="/wishlist"
-              className="relative text-white/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none"
+              className="relative text-white/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
               aria-label={t("nav.wishlist")}
             >
               <Heart className="w-[14px] h-[14px]" strokeWidth={1.5} />
@@ -61,7 +71,7 @@ export function ElegantHeader() {
             {!isShowcase && (
               <button
                 onClick={openDrawer}
-                className="relative text-white/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none"
+                className="relative text-white/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
                 aria-label={t("nav.cart")}
               >
                 <ShoppingBag className="w-[14px] h-[14px]" strokeWidth={1.5} />
@@ -76,7 +86,7 @@ export function ElegantHeader() {
             {user ? (
               <Link
                 href="/dashboard/profile"
-                className="text-white/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none"
+                className="text-white/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
                 aria-label={t("nav.account")}
               >
                 <User className="w-[14px] h-[14px]" strokeWidth={1.5} />
@@ -91,7 +101,7 @@ export function ElegantHeader() {
             )}
 
             <button
-              className="lg:hidden text-white/70 hover:text-[#C5A467] transition-colors cursor-pointer focus:outline-none ml-1"
+              className="lg:hidden text-white/70 hover:text-[#C5A467] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded ml-1"
               onClick={() => setMobileOpen((v) => !v)}
               aria-expanded={mobileOpen}
               aria-label={mobileOpen ? t("nav.closeMenu") : t("nav.openMenu")}
@@ -111,7 +121,7 @@ export function ElegantHeader() {
             {/* Logo — centered */}
             <Link
               href="/"
-              className="text-[20px] font-light tracking-[0.3em] uppercase whitespace-nowrap text-[#2D2A26] hover:text-[#C5A467] transition-colors duration-200 focus:outline-none lg:absolute lg:left-1/2 lg:-translate-x-1/2"
+              className="text-[20px] font-light tracking-[0.3em] uppercase whitespace-nowrap text-[#2D2A26] hover:text-[#C5A467] transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded lg:absolute lg:left-1/2 lg:-translate-x-1/2"
             >
               <StoreLogo imgHeight="h-8" />
             </Link>
@@ -127,26 +137,17 @@ export function ElegantHeader() {
                     <span className="text-[#C5A467]/40 mx-4 text-[11px]">&middot;</span>
                   )}
                   {item.children.length > 0 ? (
-                    <div className="relative group">
-                      <button
-                        className="flex items-center gap-1 text-[11px] tracking-[0.18em] uppercase whitespace-nowrap text-[#2D2A26]/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none"
-                      >
-                        {item.label}
-                        <ChevronDown className="w-3 h-3" strokeWidth={1.5} />
-                      </button>
-                      <div className="absolute left-0 top-full mt-1 hidden group-hover:block min-w-[180px] bg-white border border-[#e5ddd5] shadow-md rounded z-50">
-                        {item.children.map((child) => (
-                          <Link
-                            key={child.id}
-                            href={child.href}
-                            {...(child.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                            className="block px-4 py-2 text-[11px] tracking-[0.12em] uppercase text-[#2D2A26]/70 hover:bg-[#faf7f4] hover:text-[#C5A467] transition-colors duration-200"
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
+                    <NavDropdown
+                      buttonContent={<>{item.label} <ChevronDown className="w-3 h-3" strokeWidth={1.5} /></>}
+                      buttonClassName="flex items-center gap-1 text-[11px] tracking-[0.18em] uppercase whitespace-nowrap text-[#2D2A26]/70 hover:text-[#C5A467] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                      menuClassName="bg-white border border-[#e5ddd5] shadow-md rounded min-w-[180px]"
+                    >
+                      {item.children.map((child) => (
+                        <Link key={child.id} href={child.href} className="block px-4 py-2 text-[11px] tracking-[0.12em] uppercase text-[#2D2A26]/70 hover:bg-[#faf7f4] hover:text-[#C5A467] transition-colors duration-200 focus:outline-none focus-visible:bg-[#faf7f4]" role="menuitem" tabIndex={-1} {...(child.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                          {child.label}
+                        </Link>
+                      ))}
+                    </NavDropdown>
                   ) : (
                     <Link
                       href={item.href}

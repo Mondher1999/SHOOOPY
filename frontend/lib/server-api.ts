@@ -37,7 +37,7 @@ export async function serverFetchProduct(
 ): Promise<Product | null> {
   return serverFetch<Product>(
     `/api/products/slug/${encodeURIComponent(slug)}`,
-    3600
+    60
   );
 }
 

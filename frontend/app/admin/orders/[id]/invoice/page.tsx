@@ -64,9 +64,9 @@ export default function InvoicePage() {
   return (
     <>
       {/* Sticky action bar — hidden on print */}
-      <div className="print:hidden sticky top-0 z-10 bg-white border-b border-polaris-border shadow-sm">
+      <div className="print:hidden sticky top-0 z-10 bg-polaris-surface border-b border-polaris-border shadow-sm">
         <div className="max-w-3xl mx-auto px-8 py-3 flex items-center justify-between">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild className="text-polaris-text hover:bg-polaris-surface-hovered">
             <Link href={`/admin/orders/${id}`}>
               <ArrowLeft className="h-4 w-4 mr-1" />
               {t("orders:admin.backToOrders")}
@@ -160,7 +160,7 @@ export default function InvoicePage() {
             {(order.discountAmount || 0) > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>{t("invoice.discount")} {order.couponCode ? `(${order.couponCode})` : ""}</span>
-                <span>-{formatPrice(order.discountAmount)}</span>
+                <span>-{formatPrice(order.discountAmount || 0)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">

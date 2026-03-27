@@ -14,8 +14,12 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 function CategoryCardSkeleton() {
   return (
-    <div className="rounded-none overflow-hidden bg-[#1A1A1A] aspect-[16/10]">
-      <Skeleton className="h-full w-full rounded-none bg-[#2A2A2A]" />
+    <div className="bg-[#1A1A1A] border-2 border-[#2A2A2A] overflow-hidden">
+      <Skeleton className="aspect-[16/10] w-full rounded-none bg-[#2A2A2A]" />
+      <div className="p-5 sm:p-6 border-t-2 border-[#2A2A2A] space-y-2">
+        <Skeleton className="h-5 w-2/3 rounded-none bg-[#2A2A2A]" />
+        <Skeleton className="h-3 w-1/2 rounded-none bg-[#2A2A2A]" />
+      </div>
     </div>
   );
 }
@@ -108,48 +112,39 @@ export default function BoldCategoriesListView({
                   key={cat.id}
                   href={`/categories/${cat.slug}`}
                   className={cn(
-                    "group relative block rounded-none overflow-hidden aspect-[16/10] bg-[#1A1A1A]",
+                    "group block bg-[#1A1A1A] border-2 border-[#2A2A2A] overflow-hidden",
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3C00] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F0F0F]",
                     "transition-all duration-300",
-                    "hover:shadow-[0_20px_60px_-12px_rgba(255,60,0,0.3)]"
+                    "hover:border-[#FF3C00]/40 hover:shadow-[0_20px_60px_-12px_rgba(255,60,0,0.2)]"
                   )}
                 >
-                  {/* Image or Placeholder */}
-                  {imageSrc ? (
-                    <Image
-                      src={imageSrc}
-                      alt={cat.name}
-                      fill
-                      className={cn(
-                        "object-cover transition-transform duration-500 ease-out",
-                        "group-hover:scale-105"
-                      )}
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#FF3C00] to-[#E63500] flex items-center justify-center">
-                      <FolderOpen
-                        className="h-14 w-14 text-white/20"
-                        aria-hidden="true"
+                  {/* Contained Image */}
+                  <div className="relative aspect-[16/10] bg-[#111111] overflow-hidden">
+                    {imageSrc ? (
+                      <Image
+                        src={imageSrc}
+                        alt={cat.name}
+                        fill
+                        className={cn(
+                          "object-cover transition-transform duration-500 ease-out",
+                          "group-hover:scale-105"
+                        )}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
-                    </div>
-                  )}
-
-                  {/* Dark gradient overlay */}
-                  <div
-                    className={cn(
-                      "absolute inset-0 transition-all duration-500",
-                      imageSrc
-                        ? "bg-gradient-to-t from-black/80 via-black/30 to-transparent group-hover:from-black/90 group-hover:via-black/40"
-                        : "bg-black/10 group-hover:bg-black/20"
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#FF3C00]/20 to-[#1A1A1A] flex items-center justify-center">
+                        <FolderOpen
+                          className="h-14 w-14 text-[#FF3C00]/30"
+                          aria-hidden="true"
+                        />
+                      </div>
                     )}
-                  />
+                    {/* Orange top accent line */}
+                    <div className="absolute top-0 left-0 w-0 h-0.5 bg-[#FF3C00] transition-all duration-500 group-hover:w-full" />
+                  </div>
 
-                  {/* Orange top accent line */}
-                  <div className="absolute top-0 left-0 w-0 h-0.5 bg-[#FF3C00] transition-all duration-500 group-hover:w-full" />
-
-                  {/* Content overlay */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-6">
+                  {/* Card content below image */}
+                  <div className="p-5 sm:p-6 border-t-2 border-[#2A2A2A] group-hover:border-[#FF3C00]/30 transition-colors">
                     <h2 className="text-white font-extrabold uppercase tracking-wider leading-tight mb-1 text-lg sm:text-xl">
                       {cat.name}
                     </h2>

@@ -8,12 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSettingsAPI, updateSettingsAPI, uploadSettingsFileAPI, sendTestEmailAPI } from "@/services/settings-service";
+import { getSettingsAPI, updateSettingsAPI, uploadSettingsFileAPI, sendTestEmailAPI, getProductTypeCatalogAPI } from "@/services/settings-service";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import logger from "@/lib/logger";
-import type { SiteSettings, HomepageSlide, HomepageSectionKey, ThemeConfig, TestimonialItem, TrustBarItem, ValuePropositionItem, PartnerItem, InstagramImage, TypographySettings, ColorPaletteSettings, HeaderVariant, FooterVariant, NavigationItem } from "@/types";
+import type { SiteSettings, HomepageSlide, HomepageSectionKey, ThemeConfig, TestimonialItem, TrustBarItem, ValuePropositionItem, PartnerItem, InstagramImage, TypographySettings, ColorPaletteSettings, HeaderVariant, FooterVariant, NavigationItem, ProductTypeCatalog } from "@/types";
 import { BUILTIN_PAGES } from "@/hooks/useNavigation";
 import { THEMES, getThemeIds, getTheme } from "@/components/home/HomepageSections";
 import { CURRENCIES, getCurrency } from "@/lib/currency";
@@ -57,19 +57,32 @@ interface SaveButtonProps {
   onClick: () => void;
   isSaving: boolean;
   t: (key: string, options?: Record<string, unknown>) => string;
+  inline?: boolean;
 }
 
-function SaveButton({ onClick, isSaving, t }: SaveButtonProps) {
+function SaveButton({ onClick, isSaving, t, inline = false }: SaveButtonProps) {
+  const btn = (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={isSaving}
+      className="px-5 py-2 text-sm font-medium rounded bg-polaris-primary text-white hover:bg-polaris-primary-hovered disabled:opacity-50 transition-colors cursor-pointer"
+    >
+      {isSaving ? t("common:actions.saving") : t("common:actions.save")}
+    </button>
+  );
+
+  if (inline) {
+    return (
+      <div className="mt-6 pt-4 border-t border-polaris-border flex justify-end">
+        {btn}
+      </div>
+    );
+  }
+
   return (
-    <div className="sticky bottom-0 -mx-6 -mb-6 mt-6 px-6 py-3 bg-polaris-surface border-t border-polaris-border flex justify-end rounded-b-lg z-10">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={isSaving}
-        className="px-5 py-2 text-sm font-medium rounded bg-polaris-primary text-white hover:bg-polaris-primary-hovered disabled:opacity-50 transition-colors cursor-pointer"
-      >
-        {isSaving ? t("common:actions.saving") : t("common:actions.save")}
-      </button>
+    <div className="fixed bottom-0 left-0 lg:left-60 right-0 px-6 py-3 bg-polaris-surface/95 backdrop-blur-sm border-t border-polaris-border flex justify-end z-40 shadow-lg">
+      {btn}
     </div>
   );
 }
@@ -213,7 +226,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-20">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-polaris-text">{t("admin:settings.title")}</h1>
@@ -363,6 +376,15 @@ function StoreTab({ settings, onSave, isSaving, t }: TabProps) {
   const set = (key: string, val: string) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const handleLogoUpload = async (file: File) => {
+    const ALLOWED_IMG = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/x-icon"]);
+    if (!ALLOWED_IMG.has(file.type)) {
+      toast({ title: t("admin:settings.invalidFileType"), variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: t("admin:settings.fileTooLarge"), variant: "destructive" });
+      return;
+    }
     setIsUploadingLogo(true);
     try {
       const res = await uploadSettingsFileAPI(file, "logo");
@@ -544,6 +566,25 @@ function OrdersTab({ settings, onSave, isSaving, t }: TabProps) {
 
 function ProductsTab({ settings, onSave, isSaving, t }: TabProps) {
   const [form, setForm] = useState(settings.products);
+  const [catalog, setCatalog] = useState<ProductTypeCatalog | null>(null);
+
+  useEffect(() => {
+    getProductTypeCatalogAPI()
+      .then((res) => setCatalog(res.data))
+      .catch((err) => logger.error("Failed to load product type catalog", err));
+  }, []);
+
+  const toggleType = (key: string) => {
+    setForm((prev) => {
+      const current = prev.productTypes || [];
+      const next = current.includes(key)
+        ? current.filter((k: string) => k !== key)
+        : [...current, key];
+      return { ...prev, productTypes: next };
+    });
+  };
+
+  const enabledTypes: string[] = form.productTypes || [];
 
   return (
     <div className={cn(sectionClasses, "space-y-4")}>
@@ -570,6 +611,52 @@ function ProductsTab({ settings, onSave, isSaving, t }: TabProps) {
         checked={form.reviewsEnabled}
         onCheckedChange={(val) => setForm((prev) => ({ ...prev, reviewsEnabled: val }))}
       />
+
+      {/* ── Product Types Toggle Grid ── */}
+      <div className="space-y-3 pt-2 border-t border-polaris-border">
+        <div className="space-y-1">
+          <Label className="text-sm font-medium text-polaris-text">{t("admin:settings.products.productTypesTitle")}</Label>
+          <p className="text-xs text-polaris-text-subdued">{t("admin:settings.products.productTypesHelp")}</p>
+        </div>
+        {catalog ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {Object.entries(catalog).map(([key, config]) => {
+              const enabled = enabledTypes.includes(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleType(key)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 text-sm rounded border transition-colors cursor-pointer text-left",
+                    enabled
+                      ? "border-polaris-primary bg-polaris-primary/10 text-polaris-primary font-medium"
+                      : "border-polaris-border bg-polaris-surface text-polaris-text-subdued hover:border-polaris-primary/50"
+                  )}
+                >
+                  <span className={cn(
+                    "flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                    enabled ? "bg-polaris-primary border-polaris-primary" : "border-[#C9CCCF]"
+                  )}>
+                    {enabled && <Check className="w-3 h-3 text-white" />}
+                  </span>
+                  <span className="truncate">{t(`products:types.${key}`)}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full rounded" />
+            ))}
+          </div>
+        )}
+        {catalog && enabledTypes.length === 0 && (
+          <p className="text-xs text-amber-600">{t("admin:settings.products.productTypesNoneEnabled")}</p>
+        )}
+      </div>
+
       <SaveButton onClick={() => onSave(form)} isSaving={isSaving} t={t} />
     </div>
   );
@@ -1432,6 +1519,7 @@ function LayoutTab({ settings, onSave, isSaving, t }: LayoutTabProps) {
           onClick={() => onSave("header", { enabled: headerEnabled, variant: headerVariant, mode: headerMode })}
           isSaving={isSaving === "header"}
           t={t}
+          inline
         />
       </div>
 
@@ -1485,6 +1573,7 @@ function LayoutTab({ settings, onSave, isSaving, t }: LayoutTabProps) {
           onClick={() => onSave("footer", { enabled: footerEnabled, variant: footerVariant, mode: footerMode })}
           isSaving={isSaving === "footer"}
           t={t}
+          inline
         />
       </div>
     </div>
@@ -1639,6 +1728,17 @@ function HomepageTab({ settings, onSave, isSaving, t, onRefresh }: HomepageTabPr
     if (!el) return;
     const file = el.files?.[0];
     if (!file) return;
+    const ALLOWED_IMG = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/x-icon"]);
+    if (!ALLOWED_IMG.has(file.type)) {
+      toast({ title: t("admin:settings.invalidFileType"), variant: "destructive" });
+      el.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: t("admin:settings.fileTooLarge"), variant: "destructive" });
+      el.value = "";
+      return;
+    }
     try {
       const res = await uploadSettingsFileAPI(file, fieldName);
       const url = "url" in res.data ? (res.data as { url: string }).url : "";
@@ -2476,9 +2576,7 @@ function HomepageTab({ settings, onSave, isSaving, t, onRefresh }: HomepageTabPr
       </>)}{/* end dynamic-only panels */}
 
       {/* ── Save ────────────────────────────────────────────────────────── */}
-      <div className={sectionClasses}>
-        <SaveButton onClick={handleSave} isSaving={isSaving} t={t} />
-      </div>
+      <SaveButton onClick={handleSave} isSaving={isSaving} t={t} />
     </div>
   );
 }
@@ -3045,7 +3143,7 @@ function NavigationTab({ settings, onSave, isSaving, t }: TabProps) {
             onDragOver={(e) => onDragOver(e, idx)}
             onDragEnd={onDragEnd}
             className={cn(
-              "border border-polaris-border rounded-lg bg-white transition-all",
+              "border border-polaris-border rounded-lg bg-polaris-surface transition-all",
               dragOverIdx === idx && "border-polaris-primary border-dashed",
               !item.enabled && "opacity-60"
             )}
@@ -3059,7 +3157,7 @@ function NavigationTab({ settings, onSave, isSaving, t }: TabProps) {
                   <span className="text-sm font-medium text-polaris-text truncate">{getItemDisplayLabel(item)}</span>
                   <span className={cn(
                     "text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider",
-                    item.type === "builtin" ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"
+                    item.type === "builtin" ? "bg-polaris-info-light text-polaris-info" : "bg-polaris-warning-light text-polaris-warning"
                   )}>
                     {item.type === "builtin" ? t("admin:settings.navigation.typeBuiltin") : t("admin:settings.navigation.typeCustom")}
                   </span>

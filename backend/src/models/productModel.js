@@ -1,5 +1,16 @@
 import { Schema, model } from "mongoose";
 
+// ─── Variant subdocument: one per valid attribute combination ─────────────────
+const variantSchema = new Schema(
+  {
+    optionCombo: { type: Map, of: String, required: true },
+    stock: { type: Number, default: 0, min: 0 },
+    sku: { type: String, default: null, trim: true },
+    enabled: { type: Boolean, default: true },
+  },
+  { _id: true }
+);
+
 const productSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -27,6 +38,9 @@ const productSchema = new Schema(
     isActive: { type: Boolean, default: true },
     productType: { type: String, default: null },
     attributes: { type: Map, of: Schema.Types.Mixed, default: {} },
+    tva: { type: Number, default: 0, min: 0, max: 100 },
+    variantMode: { type: String, enum: ["none", "simple", "advanced"], default: "none" },
+    variants: { type: [variantSchema], default: [] },
   },
   { timestamps: true }
 );
@@ -45,6 +59,26 @@ productSchema.index({ isActive: 1, createdAt: -1 });
 
 // Sparse unique index for SKU (null allowed, but non-null must be unique)
 productSchema.index({ sku: 1 }, { unique: true, sparse: true });
+
+// Category-filtered listings sorted by newest (for public category pages)
+productSchema.index({ category: 1, createdAt: -1 });
+
+// Virtual: backward-compatible hasVariants derived from variantMode
+productSchema.virtual("hasVariants").get(function () {
+  return this.variantMode !== "none";
+});
+
+// Sync top-level stock from variant stocks based on variantMode
+productSchema.pre("save", function (next) {
+  if (this.variantMode === "advanced" && this.variants.length > 0) {
+    this.stock = this.variants
+      .filter((v) => v.enabled)
+      .reduce((sum, v) => sum + v.stock, 0);
+  } else if (this.variantMode === "simple" && this.variants.length > 0) {
+    this.stock = this.variants.reduce((sum, v) => sum + v.stock, 0);
+  }
+  next();
+});
 
 // Auto-generate slug from name before saving
 productSchema.pre("save", async function (next) {

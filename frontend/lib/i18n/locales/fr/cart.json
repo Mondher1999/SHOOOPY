@@ -38,6 +38,7 @@
   "drawerTitle": "Votre panier",
   "productImageAlt": "Image du produit {{name}}",
   "itemsInCart": "Articles dans le panier",
+  "tvaTotal": "TVA comprise",
   "showcaseTitle": "Mode Vitrine",
   "showcaseMessage": "Cette boutique est actuellement en mode vitrine. Les fonctionnalités d'achat sont temporairement indisponibles."
 }

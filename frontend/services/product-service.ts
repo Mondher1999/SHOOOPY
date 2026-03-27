@@ -74,7 +74,10 @@ export interface ProductFormData {
   images?: ProductImage[];
   stock?: number;
   sku?: string | null;
-  attributes?: Record<string, string>;
+  attributes?: Record<string, string | string[]>;
+  productType?: string | null;
+  variantMode?: "none" | "simple" | "advanced";
+  variants?: { optionCombo: Record<string, string>; stock: number; sku: string | null; enabled: boolean }[];
 }
 
 export async function createProductAPI(

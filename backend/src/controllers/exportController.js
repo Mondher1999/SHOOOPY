@@ -1,6 +1,7 @@
 import Product from "../models/productModel.js";
 import Order from "../models/orderModel.js";
 import logger from "../utils/logger.js";
+import { escapeCSV } from "../utils/sanitize.js";
 
 // ─── GET /api/export/products ───────────────────────────────────────────────
 export const exportProducts = async (req, res) => {
@@ -13,12 +14,12 @@ export const exportProducts = async (req, res) => {
     const rows = products.map((p) => {
       const cols = [
         p._id.toString(),
-        `"${(p.name || "").replace(/"/g, '""')}"`,
-        p.sku || "",
+        escapeCSV(p.name),
+        escapeCSV(p.sku),
         p.price,
         p.compareAtPrice || "",
         p.stock,
-        `"${(p.category?.name || "").replace(/"/g, '""')}"`,
+        escapeCSV(p.category?.name),
         p.isActive,
         p.createdAt ? new Date(p.createdAt).toISOString() : "",
       ];
@@ -64,16 +65,16 @@ export const exportOrders = async (req, res) => {
     const rows = orders.map((o) => {
       const itemsTotal = o.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
       const cols = [
-        o.orderNumber,
-        `"${(o.user?.name || "").replace(/"/g, '""')}"`,
-        o.user?.email || "",
-        o.status,
+        escapeCSV(o.orderNumber),
+        escapeCSV(o.user?.name),
+        escapeCSV(o.user?.email),
+        escapeCSV(o.status),
         o.items.length,
         itemsTotal.toFixed(2),
         (o.shippingCost || 0).toFixed(2),
         (o.discountAmount || 0).toFixed(2),
         o.totalPrice.toFixed(2),
-        o.paymentMethod,
+        escapeCSV(o.paymentMethod),
         o.createdAt ? new Date(o.createdAt).toISOString() : "",
       ];
       return cols.join(",");

@@ -17,6 +17,7 @@
   "myOrders": {
     "title": "My Orders",
     "empty": "You haven't placed any orders yet.",
+    "emptyHint": "Your orders will appear here once you place one.",
     "shopNow": "Start shopping",
     "item": "item",
     "items": "items",
@@ -38,6 +39,7 @@
     "notes": "Order Notes",
     "qty": "Qty: {{count}}",
     "discount": "Discount",
+    "tvaTotal": "Incl. VAT",
     "statusNotes": {
       "Order placed": "Order placed",
       "Buy Now order placed": "Buy Now order placed",
@@ -101,7 +103,36 @@
     "shipmentCancelled": "Shipment cancelled successfully",
     "shipmentCancelError": "Failed to cancel shipment. Please try again.",
     "exportCSV": "Export CSV",
+    "exportError": "Failed to export orders.",
     "printInvoice": "Print invoice",
-    "createOrder": "Create Order"
+    "createOrder": "Create Order",
+    "guest": "Guest"
+  },
+  "shipping": {
+    "title": "Shipping & Delivery",
+    "provider": "Provider",
+    "trackingNumber": "Tracking number",
+    "trackingUrl": "Tracking link",
+    "viewTracking": "Track shipment",
+    "carrierStatus": "Carrier status",
+    "estimatedDelivery": "Estimated delivery",
+    "lastSynced": "Last synced",
+    "noShipment": "No shipment created. Send this order to your delivery provider.",
+    "sendToDelivery": "Send to delivery",
+    "sending": "Sending...",
+    "sentSuccess": "Order sent to delivery provider",
+    "sentError": "Failed to send order to delivery provider",
+    "refreshTracking": "Refresh",
+    "trackingRefreshed": "Tracking status updated",
+    "trackingError": "Failed to refresh tracking status",
+    "cancelShipment": "Cancel",
+    "cancelling": "Cancelling...",
+    "cancelConfirmTitle": "Cancel shipment?",
+    "cancelConfirmDesc": "This will cancel the shipment with the delivery provider. The order status will not change.",
+    "confirmCancel": "Cancel shipment",
+    "cancelledSuccess": "Shipment cancelled",
+    "cancelledError": "Failed to cancel shipment",
+    "copied": "Tracking number copied",
+    "copyTracking": "Copy tracking number"
   }
 }

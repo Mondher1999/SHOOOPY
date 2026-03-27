@@ -191,15 +191,15 @@ export default function ArtisanProductDetailView({
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                   {Object.entries(product.attributes).map(([key, val]) => (
                     <Fragment key={key}>
-                      <dt className="text-[#8B6F47]">{key}</dt>
+                      <dt className="text-[#8B6F47]">{t(`typeAttrs.${key}`, { defaultValue: key })}</dt>
                       <dd className="text-[#3D2E1F] font-medium">
                         {Array.isArray(val)
-                          ? val.join(", ")
+                          ? val.map((v) => t(`typeAttrOptions.${v}`, { defaultValue: v })).join(", ")
                           : typeof val === "boolean"
                             ? val
                               ? t("catalog.booleanYes")
                               : t("catalog.booleanNo")
-                            : String(val)}
+                            : t(`typeAttrOptions.${String(val)}`, { defaultValue: String(val) })}
                       </dd>
                     </Fragment>
                   ))}

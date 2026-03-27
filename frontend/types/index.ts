@@ -60,6 +60,14 @@ export interface ProductImage {
   variantMap?: Record<string, string>;
 }
 
+export interface ProductVariant {
+  _id: string;
+  optionCombo: Record<string, string>;
+  stock: number;
+  sku: string | null;
+  enabled: boolean;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -76,6 +84,10 @@ export interface Product {
   isActive: boolean;
   productType: string | null;
   attributes: Record<string, string | string[] | number | boolean>;
+  tva: number;
+  variantMode: "none" | "simple" | "advanced";
+  hasVariants: boolean;
+  variants: ProductVariant[];
   createdAt: string;
   updatedAt: string;
 }
@@ -108,14 +120,17 @@ export interface CartProduct {
   images: ProductImage[];
   stock: number;
   price: number;
+  tva?: number;
   isActive: boolean;
 }
 
 export interface CartItem {
   product: CartProduct;
   quantity: number;
-  /** Price snapshot at the time the item was added */
+  /** HT price snapshot at the time the item was added */
   price: number;
+  /** TVA rate snapshot (%) at the time the item was added */
+  tva?: number;
   /** Selected variant options (e.g., { color: "Blue", size: "M" }) */
   selectedOptions?: Record<string, string>;
 }
@@ -136,12 +151,12 @@ export interface Address {
   fullName: string;
   phone: string;
   street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
   isDefault: boolean;
-  label: "home" | "work" | "other";
+  label?: "home" | "work" | "other";
   createdAt: string;
   updatedAt: string;
 }
@@ -154,7 +169,10 @@ export interface OrderItem {
   product: string;
   name: string;
   quantity: number;
+  /** HT price snapshot at order time */
   price: number;
+  /** TVA rate snapshot (%) at order time */
+  tva?: number;
   image: string;
   /** Selected variant options snapshot (e.g., { color: "Blue", size: "M" }) */
   selectedOptions?: Record<string, string>;
@@ -187,7 +205,9 @@ export type OrderStatus =
 
 export interface Order {
   id: string;
-  user: string;
+  user: string | null;
+  isGuest?: boolean;
+  guestEmail?: string;
   orderNumber: string;
   items: OrderItem[];
   shippingAddress: OrderShippingAddress;
@@ -195,9 +215,9 @@ export interface Order {
   status: OrderStatus;
   totalPrice: number;
   shippingCost: number;
-  couponCode: string;
-  discountAmount: number;
-  notes: string;
+  couponCode?: string;
+  discountAmount?: number;
+  notes?: string;
   statusHistory: OrderStatusHistory[];
   createdAt: string;
   updatedAt: string;
@@ -215,7 +235,7 @@ export interface PaginationInfo {
 // ─── Admin Order Types ───────────────────────────────────────────────────────
 
 export interface AdminOrder extends Omit<Order, "user"> {
-  user: { _id: string; name: string; email: string };
+  user: { _id: string; name: string; email: string } | null;
 }
 
 export interface OrderStats {
@@ -350,6 +370,7 @@ export interface ProductSettings {
   maxImagesPerProduct: number;
   reviewsEnabled: boolean;
   defaultSortOrder: "newest" | "price_asc" | "price_desc" | "rating";
+  productTypes?: string[];
 }
 
 export interface SocialSettings {

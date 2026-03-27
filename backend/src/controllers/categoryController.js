@@ -5,21 +5,33 @@ import cache from "../utils/cache.js";
 
 const VALID_OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 const CATEGORY_TREE_CACHE_KEY = "category:tree";
+const CATEGORIES_ALL_CACHE_KEY = "categories:all";
+const CATEGORY_CACHE_TTL = 300; // 5 minutes
 
 // lean() bypasses toJSON transform; add id manually for frontend compatibility
 function withId(doc) {
   if (!doc) return doc;
   return { ...doc, id: doc._id?.toString() };
 }
-const CATEGORY_TREE_TTL = 300; // 5 minutes
 
-// ─── Public: Get all categories (flat list) ──────────────────────────────────
+// Invalidate both category caches
+function invalidateCategoryCache() {
+  cache.del(CATEGORY_TREE_CACHE_KEY);
+  cache.del(CATEGORIES_ALL_CACHE_KEY);
+}
+
+// ─── Public: Get all categories (flat list, cached) ──────────────────────────
 export const getAllCategories = async (req, res) => {
   try {
+    const cached = cache.get(CATEGORIES_ALL_CACHE_KEY);
+    if (cached) return res.status(200).json({ success: true, data: cached });
+
     const categories = await Category.find({ isActive: true })
       .sort({ name: 1 })
       .lean();
-    res.status(200).json({ success: true, data: categories.map(withId) });
+    const result = categories.map(withId);
+    cache.set(CATEGORIES_ALL_CACHE_KEY, result, CATEGORY_CACHE_TTL);
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     logger.error("getAllCategories error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -53,7 +65,7 @@ export const getCategoryTree = async (req, res) => {
       }
     });
 
-    cache.set(CATEGORY_TREE_CACHE_KEY, roots, CATEGORY_TREE_TTL);
+    cache.set(CATEGORY_TREE_CACHE_KEY, roots, CATEGORY_CACHE_TTL);
     res.status(200).json({ success: true, data: roots });
   } catch (error) {
     logger.error("getCategoryTree error:", error);
@@ -82,6 +94,9 @@ export const getCategoryById = async (req, res) => {
 export const getCategoryBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
+    if (!slug || !/^[a-z0-9-]+$/.test(slug))
+      return res.status(400).json({ success: false, error: "Invalid category slug" });
+
     const category = await Category.findOne({ slug }).populate("parent", "name slug").lean();
     if (!category) return res.status(404).json({ success: false, error: "Category not found" });
 
@@ -118,7 +133,7 @@ export const createCategory = async (req, res) => {
     });
 
     // Invalidate tree cache on write
-    cache.del(CATEGORY_TREE_CACHE_KEY);
+    invalidateCategoryCache();
 
     res.status(201).json({ success: true, data: category });
   } catch (error) {
@@ -163,7 +178,7 @@ export const updateCategory = async (req, res) => {
     );
     if (!category) return res.status(404).json({ success: false, error: "Category not found" });
 
-    cache.del(CATEGORY_TREE_CACHE_KEY);
+    invalidateCategoryCache();
 
     res.status(200).json({ success: true, data: category });
   } catch (error) {
@@ -201,7 +216,7 @@ export const deleteCategory = async (req, res) => {
       });
 
     await Category.findByIdAndDelete(id);
-    cache.del(CATEGORY_TREE_CACHE_KEY);
+    invalidateCategoryCache();
 
     res.status(200).json({ success: true, data: { message: "Category deleted successfully" } });
   } catch (error) {

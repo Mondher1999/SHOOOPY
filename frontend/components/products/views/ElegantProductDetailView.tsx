@@ -190,15 +190,15 @@ export default function ElegantProductDetailView({
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   {Object.entries(product.attributes).map(([key, val]) => (
                     <Fragment key={key}>
-                      <dt className="text-[#8B7355]">{key}</dt>
+                      <dt className="text-[#8B7355]">{t(`typeAttrs.${key}`, { defaultValue: key })}</dt>
                       <dd className="font-medium text-[#2C2C2C]">
                         {Array.isArray(val)
-                          ? val.join(", ")
+                          ? val.map((v) => t(`typeAttrOptions.${v}`, { defaultValue: v })).join(", ")
                           : typeof val === "boolean"
                             ? val
                               ? t("catalog.booleanYes")
                               : t("catalog.booleanNo")
-                            : String(val)}
+                            : t(`typeAttrOptions.${String(val)}`, { defaultValue: String(val) })}
                       </dd>
                     </Fragment>
                   ))}

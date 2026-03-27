@@ -11,7 +11,13 @@ import { ActiveFilterChips } from "@/components/products/ActiveFilterChips";
 import { ProductSort } from "@/components/products/ProductSort";
 import { Pagination } from "@/components/products/Pagination";
 import { cn } from "@/lib/utils";
+import type { ThemeStyles } from "@/hooks/useActiveTheme";
 import type { ProductListViewProps } from "@/types";
+
+/** Dark-background overrides — brighten muted text for better contrast on tech dark surfaces */
+const TECH_DARK_FILTER_OVERRIDES: Partial<ThemeStyles> = {
+  textMuted: "text-gray-500",
+};
 
 export default function TechProductListView({
   products,
@@ -51,6 +57,7 @@ export default function TechProductListView({
                 categories={categories}
                 filters={filters}
                 onFiltersChange={onFiltersChange}
+                themeOverrides={TECH_DARK_FILTER_OVERRIDES}
               />
             </div>
           </aside>

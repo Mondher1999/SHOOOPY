@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -102,12 +103,15 @@ export function ReviewForm({ productId, existingReview, onSuccess }: ReviewFormP
           <DialogTitle>
             {isEditing ? t("form.editReviewTitle") : t("form.writeReviewTitle")}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditing ? t("form.editReviewTitle") : t("form.writeReviewTitle")}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Rating */}
-          <div>
-            <Label>{t("form.ratingLabel")}</Label>
+          <div role="group" aria-labelledby="review-rating-label">
+            <Label id="review-rating-label">{t("form.ratingLabel")}</Label>
             <RatingStars
               rating={rating}
               size="lg"

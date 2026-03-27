@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -489,9 +489,9 @@ export default function AdminCategoriesPage() {
       {/* ── Create / Edit Dialog ─────────────────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && setDialogOpen(false)}>
         <DialogContent>
-          <h2 className="text-base font-semibold text-polaris-text mb-4">
-            {editTarget ? t("categories:form.editTitle") : t("categories:form.createTitle")}
-          </h2>
+          <DialogHeader>
+            <DialogTitle>{editTarget ? t("categories:form.editTitle") : t("categories:form.createTitle")}</DialogTitle>
+          </DialogHeader>
 
           {formError && (
             <Alert variant="destructive" role="alert" className="mb-3">
@@ -553,16 +553,6 @@ export default function AdminCategoriesPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="cat-isActive"
-                  checked={formState.isActive}
-                  onChange={(e) => setFormState((s) => ({ ...s, isActive: e.target.checked }))}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="cat-isActive">{t("categories:form.isActiveLabel")}</Label>
-              </div>
             </div>
 
             <div className="flex gap-2 justify-end mt-6">
@@ -589,9 +579,9 @@ export default function AdminCategoriesPage() {
       {/* ── Delete confirmation ──────────────────────────────────────────── */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
-          <h2 className="text-base font-semibold text-polaris-text mb-2">
-            {t("categories:actions.confirmDelete")}
-          </h2>
+          <DialogHeader>
+            <DialogTitle>{t("categories:actions.confirmDelete")}</DialogTitle>
+          </DialogHeader>
           {deleteTarget && (
             <p className="text-sm text-polaris-text-subdued mb-4">
               {t("categories:actions.confirmDeleteMessage", { name: deleteTarget.name })}

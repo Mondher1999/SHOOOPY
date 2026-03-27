@@ -63,18 +63,21 @@ export default function ProductDetailClient({ initialProduct }: ProductDetailCli
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Always fetch fresh data from API. When initialProduct is provided (SSR),
+  // it renders immediately while this fetch silently refreshes in the background.
   useEffect(() => {
-    if (initialProduct) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    if (!initialProduct) {
+      setLoading(true);
+      setError(null);
+    }
 
     getProductBySlugAPI(slug)
       .then((res) => {
         if (!cancelled) setProduct(res.data);
       })
       .catch((err) => {
-        if (!cancelled) {
+        if (!cancelled && !initialProduct) {
           logger.error("Product detail fetch error:", err);
           const status = err?.response?.status;
           if (status === 404) setError(t("catalog.notFound"));
@@ -117,8 +120,30 @@ export default function ProductDetailClient({ initialProduct }: ProductDetailCli
     return Object.keys(clean).length > 0 ? clean : undefined;
   }, [selectedOptions]);
 
+  // Check if all variant axes are selected (for add-to-cart validation)
+  const allVariantAxesSelected = useMemo(() => {
+    if (!product?.hasVariants || !product.variants?.length) return true;
+    const axes = new Set<string>();
+    for (const v of product.variants) {
+      for (const key of Object.keys(v.optionCombo)) axes.add(key);
+    }
+    return Array.from(axes).every((axis) => {
+      const val = selectedOptions[axis];
+      if (typeof val === "string") return val !== "";
+      if (Array.isArray(val)) return val.length > 0;
+      return false;
+    });
+  }, [product?.hasVariants, product?.variants, selectedOptions]);
+
   const handleAddToCart = useCallback(async (quantityOrEvent?: number | unknown) => {
     if (!product) return;
+
+    // Validate all variant axes are selected before adding to cart
+    if (product.hasVariants && !allVariantAxesSelected) {
+      toast({ title: t("variants.selectAllOptions"), variant: "destructive" });
+      return;
+    }
+
     const qty = typeof quantityOrEvent === "number" ? quantityOrEvent : 1;
     // Convert cleanSelectedOptions to Record<string, string> for cart storage
     // (buyer picks ONE value per attribute, so array values take the first element)
@@ -140,16 +165,16 @@ export default function ProductDetailClient({ initialProduct }: ProductDetailCli
     } finally {
       setAdding(false);
     }
-  }, [product, addItem, openDrawer, toast, tCart, cleanSelectedOptions]);
+  }, [product, addItem, openDrawer, toast, tCart, t, cleanSelectedOptions, allVariantAxesSelected]);
 
   const handleBuyNow = useCallback(() => {
     if (!product) return;
-    if (!user) {
-      toast({ title: tCart("loginRequired") ?? "Please log in to continue", variant: "destructive" });
+    if (product.hasVariants && !allVariantAxesSelected) {
+      toast({ title: t("variants.selectAllOptions"), variant: "destructive" });
       return;
     }
     setBuyNowOpen(true);
-  }, [product, user, toast, tCart]);
+  }, [product, toast, t, allVariantAxesSelected]);
 
   if (loading) return <ProductDetailSkeleton />;
 

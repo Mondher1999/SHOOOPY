@@ -37,7 +37,7 @@ export const submitContact = async (req, res) => {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       subject: subject.trim(),
-      message,
+      message: message.trim(),
     });
 
     // Notify admin (non-blocking)

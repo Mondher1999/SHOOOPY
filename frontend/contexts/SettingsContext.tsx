@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { getSettingsAPI } from "@/services/settings-service";
 import type { SiteSettings } from "@/types";
 import logger from "@/lib/logger";
@@ -38,8 +38,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     fetchSettings();
   }, [fetchSettings]);
 
+  const value = useMemo(
+    () => ({ settings, isLoading, refetch: fetchSettings, update: setSettings }),
+    [settings, isLoading, fetchSettings]
+  );
+
   return (
-    <SettingsContext.Provider value={{ settings, isLoading, refetch: fetchSettings, update: setSettings }}>
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   );

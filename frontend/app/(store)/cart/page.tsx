@@ -14,9 +14,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useActiveTheme } from "@/hooks/useActiveTheme";
+import { calcTTC, calcTotalTVA } from "@/lib/tva";
 import { cn } from "@/lib/utils";
 import { isColorAttr, getColorValue } from "@/lib/colorMap";
 import logger from "@/lib/logger";
+import { cartItemKey } from "@/lib/cartUtils";
 import type { CartItem } from "@/types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
@@ -48,17 +50,7 @@ function CartPageSkeleton() {
   );
 }
 
-// ─── Composite key + Options display ───────────────────────────────────────────
-
-function cartItemKey(item: CartItem): string {
-  const opts = item.selectedOptions;
-  if (!opts || Object.keys(opts).length === 0) return item.product.id;
-  const sorted = Object.keys(opts).sort().reduce<Record<string, string>>((acc, k) => {
-    acc[k] = opts[k];
-    return acc;
-  }, {});
-  return `${item.product.id}::${JSON.stringify(sorted)}`;
-}
+// ─── Options display ─────────────────────────────────────────────────────────
 
 function OptionsText({ options, t }: { options?: Record<string, string>; t: (key: string, opts?: Record<string, unknown>) => string }) {
   if (!options || Object.keys(options).length === 0) return null;
@@ -93,8 +85,9 @@ function CartItemCard({ item }: { item: CartItem }) {
   const theme = useActiveTheme();
   const product = item.product;
   const primaryImage = product.images[0] ?? null;
+  // Global stock is a best-effort UI hint; backend enforces variant-level stock on checkout
   const atStockLimit = item.quantity >= product.stock;
-  const lineTotal = item.price * item.quantity;
+  const lineTotal = calcTTC(item.price, item.tva ?? 0) * item.quantity;
   const opts = item.selectedOptions;
 
   const handleIncrease = async () => {
@@ -151,7 +144,7 @@ function CartItemCard({ item }: { item: CartItem }) {
                   fill
                   className="object-cover"
                   sizes="96px"
-                  unoptimized
+
                 />
               ) : (
                 <div className="h-full w-full flex items-center justify-center">
@@ -240,10 +233,15 @@ function CartItemCard({ item }: { item: CartItem }) {
 
 function OrderSummary() {
   const { t } = useTranslation("cart");
-  const { totalPrice, totalItems, clearCart } = useCart();
+  const { cart, totalPrice, totalItems, clearCart } = useCart();
   const { toast } = useToast();
   const formatPrice = useFormatPrice();
   const theme = useActiveTheme();
+
+  const totalTVA = calcTotalTVA(
+    (cart?.items ?? []).map((i) => ({ price: i.price, tva: i.tva ?? 0, quantity: i.quantity }))
+  );
+  const hasTVA = totalTVA > 0;
 
   const handleClear = async () => {
     try {
@@ -267,6 +265,13 @@ function OrderSummary() {
           </span>
           <span className={cn("font-semibold", theme.text)}>{formatPrice(totalPrice)}</span>
         </div>
+
+        {hasTVA && (
+          <div className="flex justify-between text-xs">
+            <span className={theme.textMuted}>{t("tvaTotal")}</span>
+            <span className={theme.textMuted}>{formatPrice(totalTVA)}</span>
+          </div>
+        )}
 
         <div className={cn("h-px w-full", theme.separator)} />
 

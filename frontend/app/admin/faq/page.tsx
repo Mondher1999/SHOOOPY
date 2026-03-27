@@ -150,7 +150,7 @@ export default function AdminFAQPage() {
               </div>
               <div className="flex gap-1 shrink-0">
                 <Button variant="ghost" size="icon" onClick={() => openEditDialog(faq)} aria-label={t("faq.edit")}>
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-4 w-4 text-polaris-text" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => handleDelete(faq.id)} aria-label={t("faq.delete")}>
                   <Trash2 className="h-4 w-4 text-destructive" />

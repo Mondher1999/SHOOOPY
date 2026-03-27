@@ -1,4 +1,5 @@
 import axiosInstance from "@/utils/axiosInstance";
+import { fetchAPI } from "@/lib/api";
 import type { Order, AdminOrder, OrderStats, PaginationInfo } from "@/types";
 
 type OrderResponse = { success: true; data: Order };
@@ -28,6 +29,46 @@ export interface BuyNowPayload {
 export async function buyNowAPI(payload: BuyNowPayload): Promise<OrderResponse> {
   const res = await axiosInstance.post<OrderResponse>("/api/orders/buy-now", payload);
   return res.data;
+}
+
+// ─── Guest endpoints (no auth) ──────────────────────────────────────────────
+
+export interface GuestBuyNowPayload {
+  items: { productId: string; quantity: number; selectedOptions?: Record<string, string> }[];
+  fullName: string;
+  phone: string;
+  address: string;
+  couponCode?: string;
+  guestEmail?: string;
+}
+
+export async function guestBuyNowAPI(payload: GuestBuyNowPayload): Promise<OrderResponse> {
+  return fetchAPI<OrderResponse>("/api/orders/guest/buy-now", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface GuestCheckoutPayload {
+  items: { productId: string; quantity: number; selectedOptions?: Record<string, string> }[];
+  shippingAddress: {
+    fullName: string;
+    phone: string;
+    street: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  notes?: string;
+  guestEmail?: string;
+}
+
+export async function guestCheckoutAPI(payload: GuestCheckoutPayload): Promise<OrderResponse> {
+  return fetchAPI<OrderResponse>("/api/orders/guest", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function getMyOrdersAPI(page = 1, limit = 10): Promise<OrderListResponse> {
@@ -102,7 +143,7 @@ export async function getOrderStatsAPI(days = 30): Promise<OrderStatsResponse> {
 
 export interface CreateOrderAdminPayload {
   userId?: string;
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; quantity: number; selectedOptions?: Record<string, string | string[]> }[];
   shippingAddress: {
     fullName: string;
     phone: string;
@@ -115,6 +156,7 @@ export interface CreateOrderAdminPayload {
   };
   notes?: string;
   notifyCustomer?: boolean;
+  shippingCost?: number;
 }
 
 export async function createOrderAdminAPI(

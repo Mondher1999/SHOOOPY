@@ -11,5 +11,14 @@
   "errorRemove": "Could not remove item. Please try again.",
   "retry": "Try again",
   "addAriaLabel": "Add {{name}} to wishlist",
-  "removeAriaLabel": "Remove {{name}} from wishlist"
+  "removeAriaLabel": "Remove {{name}} from wishlist",
+  "itemCount": "{{count}} saved items",
+  "startShopping": "Start shopping",
+  "signInToContinue": "Sign in",
+  "clearAll": "Clear all",
+  "clearedAll": "Wishlist cleared.",
+  "errorClearAll": "Could not clear wishlist. Please try again.",
+  "addAllToCart": "Add all to cart",
+  "addedAllToCart": "{{count}} items added to cart.",
+  "noItemsToAdd": "No in-stock items to add."
 }

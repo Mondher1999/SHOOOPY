@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -154,12 +155,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // ─── Computed values ──────────────────────────────────────────────────────
-  const totalItems = user
-    ? (cart?.items ?? []).reduce((sum, i) => sum + i.quantity, 0)
-    : guestItems.reduce((sum, i) => sum + i.quantity, 0);
+  // ─── Computed values (memoized) ──────────────────────────────────────────
+  const totalItems = useMemo(
+    () => user
+      ? (cart?.items ?? []).reduce((sum, i) => sum + i.quantity, 0)
+      : guestItems.reduce((sum, i) => sum + i.quantity, 0),
+    [user, cart?.items, guestItems]
+  );
 
-  const totalPrice = cart?.totalPrice ?? 0;
+  const totalPrice = useMemo(() => cart?.totalPrice ?? 0, [cart?.totalPrice]);
 
   // ─── Drawer ───────────────────────────────────────────────────────────────
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
@@ -250,25 +254,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const reload = fetchServerCart;
 
+  const value = useMemo(
+    () => ({
+      cart, guestItems, isLoading, error, totalItems, totalPrice,
+      isDrawerOpen, openDrawer, closeDrawer,
+      addItem, updateQuantity, removeItem, clearCart, reload,
+    }),
+    [cart, guestItems, isLoading, error, totalItems, totalPrice,
+     isDrawerOpen, openDrawer, closeDrawer,
+     addItem, updateQuantity, removeItem, clearCart, reload]
+  );
+
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        guestItems,
-        isLoading,
-        error,
-        totalItems,
-        totalPrice,
-        isDrawerOpen,
-        openDrawer,
-        closeDrawer,
-        addItem,
-        updateQuantity,
-        removeItem,
-        clearCart,
-        reload,
-      }}
-    >
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

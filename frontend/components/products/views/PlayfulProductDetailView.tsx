@@ -187,15 +187,15 @@ export default function PlayfulProductDetailView({
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                   {Object.entries(product.attributes).map(([key, val]) => (
                     <Fragment key={key}>
-                      <dt className="text-[#6B6798]">{key}</dt>
+                      <dt className="text-[#6B6798]">{t(`typeAttrs.${key}`, { defaultValue: key })}</dt>
                       <dd className="text-[#2D2B55] font-semibold">
                         {Array.isArray(val)
-                          ? val.join(", ")
+                          ? val.map((v) => t(`typeAttrOptions.${v}`, { defaultValue: v })).join(", ")
                           : typeof val === "boolean"
                             ? val
                               ? t("catalog.booleanYes")
                               : t("catalog.booleanNo")
-                            : String(val)}
+                            : t(`typeAttrOptions.${String(val)}`, { defaultValue: String(val) })}
                       </dd>
                     </Fragment>
                   ))}

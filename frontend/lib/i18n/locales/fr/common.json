@@ -21,13 +21,28 @@
     "loading": "Chargement...",
     "saving": "Enregistrement...",
     "deleting": "Suppression...",
-    "remove": "Supprimer"
+    "remove": "Supprimer",
+    "confirm": "Confirmer",
+    "scrollToTop": "Retour en haut",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "skipToContent": "Aller au contenu principal"
   },
   "errors": {
     "generic": "Une erreur s'est produite. Veuillez réessayer.",
     "network": "Erreur réseau. Vérifiez votre connexion.",
     "unauthorized": "Veuillez vous connecter pour continuer.",
     "forbidden": "Vous n'avez pas la permission de faire cela."
+  },
+  "errorBoundary": {
+    "title": "Une erreur est survenue",
+    "description": "Une erreur inattendue s'est produite. Veuillez réessayer ou retourner à la page d'accueil.",
+    "backToAdmin": "Retour au tableau de bord"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "backHome": "Retour à l'accueil"
   },
   "nav": {
     "home": "Accueil",
@@ -96,7 +111,8 @@
     },
     "collections": {
       "heading": "Collections",
-      "empty": "Aucune collection disponible pour l'instant."
+      "empty": "Aucune collection disponible pour l'instant.",
+      "showMore": "Voir plus"
     },
     "brandStory": {
       "heading": "L'art de la curation réfléchie",
@@ -139,7 +155,15 @@
       "returns": "Retours gratuits",
       "returnsDesc": "Retours sans tracas sur toutes les commandes, sans questions.",
       "delivery": "Livraison rapide",
-      "deliveryDesc": "Expédition rapide et fiable directement à votre porte."
+      "deliveryDesc": "Expédition rapide et fiable directement à votre porte.",
+      "trustedService": "Service client de confiance",
+      "trustedServiceDesc": "Approuvé par 96% des créateurs de contenu (4,8/5 sur plus de 1 600 avis)",
+      "flexiblePayment": "Options de paiement flexibles",
+      "flexiblePaymentDesc": "Réalisez vos envies grâce à nos options de paiement mensuel ou hebdomadaire",
+      "curatedSelection": "Sélection soignée de produits",
+      "curatedSelectionDesc": "Par des créatifs, pour des créatifs. Des produits soigneusement sélectionnés pour les créateurs visuels",
+      "localWarranties": "Garanties locales",
+      "localWarrantiesDesc": "Bénéficiez de garanties locales sur les grandes marques comme Godox, Neewer, Newell et plus encore."
     },
     "newArrivals": {
       "heading": "Dernières arrivées",
@@ -270,7 +294,8 @@
       "shopNow": "Voir les produits",
       "heading": "Acheter par Catégorie",
       "explore": "Explorer",
-      "tagline": "Parcourir"
+      "tagline": "Parcourir",
+      "more": "plus"
     },
     "founded": {
       "year": "Fondée en 1989",

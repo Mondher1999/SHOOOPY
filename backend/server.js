@@ -39,6 +39,9 @@ const app = express();
 app.use(correlationId);
 
 // ─── Security Middleware ────────────────────────────────────────────────────
+if (process.env.NODE_ENV === "production" && !process.env.FRONTEND_URL) {
+  logger.warn("SECURITY: FRONTEND_URL not set — CORS falls back to localhost:3002");
+}
 app.use(helmet());
 
 app.use(
@@ -58,13 +61,22 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// Auth-specific rate limit: 50 requests per 15 minutes per IP
+// Auth-specific rate limit: 250 requests per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
+  max: 250,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: "Too many authentication attempts, please try again later." },
+});
+
+// Export-specific rate limit: 10 requests per 15 minutes per IP (resource-intensive)
+const exportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many export requests, please try again later." },
 });
 
 // ─── Request Parsing ────────────────────────────────────────────────────────
@@ -80,7 +92,7 @@ if (process.env.NODE_ENV === "development") {
 app.use("/uploads", (req, res, next) => {
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   next();
-}, express.static(path.join(__dirname, "uploads")));
+}, express.static(path.join(__dirname, "uploads"), { dotfiles: "deny" }));
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 app.use("/health", healthRoutes);
@@ -102,7 +114,7 @@ app.use("/api/faq", faqRoutes);
 app.use("/api/subscribers", subscriberRoutes);
 app.use("/api/shipping", shippingRoutes);
 app.use("/api/redirects", redirectRoutes);
-app.use("/api/export", exportRoutes);
+app.use("/api/export", exportLimiter, exportRoutes);
 
 // ─── Global Error Handler ───────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars

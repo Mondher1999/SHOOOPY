@@ -21,7 +21,9 @@
     "submitButton": "Enregistrer les modifications",
     "submitting": "Enregistrement...",
     "successMessage": "Profil mis à jour avec succès",
-    "errorEmailTaken": "Cet e-mail est déjà utilisé"
+    "errorEmailTaken": "Cet e-mail est déjà utilisé",
+    "invalidAvatarType": "Veuillez sélectionner un fichier image",
+    "avatarTooLarge": "L'avatar doit faire moins de 2 Mo"
   },
   "changePassword": {
     "title": "Changer le mot de passe",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { Eye, Package, AlertCircle, ChevronLeft, ChevronRight, Download, Search, Plus } from "lucide-react";
 import { getAllOrdersAdminAPI } from "@/services/order-service";
+import axiosInstance from "@/utils/axiosInstance";
 import { StatusBadge } from "@/components/orders/StatusBadge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,8 +20,6 @@ const STATUS_TABS: (OrderStatus | "all")[] = [
   "all", "pending", "confirmed", "processing", "shipped", "delivered", "cancelled",
 ];
 
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 export default function AdminOrdersPage() {
   const { t } = useTranslation("orders");
@@ -67,16 +66,25 @@ export default function AdminOrdersPage() {
     fetchOrders(1);
   }, [fetchOrders]);
 
-  const handleExportCSV = () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const params = new URLSearchParams();
-    if (statusFilter !== "all") params.set("status", statusFilter);
-    if (debouncedSearch) params.set("search", debouncedSearch);
-    const url = `${BASE_URL}/api/export/orders?${params.toString()}${token ? `&token=${encodeURIComponent(token)}` : ""}`;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "orders.csv";
-    a.click();
+  const handleExportCSV = async () => {
+    try {
+      const params: Record<string, string> = {};
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (debouncedSearch) params.search = debouncedSearch;
+
+      const res = await axiosInstance.get("/api/export/orders", {
+        params,
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "orders.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      logger.error("exportCSV error:", err);
+    }
   };
 
   const formatPrice = useFormatPrice();
@@ -245,7 +253,7 @@ export default function AdminOrdersPage() {
                       <StatusBadge status={order.status} />
                     </div>
                     <p className="text-xs text-polaris-text-subdued">
-                      {order.user.name} &middot; {order.user.email}
+                      {order.user ? `${order.user.name} \u00B7 ${order.user.email}` : `${t("admin.guest")} \u00B7 ${order.shippingAddress?.fullName || ""}`}
                     </p>
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] text-polaris-text-subdued">{formatDate(order.createdAt)}</span>
@@ -270,8 +278,8 @@ export default function AdminOrdersPage() {
 
                     {/* Customer */}
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium leading-5 text-polaris-text truncate" title={order.user.name}>{order.user.name}</p>
-                      <p className="text-xs leading-4 text-polaris-text-subdued truncate" title={order.user.email}>{order.user.email}</p>
+                      <p className="text-[13px] font-medium leading-5 text-polaris-text truncate" title={order.user?.name || t("admin.guest")}>{order.user?.name || t("admin.guest")}</p>
+                      <p className="text-xs leading-4 text-polaris-text-subdued truncate" title={order.user?.email || order.shippingAddress?.fullName || ""}>{order.user?.email || order.shippingAddress?.fullName || ""}</p>
                     </div>
 
                     {/* Date */}

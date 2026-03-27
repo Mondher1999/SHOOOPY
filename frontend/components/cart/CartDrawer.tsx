@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useActiveTheme } from "@/hooks/useActiveTheme";
+import { calcTTC } from "@/lib/tva";
 import { cn } from "@/lib/utils";
 import { isColorAttr, getColorValue } from "@/lib/colorMap";
 import logger from "@/lib/logger";
@@ -71,6 +72,7 @@ function CartItemRow({ item }: { item: CartItem }) {
   const theme = useActiveTheme();
   const product = item.product;
   const primaryImage = product.images[0] ?? null;
+  // Global stock is a best-effort UI hint; backend enforces variant-level stock on checkout
   const atStockLimit = item.quantity >= product.stock;
   const opts = item.selectedOptions;
 
@@ -127,7 +129,7 @@ function CartItemRow({ item }: { item: CartItem }) {
               fill
               className="object-cover"
               sizes="64px"
-              unoptimized
+
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
@@ -150,7 +152,7 @@ function CartItemRow({ item }: { item: CartItem }) {
           {product.name}
         </Link>
         <OptionsText options={opts} t={tProducts} />
-        <p className={cn("text-sm font-semibold mt-0.5", theme.text)}>{formatPrice(item.price * item.quantity)}</p>
+        <p className={cn("text-sm font-semibold mt-0.5", theme.text)}>{formatPrice(calcTTC(item.price, item.tva ?? 0) * item.quantity)}</p>
         {product.stock <= 5 && (
           <Badge variant="secondary" className="text-xs mt-0.5">
             {t("stockWarning", { count: product.stock })}
@@ -162,7 +164,7 @@ function CartItemRow({ item }: { item: CartItem }) {
           <Button
             variant="outline"
             size="icon"
-            className={cn("h-6 w-6", theme.border)}
+            className={cn("h-7 w-7 min-h-[44px] min-w-[44px]", theme.border)}
             onClick={handleDecrease}
             aria-label={t("decreaseQty")}
           >
@@ -172,7 +174,7 @@ function CartItemRow({ item }: { item: CartItem }) {
           <Button
             variant="outline"
             size="icon"
-            className={cn("h-6 w-6", theme.border)}
+            className={cn("h-7 w-7 min-h-[44px] min-w-[44px]", theme.border)}
             onClick={handleIncrease}
             disabled={atStockLimit}
             aria-label={t("increaseQty")}
@@ -182,7 +184,7 @@ function CartItemRow({ item }: { item: CartItem }) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 ml-1 text-muted-foreground hover:text-destructive"
+            className="h-7 w-7 min-h-[44px] min-w-[44px] ml-1 text-muted-foreground hover:text-destructive"
             onClick={handleRemove}
             aria-label={t("removeAriaLabel", { name: product.name })}
           >

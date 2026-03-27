@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useActiveTheme } from "@/hooks/useActiveTheme";
+import type { ThemeStyles } from "@/hooks/useActiveTheme";
 import type { CategoryNode, FilterState } from "@/types";
 
 interface ProductFiltersProps {
@@ -18,6 +19,8 @@ interface ProductFiltersProps {
   onFiltersChange: (filters: FilterState) => void;
   maxPriceLimit?: number;
   className?: string;
+  /** Override specific theme colors (e.g. for dark-background views) */
+  themeOverrides?: Partial<ThemeStyles>;
 }
 
 function CategoryTreeItem({
@@ -27,6 +30,7 @@ function CategoryTreeItem({
   depth = 0,
   accent,
   textMuted,
+  t,
 }: {
   node: CategoryNode;
   selected: string | undefined;
@@ -34,6 +38,7 @@ function CategoryTreeItem({
   depth?: number;
   accent: string;
   textMuted: string;
+  t: (key: string) => string;
 }) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.children.length > 0;
@@ -47,7 +52,7 @@ function CategoryTreeItem({
             type="button"
             onClick={() => setExpanded((e) => !e)}
             className="p-0.5 rounded hover:bg-muted transition-colors"
-            aria-label={expanded ? "Collapse" : "Expand"}
+            aria-label={expanded ? t("catalog.collapse") : t("catalog.expand")}
             aria-expanded={expanded}
           >
             {expanded ? (
@@ -81,6 +86,7 @@ function CategoryTreeItem({
               depth={depth + 1}
               accent={accent}
               textMuted={textMuted}
+              t={t}
             />
           ))}
         </ul>
@@ -95,10 +101,12 @@ export function ProductFilters({
   onFiltersChange,
   maxPriceLimit = 1000,
   className,
+  themeOverrides,
 }: ProductFiltersProps) {
   const { t } = useTranslation("products");
   const formatPrice = useFormatPrice();
-  const theme = useActiveTheme();
+  const baseTheme = useActiveTheme();
+  const theme = themeOverrides ? { ...baseTheme, ...themeOverrides } : baseTheme;
 
   const activeCount = [
     filters.category,
@@ -122,7 +130,7 @@ export function ProductFilters({
 
   return (
     <aside
-      className={cn("space-y-5", className)}
+      className={cn("space-y-5", theme.text, className)}
       aria-label={t("catalog.filtersLabel")}
       suppressHydrationWarning
     >
@@ -167,6 +175,7 @@ export function ProductFilters({
                 onSelect={(id) => onFiltersChange({ ...filters, category: id })}
                 accent={theme.accent}
                 textMuted={theme.textMuted}
+                t={t}
               />
             ))}
           </ul>
@@ -186,7 +195,7 @@ export function ProductFilters({
               type="button"
               onClick={() => onFiltersChange({ ...filters, minPrice: undefined, maxPrice: undefined })}
               className={cn("text-xs transition-colors", theme.textMuted)}
-              aria-label="Reset price filter"
+              aria-label={t("catalog.resetPrice")}
             >
               <X className="h-3 w-3" />
             </button>

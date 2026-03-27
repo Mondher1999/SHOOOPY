@@ -3,6 +3,8 @@ import { protect, restrictTo } from "../middlewares/auth.js";
 import {
   placeOrder,
   buyNow,
+  guestBuyNow,
+  guestCheckout,
   getMyOrders,
   getOrderById,
   cancelOrder,
@@ -14,6 +16,10 @@ import {
 } from "../controllers/orderController.js";
 
 const router = express.Router();
+
+// ─── Guest routes (no authentication) ───────────────────────────────────────
+router.post("/guest",          guestCheckout);
+router.post("/guest/buy-now",  guestBuyNow);
 
 // ─── Customer routes (authenticated) ────────────────────────────────────────
 // Note: /my-orders must come before /:id to avoid route conflict

@@ -4,7 +4,7 @@
 > **Team Size**: Solo developer (full-time)
 > **Sprint Capacity**: Max 40 story points per sprint
 > **Payment Method**: Cash on Delivery (COD) only
-> **Tech Stack**: Next.js 14 + Express.js + MongoDB + JWT + Tailwind CSS + shadcn/ui
+> **Tech Stack**: Next.js 15 + Express.js + MongoDB + JWT + Tailwind CSS + shadcn/ui
 
 ---
 

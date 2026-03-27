@@ -130,7 +130,7 @@ export default function AdminRedirectsPage() {
   };
 
   const inputClasses = cn(
-    "w-full h-9 px-3 text-sm rounded border border-[#C9CCCF] bg-polaris-surface text-polaris-text",
+    "w-full h-9 px-3 text-sm rounded border border-polaris-border bg-polaris-surface text-polaris-text",
     "placeholder:text-polaris-text-subdued",
     "focus:outline-none focus:ring-1 focus:ring-polaris-primary focus:border-polaris-primary"
   );
@@ -325,7 +325,7 @@ export default function AdminRedirectsPage() {
               <button
                 type="button"
                 onClick={() => setDialogOpen(false)}
-                className="px-4 py-2 text-sm rounded border border-[#C9CCCF] text-polaris-text hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
+                className="px-4 py-2 text-sm rounded border border-polaris-border text-polaris-text hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
               >
                 {t("common:actions.cancel")}
               </button>
@@ -353,7 +353,7 @@ export default function AdminRedirectsPage() {
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setDeleteTarget(null)}
-              className="px-4 py-2 text-sm rounded border border-[#C9CCCF] text-polaris-text hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
+              className="px-4 py-2 text-sm rounded border border-polaris-border text-polaris-text hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
             >
               {t("common:actions.cancel")}
             </button>

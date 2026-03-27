@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { getMeAPI, loginAPI, logoutAPI, registerAPI, type AuthUser } from "@/services/auth-service";
 import logger from "@/lib/logger";
 
@@ -41,15 +41,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser().finally(() => setIsLoading(false));
   }, [refreshUser]);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     const response = await loginAPI(email, password);
     const { user: userData, accessToken, refreshToken } = response.data;
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
+    document.cookie = "shopflow_auth=1; path=/; SameSite=Lax";
     setUser(userData);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
       if (refreshToken) {
@@ -61,22 +62,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        document.cookie = "shopflow_auth=; path=/; max-age=0";
       }
       setUser(null);
     }
-  };
+  }, []);
 
-  const register = async (name: string, email: string, password: string): Promise<AuthUser> => {
+  const register = useCallback(async (name: string, email: string, password: string): Promise<AuthUser> => {
     const response = await registerAPI(name, email, password);
     const { user: userData, accessToken, refreshToken } = response.data;
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
+    document.cookie = "shopflow_auth=1; path=/; SameSite=Lax";
     setUser(userData);
     return userData;
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, isLoading, login, logout, register, refreshUser }),
+    [user, isLoading, login, logout, register, refreshUser]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register, refreshUser }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 {
   "showcaseTitle": "Mode Vitrine",
   "showcaseMessage": "Cette boutique est actuellement en mode vitrine. Le paiement est temporairement indisponible.",
-  "browsProducts": "Parcourir les produits",
+  "browseProducts": "Parcourir les produits",
   "checkout": {
     "title": "Paiement",
     "stepsLabel": "Étapes de paiement",
@@ -13,7 +13,14 @@
     "continue": "Continuer",
     "back": "Retour",
     "errorPlacing": "Impossible de passer la commande. Veuillez réessayer.",
-    "errorOutOfStock": "Certains articles sont en rupture de stock : {{names}}. Veuillez mettre à jour votre panier."
+    "errorOutOfStock": "Certains articles sont en rupture de stock : {{names}}. Veuillez mettre à jour votre panier.",
+    "guestNameLabel": "Nom complet",
+    "guestNamePlaceholder": "Votre nom complet",
+    "guestPhoneLabel": "Numéro de téléphone",
+    "guestPhonePlaceholder": "Votre numéro de téléphone",
+    "guestAddressLabel": "Adresse de livraison",
+    "guestAddressPlaceholder": "Votre adresse de livraison",
+    "guestItemLabel": "Produit #{{id}}"
   },
   "addressSelector": {
     "title": "Sélectionner l'adresse de livraison",
@@ -51,6 +58,7 @@
     "productImageAlt": "Image du produit {{name}}",
     "qty": "Qté : {{count}}",
     "subtotal": "Sous-total",
+    "tvaTotal": "TVA comprise",
     "shipping": "Livraison",
     "freeShipping": "Gratuite",
     "total": "Total",

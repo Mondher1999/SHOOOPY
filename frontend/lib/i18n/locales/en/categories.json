@@ -22,6 +22,7 @@
     "visible": "Activate category",
     "confirmDelete": "Delete category?",
     "confirmDeleteMessage": "Delete \"{{name}}\"? This cannot be undone.",
+    "confirmDeleteCascade": "This will also delete {{count}} subcategory(s). Are you sure?",
     "successDeleted": "Category deleted",
     "successCreated": "Category created",
     "successUpdated": "Category updated"
@@ -56,6 +57,9 @@
     "errorLoading": "Failed to load categories. Please try again.",
     "notFound": "Category not found.",
     "subcategoriesLabel": "Subcategories",
-    "backToCategories": "Back to categories"
+    "backToCategories": "Back to categories",
+    "subtitle": "Explore our collections",
+    "explore": "Explore",
+    "productCount": "{{count}} products"
   }
 }

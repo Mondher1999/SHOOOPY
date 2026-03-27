@@ -2,18 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, User, Phone, MapPin } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AddressSelector } from "@/components/checkout/AddressSelector";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
 import { CODConfirmation } from "@/components/checkout/CODConfirmation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
-import { placeOrderAPI } from "@/services/order-service";
+import { useSettings } from "@/contexts/SettingsContext";
+import { placeOrderAPI, guestCheckoutAPI } from "@/services/order-service";
 import { useActiveTheme, type ThemeStyles } from "@/hooks/useActiveTheme";
 import { cn } from "@/lib/utils";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { calcTTC } from "@/lib/tva";
+import { cartItemKey } from "@/lib/cartUtils";
 import logger from "@/lib/logger";
 
 // ─── Step definitions ─────────────────────────────────────────────────────────
@@ -100,42 +104,151 @@ function StepIndicator({ current, theme }: { current: Step; theme: ThemeStyles }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// ─── Guest address form ──────────────────────────────────────────────────────
+
+function GuestAddressForm({
+  fullName,
+  phone,
+  street,
+  onFullNameChange,
+  onPhoneChange,
+  onStreetChange,
+  theme,
+}: {
+  fullName: string;
+  phone: string;
+  street: string;
+  onFullNameChange: (v: string) => void;
+  onPhoneChange: (v: string) => void;
+  onStreetChange: (v: string) => void;
+  theme: ThemeStyles;
+}) {
+  const { t } = useTranslation("checkout");
+  return (
+    <div className="space-y-3">
+      <div>
+        <label htmlFor="guestFullName" className={cn("text-sm font-medium mb-1 block", theme.text)}>
+          {t("checkout.guestNameLabel")}<span className="text-destructive">*</span>
+        </label>
+        <div className="relative">
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Input
+            id="guestFullName"
+            value={fullName}
+            onChange={(e) => onFullNameChange(e.target.value)}
+            placeholder={t("checkout.guestNamePlaceholder")}
+            className="pl-10"
+            required
+            aria-required="true"
+            autoComplete="name"
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor="guestPhone" className={cn("text-sm font-medium mb-1 block", theme.text)}>
+          {t("checkout.guestPhoneLabel")}<span className="text-destructive">*</span>
+        </label>
+        <div className="relative">
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Input
+            id="guestPhone"
+            value={phone}
+            onChange={(e) => onPhoneChange(e.target.value)}
+            placeholder={t("checkout.guestPhonePlaceholder")}
+            className="pl-10"
+            required
+            aria-required="true"
+            autoComplete="tel"
+            type="tel"
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor="guestStreet" className={cn("text-sm font-medium mb-1 block", theme.text)}>
+          {t("checkout.guestAddressLabel")}<span className="text-destructive">*</span>
+        </label>
+        <div className="relative">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Input
+            id="guestStreet"
+            value={street}
+            onChange={(e) => onStreetChange(e.target.value)}
+            placeholder={t("checkout.guestAddressPlaceholder")}
+            className="pl-10"
+            required
+            aria-required="true"
+            autoComplete="street-address"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function CheckoutPage() {
   const { t } = useTranslation("checkout");
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const { cart, reload: reloadCart } = useCart();
+  const { cart, guestItems, reload: reloadCart, clearCart } = useCart();
+  const { settings } = useSettings();
   const formatPrice = useFormatPrice();
   const theme = useActiveTheme();
+
+  const isGuest = !user;
 
   const [step, setStep] = useState<Step>(1);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isPlacing, setIsPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
-  // Prevents the empty-cart redirect from firing after a successful order placement
-  // (placeOrder clears the cart, which would otherwise redirect away from the success page)
   const orderPlacedRef = useRef(false);
+  // Skip the first effect run to allow CartContext to hydrate guest cart from localStorage
+  const mountedRef = useRef(false);
 
-  // Redirect unauthenticated users to login
+  // Guest address form state
+  const [guestFullName, setGuestFullName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestStreet, setGuestStreet] = useState("");
+
+  const guestAddressValid = guestFullName.trim() && guestPhone.trim() && guestStreet.trim();
+
+  // Mark mounted after first render — lets CartContext hydrate guest items first
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/auth/login?redirect=/checkout");
-    }
-  }, [user, authLoading, router]);
+    mountedRef.current = true;
+  }, []);
 
   // Redirect if cart is empty — but NOT after a successful order (cart is cleared by the order)
   useEffect(() => {
-    if (!authLoading && !orderPlacedRef.current && cart && cart.items.length === 0) {
-      router.replace("/cart");
+    if (authLoading) return;
+    if (!mountedRef.current) return;
+    if (orderPlacedRef.current) return;
+
+    if (isGuest) {
+      // Guest: check localStorage cart
+      if (guestItems.length === 0) {
+        router.replace("/cart");
+      }
+    } else {
+      // Authenticated: check server cart
+      if (cart && cart.items.length === 0) {
+        router.replace("/cart");
+      }
     }
-  }, [cart, authLoading, router]);
+  }, [cart, guestItems, isGuest, authLoading, router]);
 
   const items = cart?.items ?? [];
   const subtotal = cart?.totalPrice ?? 0;
-  const total = subtotal; // free shipping
+  let shippingCost = settings?.orders?.defaultShippingCost ?? 0;
+  const freeThreshold = settings?.orders?.freeShippingThreshold ?? 0;
+  if (freeThreshold > 0 && subtotal >= freeThreshold) shippingCost = 0;
+  const total = subtotal + shippingCost;
+
+  // Step 1 "continue" is valid if guest has filled address or authenticated has selected address
+  const canContinueStep1 = isGuest ? !!guestAddressValid : !!selectedAddressId;
 
   const handleNext = () => {
-    if (step === 1 && !selectedAddressId) return;
+    if (step === 1 && !canContinueStep1) return;
     setStep((s) => (s < 3 ? ((s + 1) as Step) : s));
   };
 
@@ -145,18 +258,42 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!selectedAddressId) return;
     setIsPlacing(true);
     setPlaceError(null);
     try {
-      const res = await placeOrderAPI(selectedAddressId);
-      // Set the flag BEFORE navigating so the empty-cart useEffect won't redirect to /cart
-      orderPlacedRef.current = true;
-      router.push(`/checkout/success?orderNumber=${res.data.orderNumber}&orderId=${res.data.id}`);
-      reloadCart(); // fire-and-forget — clears cart in background after navigation starts
+      if (isGuest) {
+        // Guest checkout: send cart items from localStorage + inline address
+        const guestCartItems = guestItems.map((gi) => ({
+          productId: gi.productId,
+          quantity: gi.quantity,
+          selectedOptions: gi.selectedOptions ?? {},
+        }));
+
+        const res = await guestCheckoutAPI({
+          items: guestCartItems,
+          shippingAddress: {
+            fullName: guestFullName.trim(),
+            phone: guestPhone.trim(),
+            street: guestStreet.trim(),
+          },
+        });
+
+        orderPlacedRef.current = true;
+        // Clear guest cart from localStorage
+        await clearCart();
+        router.push(`/checkout/success?orderNumber=${res.data.orderNumber}&orderId=${res.data.id}`);
+      } else {
+        // Authenticated checkout
+        if (!selectedAddressId) return;
+        const res = await placeOrderAPI(selectedAddressId);
+        orderPlacedRef.current = true;
+        router.push(`/checkout/success?orderNumber=${res.data.orderNumber}&orderId=${res.data.id}`);
+        reloadCart();
+      }
     } catch (err: unknown) {
       logger.error("placeOrder error:", err);
       let msg = t("checkout.errorPlacing");
+      // Handle both axios errors (authenticated) and fetchAPI errors (guest)
       if (err && typeof err === "object" && "response" in err) {
         const apiErr = err as { response?: { data?: { error?: string; data?: { outOfStock?: { name: string }[] } } } };
         const outOfStock = apiErr.response?.data?.data?.outOfStock;
@@ -165,6 +302,8 @@ export default function CheckoutPage() {
         } else {
           msg = apiErr.response?.data?.error ?? msg;
         }
+      } else if (err instanceof Error) {
+        msg = err.message || msg;
       }
       setPlaceError(msg);
     } finally {
@@ -172,12 +311,17 @@ export default function CheckoutPage() {
     }
   };
 
-  // Don't render until auth resolves (avoids flash)
-  if (authLoading || !user) return null;
+  // Don't render until auth check resolves (avoids flash)
+  if (authLoading) return null;
+
+  // For guests with empty cart, redirect will handle it
+  if (isGuest && guestItems.length === 0 && !orderPlacedRef.current) return null;
+  // For authenticated users with empty cart
+  if (!isGuest && cart && cart.items.length === 0 && !orderPlacedRef.current) return null;
 
   return (
     <div className={cn("w-full", theme.pageBg, theme.bodyClass)}>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className={cn("text-2xl font-bold mb-6", theme.text, theme.headingClass)}>{t("checkout.title")}</h1>
 
         <StepIndicator current={step} theme={theme} />
@@ -188,14 +332,26 @@ export default function CheckoutPage() {
             {step === 1 && (
               <div>
                 <h2 className={cn("text-lg font-semibold mb-4", theme.text, theme.headingClass)}>{t("checkout.stepAddress")}</h2>
-                <AddressSelector
-                  selectedId={selectedAddressId}
-                  onSelect={setSelectedAddressId}
-                />
+                {isGuest ? (
+                  <GuestAddressForm
+                    fullName={guestFullName}
+                    phone={guestPhone}
+                    street={guestStreet}
+                    onFullNameChange={setGuestFullName}
+                    onPhoneChange={setGuestPhone}
+                    onStreetChange={setGuestStreet}
+                    theme={theme}
+                  />
+                ) : (
+                  <AddressSelector
+                    selectedId={selectedAddressId}
+                    onSelect={setSelectedAddressId}
+                  />
+                )}
                 <div className="flex justify-end mt-6">
                   <Button
                     onClick={handleNext}
-                    disabled={!selectedAddressId}
+                    disabled={!canContinueStep1}
                     size="lg"
                     className={theme.btnPrimary}
                   >
@@ -210,18 +366,43 @@ export default function CheckoutPage() {
                 <h2 className={cn("text-lg font-semibold mb-4", theme.text, theme.headingClass)}>{t("checkout.stepReview")}</h2>
                 {/* Items review */}
                 <div className="space-y-3 mb-6">
-                  {items.map((item) => (
+                  {!isGuest && items.map((item) => (
                     <div
-                      key={item.product.id}
+                      key={cartItemKey(item)}
                       className={cn("flex justify-between items-center py-2 border-b last:border-0", theme.border)}
                     >
                       <div>
                         <p className={cn("text-sm font-medium", theme.text)}>{item.product.name}</p>
+                        {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                          <p className={cn("text-xs", theme.textMuted)}>
+                            {Object.entries(item.selectedOptions).map(([k, v]) => `${k}: ${v}`).join(", ")}
+                          </p>
+                        )}
                         <p className={cn("text-xs", theme.textMuted)}>
-                          {t("orderSummary.qty", { count: item.quantity })} × {formatPrice(item.price)}
+                          {t("orderSummary.qty", { count: item.quantity })} × {formatPrice(calcTTC(item.price, item.tva ?? 0))}
                         </p>
                       </div>
-                      <span className={cn("text-sm font-semibold", theme.text)}>{formatPrice(item.price * item.quantity)}</span>
+                      <span className={cn("text-sm font-semibold", theme.text)}>{formatPrice(calcTTC(item.price, item.tva ?? 0) * item.quantity)}</span>
+                    </div>
+                  ))}
+                  {isGuest && guestItems.map((gi, idx) => (
+                    <div
+                      key={`${gi.productId}-${idx}`}
+                      className={cn("flex justify-between items-center py-2 border-b last:border-0", theme.border)}
+                    >
+                      <div>
+                        <p className={cn("text-sm font-medium", theme.text)}>
+                          {t("checkout.guestItemLabel", { id: gi.productId.slice(-6) })}
+                        </p>
+                        {gi.selectedOptions && Object.keys(gi.selectedOptions).length > 0 && (
+                          <p className={cn("text-xs", theme.textMuted)}>
+                            {Object.entries(gi.selectedOptions).map(([k, v]) => `${k}: ${v}`).join(", ")}
+                          </p>
+                        )}
+                        <p className={cn("text-xs", theme.textMuted)}>
+                          {t("orderSummary.qty", { count: gi.quantity })}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -244,7 +425,7 @@ export default function CheckoutPage() {
                   onPlaceOrder={handlePlaceOrder}
                   isLoading={isPlacing}
                   error={placeError}
-                  total={formatPrice(total)}
+                  total={isGuest ? undefined : formatPrice(total)}
                 />
                 <Button variant="ghost" className={cn("mt-4", theme.btnOutline)} onClick={handleBack}>
                   {t("checkout.back")}
@@ -258,7 +439,7 @@ export default function CheckoutPage() {
             <OrderSummary />
           </aside>
         </div>
-      </main>
+      </section>
     </div>
   );
 }

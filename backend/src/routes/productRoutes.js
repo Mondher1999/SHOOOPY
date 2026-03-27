@@ -1,5 +1,5 @@
 import express from "express";
-import { protect } from "../middlewares/auth.js";
+import { protect, restrictTo } from "../middlewares/auth.js";
 import {
   getAllProducts,
   getProductById,
@@ -20,9 +20,9 @@ router.get("/search", searchProducts);
 router.get("/slug/:slug", getProductBySlug);
 router.get("/:id", getProductById);
 
-// ─── Protected (any authenticated user can create; ownership checked in controller) ──
-router.post("/", protect, createProduct);
-router.put("/:id", protect, updateProduct);
-router.delete("/:id", protect, deleteProduct);
+// ─── Admin-only CRUD ─────────────────────────────────────────────────────────
+router.post("/", protect, restrictTo("admin"), createProduct);
+router.put("/:id", protect, restrictTo("admin"), updateProduct);
+router.delete("/:id", protect, restrictTo("admin"), deleteProduct);
 
 export default router;

@@ -41,6 +41,9 @@ export async function fetchAPI<T = unknown>(
   const data = await response.json();
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.location.href = "/auth/login";
+    }
     throw new Error(data?.error || "Request failed");
   }
 

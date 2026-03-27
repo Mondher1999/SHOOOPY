@@ -52,7 +52,13 @@ export default function ChangePasswordPage() {
       setSuccess(true);
       reset();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("common:errors.generic");
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      const serverMsg = axiosErr?.response?.data?.error || "";
+      const errorMap: Record<string, string> = {
+        "Current password is incorrect": t("dashboard:changePassword.errorCurrentPassword"),
+        "New password must differ from current password": t("dashboard:changePassword.errorSamePassword"),
+      };
+      const msg = errorMap[serverMsg] || serverMsg || (err instanceof Error ? err.message : t("common:errors.generic"));
       setServerError(msg);
       logger.error("changePassword failed:", err);
     } finally {

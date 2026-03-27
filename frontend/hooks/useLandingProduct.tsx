@@ -59,7 +59,7 @@ export function LandingProductProvider({ children }: { children: ReactNode }) {
       })
       .catch((err) => {
         logger.error("LandingProduct fetch error:", err);
-        setError("Failed to load product");
+        setError(t("catalog.errorLoading"));
       })
       .finally(() => setIsLoading(false));
   }, [productId]);

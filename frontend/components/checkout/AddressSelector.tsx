@@ -22,14 +22,9 @@ import type { Address } from "@/types";
 // ─── Validation schema ────────────────────────────────────────────────────────
 
 const addressSchema = z.object({
-  fullName:   z.string().min(2, "checkout:addressForm.fullNameMin"),
-  phone:      z.string().min(7, "checkout:addressForm.phoneMin"),
-  street:     z.string().min(5, "checkout:addressForm.streetMin"),
-  city:       z.string().min(2, "checkout:addressForm.cityMin"),
-  state:      z.string().min(2, "checkout:addressForm.stateMin"),
-  postalCode: z.string().min(3, "checkout:addressForm.postalCodeMin"),
-  country:    z.string().min(2, "checkout:addressForm.countryMin"),
-  label:      z.enum(["home", "work", "other"]).default("home"),
+  fullName: z.string().min(2, "checkout:addressForm.fullNameMin"),
+  phone:    z.string().min(7, "checkout:addressForm.phoneMin"),
+  street:   z.string().min(5, "checkout:addressForm.streetMin"),
 });
 
 type AddressFields = z.infer<typeof addressSchema>;
@@ -63,7 +58,7 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
     formState: { errors },
   } = useForm<AddressFields>({
     resolver: zodResolver(addressSchema) as never,
-    defaultValues: { label: "home", country: "US" },
+    defaultValues: {},
   });
 
   const onSubmit = async (data: AddressFields) => {
@@ -139,83 +134,6 @@ export function AddressForm({ onCreated, onCancel, showCancel = true }: AddressF
             {t(errors.street.message ?? "addressForm.streetMin")}
           </p>
         )}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="city" className={theme.text}>{t("addressForm.city")}</Label>
-          <Input
-            id="city"
-            {...register("city")}
-            aria-describedby={errors.city ? "city-error" : undefined}
-            aria-invalid={!!errors.city}
-          />
-          {errors.city && (
-            <p id="city-error" className="text-destructive text-xs" role="alert">
-              {t(errors.city.message ?? "addressForm.cityMin")}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="state" className={theme.text}>{t("addressForm.state")}</Label>
-          <Input
-            id="state"
-            {...register("state")}
-            aria-describedby={errors.state ? "state-error" : undefined}
-            aria-invalid={!!errors.state}
-          />
-          {errors.state && (
-            <p id="state-error" className="text-destructive text-xs" role="alert">
-              {t(errors.state.message ?? "addressForm.stateMin")}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="postalCode" className={theme.text}>{t("addressForm.postalCode")}</Label>
-          <Input
-            id="postalCode"
-            {...register("postalCode")}
-            aria-describedby={errors.postalCode ? "postalCode-error" : undefined}
-            aria-invalid={!!errors.postalCode}
-          />
-          {errors.postalCode && (
-            <p id="postalCode-error" className="text-destructive text-xs" role="alert">
-              {t(errors.postalCode.message ?? "addressForm.postalCodeMin")}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="country" className={theme.text}>{t("addressForm.country")}</Label>
-          <Input
-            id="country"
-            {...register("country")}
-            aria-describedby={errors.country ? "country-error" : undefined}
-            aria-invalid={!!errors.country}
-          />
-          {errors.country && (
-            <p id="country-error" className="text-destructive text-xs" role="alert">
-              {t(errors.country.message ?? "addressForm.countryMin")}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="label" className={theme.text}>{t("addressForm.label")}</Label>
-          <select
-            id="label"
-            {...register("label")}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="home">{t("addressForm.labelHome")}</option>
-            <option value="work">{t("addressForm.labelWork")}</option>
-            <option value="other">{t("addressForm.labelOther")}</option>
-          </select>
-        </div>
       </div>
 
       <div className="flex gap-2 pt-2">
@@ -322,7 +240,7 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <LabelIcon label={address.label} />
+                  <LabelIcon label={address.label || "other"} />
                   <span className={cn("font-medium text-sm capitalize", theme.text)}>{address.label}</span>
                   {address.isDefault && (
                     <Badge variant="secondary" className="text-xs">
@@ -332,10 +250,7 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
                 </div>
                 <p className={cn("text-sm font-semibold", theme.text)}>{address.fullName}</p>
                 <p className={cn("text-sm", theme.textMuted)}>{address.phone}</p>
-                <p className={cn("text-sm", theme.textMuted)}>
-                  {address.street}, {address.city}, {address.state} {address.postalCode}
-                </p>
-                <p className={cn("text-sm", theme.textMuted)}>{address.country}</p>
+                <p className={cn("text-sm", theme.textMuted)}>{address.street}</p>
               </div>
               {isSelected && (
                 <CheckCircle2

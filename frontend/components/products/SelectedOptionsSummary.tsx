@@ -45,7 +45,7 @@ export function SelectedOptionsSummary({ selectedOptions }: SelectedOptionsSumma
                 aria-hidden="true"
               />
             )}
-            <span className="font-semibold">{value}</span>
+            <span className="font-semibold">{t(`typeAttrOptions.${value}`, { defaultValue: value })}</span>
           </Badge>
         );
       })}

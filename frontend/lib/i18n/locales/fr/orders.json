@@ -17,6 +17,7 @@
   "myOrders": {
     "title": "Mes commandes",
     "empty": "Vous n'avez pas encore passé de commande.",
+    "emptyHint": "Vos commandes apparaîtront ici une fois que vous en aurez passé une.",
     "shopNow": "Commencer mes achats",
     "item": "article",
     "items": "articles",
@@ -38,6 +39,7 @@
     "notes": "Notes de commande",
     "qty": "Qté : {{count}}",
     "discount": "Réduction",
+    "tvaTotal": "TVA comprise",
     "statusNotes": {
       "Order placed": "Commande passée",
       "Buy Now order placed": "Commande rapide passée",
@@ -93,7 +95,18 @@
     "printInvoice": "Imprimer la facture",
     "exportCSV": "Exporter CSV",
     "exportError": "Impossible d'exporter les commandes.",
-    "createOrder": "Créer une commande"
+    "createOrder": "Créer une commande",
+    "shippingActions": "Actions d'expédition",
+    "sendToDelivery": "Envoyer en livraison",
+    "trackShipment": "Suivre l'expédition",
+    "cancelShipment": "Annuler l'expédition",
+    "shippingSent": "Commande envoyée à la société de livraison",
+    "shippingError": "Impossible d'envoyer en livraison. Veuillez réessayer.",
+    "trackingUpdated": "Informations de suivi mises à jour",
+    "trackingError": "Impossible de récupérer les informations de suivi. Veuillez réessayer.",
+    "shipmentCancelled": "Expédition annulée avec succès",
+    "shipmentCancelError": "Impossible d'annuler l'expédition. Veuillez réessayer.",
+    "guest": "Invité"
   },
   "shipping": {
     "title": "Livraison & Expédition",

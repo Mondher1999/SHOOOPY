@@ -25,6 +25,7 @@ export function SearchBar({ className }: { className?: string }) {
   const [suggestions, setSuggestions] = useState<SlimProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,6 +49,7 @@ export function SearchBar({ className }: { className?: string }) {
   }, []);
 
   useEffect(() => {
+    setActiveIndex(-1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchSuggestions(query), DEBOUNCE_MS);
     return () => {
@@ -73,10 +75,25 @@ export function SearchBar({ className }: { className?: string }) {
     router.push(`/products/search?q=${encodeURIComponent(query.trim())}`);
   };
 
+  // Total navigable items: suggestions + "view all" link at the end
+  const totalItems = suggestions.length > 0 ? suggestions.length + 1 : 0;
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       setOpen(false);
+      setActiveIndex(-1);
       inputRef.current?.blur();
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!open && suggestions.length > 0) setOpen(true);
+      setActiveIndex((prev) => (prev + 1) % totalItems);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev <= 0 ? totalItems - 1 : prev - 1));
+    } else if (e.key === "Enter" && activeIndex >= 0 && open) {
+      e.preventDefault();
+      const items = containerRef.current?.querySelectorAll<HTMLElement>('[role="option"] a, [data-search-viewall]');
+      items?.[activeIndex]?.click();
     }
   };
 
@@ -108,6 +125,8 @@ export function SearchBar({ className }: { className?: string }) {
             aria-expanded={open}
             aria-haspopup="listbox"
             aria-autocomplete="list"
+            aria-controls={open ? "search-results" : undefined}
+            aria-activedescendant={open && activeIndex >= 0 ? `search-result-${activeIndex}` : undefined}
             autoComplete="off"
             suppressHydrationWarning
           />
@@ -133,6 +152,7 @@ export function SearchBar({ className }: { className?: string }) {
       {/* Suggestion Dropdown */}
       {open && (
         <div
+          id="search-results"
           role="listbox"
           aria-label={t("search.suggestionsLabel")}
           className={cn("absolute top-full left-0 right-0 z-50 mt-1 rounded-md border shadow-lg max-h-80 overflow-y-auto", theme.surface, theme.border)}
@@ -143,11 +163,11 @@ export function SearchBar({ className }: { className?: string }) {
             </p>
           ) : (
             <ul>
-              {suggestions.map((product) => (
-                <li key={product.id} role="option" aria-selected={false}>
+              {suggestions.map((product, idx) => (
+                <li key={product.id} id={`search-result-${idx}`} role="option" aria-selected={activeIndex === idx}>
                   <Link
                     href={`/products/${product.slug}`}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-muted transition-colors focus:outline-none focus:bg-muted"
+                    className={cn("flex items-center gap-3 px-3 py-2 hover:bg-muted transition-colors focus:outline-none focus:bg-muted", activeIndex === idx && "bg-muted")}
                     onClick={() => {
                       setOpen(false);
                       setQuery("");
@@ -170,10 +190,11 @@ export function SearchBar({ className }: { className?: string }) {
                   </Link>
                 </li>
               ))}
-              <li className={cn("border-t", theme.border)}>
+              <li id={`search-result-${suggestions.length}`} role="option" aria-selected={activeIndex === suggestions.length} className={cn("border-t", theme.border)}>
                 <Link
                   href={`/products/search?q=${encodeURIComponent(query)}`}
-                  className={cn("block px-3 py-2 text-sm hover:bg-muted transition-colors focus:outline-none focus:bg-muted", theme.accent)}
+                  data-search-viewall
+                  className={cn("block px-3 py-2 text-sm hover:bg-muted transition-colors focus:outline-none focus:bg-muted", theme.accent, activeIndex === suggestions.length && "bg-muted")}
                   onClick={() => setOpen(false)}
                 >
                   {t("search.viewAll", { query })}

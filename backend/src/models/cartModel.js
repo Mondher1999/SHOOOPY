@@ -6,6 +6,8 @@ const cartItemSchema = new Schema(
     quantity: { type: Number, required: true, min: 1 },
     // Price snapshot at time of adding — prevents cart total from fluctuating when product price changes
     price:    { type: Number, required: true, min: 0 },
+    // TVA rate snapshot (%) — locked at time of adding so TTC is consistent
+    tva:      { type: Number, default: 0, min: 0, max: 100 },
     // Selected variant options (e.g., { color: "Blue", size: "M" })
     // Enables "Blue M" and "Red L" as separate line items in the same cart
     selectedOptions: { type: Map, of: String, default: {} },
@@ -24,9 +26,15 @@ const cartSchema = new Schema(
 // Compound index for looking up cart items by product ID across carts
 cartSchema.index({ "items.product": 1 });
 
-// Virtual: total price summed from items
+// TTL index: auto-delete abandoned carts after 30 days of inactivity
+cartSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
+// Virtual: total TTC price summed from items (price = HT, tva = %)
 cartSchema.virtual("totalPrice").get(function () {
-  return this.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  return this.items.reduce((sum, item) => {
+    const ttc = item.price * (1 + (item.tva || 0) / 100);
+    return sum + ttc * item.quantity;
+  }, 0);
 });
 
 cartSchema.set("toJSON", {

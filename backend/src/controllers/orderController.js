@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Order from "../models/orderModel.js";
 import Cart from "../models/cartModel.js";
 import Product from "../models/productModel.js";
@@ -5,19 +6,24 @@ import Coupon from "../models/couponModel.js";
 import Address from "../models/addressModel.js";
 import User from "../models/userModel.js";
 import Settings from "../models/settingsModel.js";
+import { comboKey, findSimpleVariants, resolveVariantMode, recomputeProductStock } from "../utils/variantHelpers.js";
 import logger from "../utils/logger.js";
 import { escapeRegex } from "../utils/sanitize.js";
 import { sendOrderNotification } from "../utils/notificationService.js";
+import cache from "../utils/cache.js";
 
 const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 /**
  * Compute shipping cost from Settings based on itemsTotal.
- * If freeShippingThreshold > 0 and itemsTotal >= threshold → free.
- * Otherwise → defaultShippingCost (fallback 0).
+ * Uses settings:global cache (5-min TTL) to avoid DB hit on every order.
  */
 const computeShippingCost = async (itemsTotal) => {
-  const settings = await Settings.findOne({}).lean();
+  let settings = cache.get("settings:global");
+  if (!settings) {
+    settings = await Settings.findOne({}).lean();
+    if (settings) cache.set("settings:global", settings, 300);
+  }
   const defaultCost = settings?.orders?.defaultShippingCost ?? 0;
   const threshold = settings?.orders?.freeShippingThreshold ?? 0;
   if (threshold > 0 && itemsTotal >= threshold) return 0;
@@ -33,6 +39,87 @@ const VALID_TRANSITIONS = {
   delivered:  ["cancelled"],
   cancelled:  [],
 };
+
+/**
+ * Decrement stock for a cart/order item — 3-way mode-aware.
+ * Advanced: exact combo match → decrement single variant.
+ * Simple: per-option match → decrement each matching per-option variant.
+ * None: global stock decrement.
+ */
+async function decrementStock(productId, quantity, selectedOptions) {
+  const product = await Product.findById(productId).select("variantMode variants");
+  if (!product) return;
+
+  const mode = resolveVariantMode(product);
+  const hasOpts = selectedOptions && Object.keys(selectedOptions).length > 0;
+
+  if (mode === "advanced" && hasOpts) {
+    const targetKey = comboKey(selectedOptions);
+    const variant = product.variants.find((v) => v.enabled && comboKey(v.optionCombo) === targetKey);
+    if (variant) {
+      await Product.updateOne(
+        { _id: productId, "variants._id": variant._id },
+        { $inc: { "variants.$.stock": -quantity } }
+      );
+      await recomputeProductStock(productId);
+      return;
+    }
+  } else if (mode === "simple" && hasOpts) {
+    const simpleVars = findSimpleVariants(product, selectedOptions);
+    for (const sv of simpleVars) {
+      await Product.updateOne(
+        { _id: productId, "variants._id": sv._id },
+        { $inc: { "variants.$.stock": -quantity } }
+      );
+    }
+    if (simpleVars.length > 0) {
+      await recomputeProductStock(productId);
+      return;
+    }
+  }
+
+  // Fallback: global stock decrement
+  await Product.findByIdAndUpdate(productId, { $inc: { stock: -quantity } });
+}
+
+/**
+ * Restore stock for an order item — 3-way mode-aware.
+ */
+async function restoreStock(productId, quantity, selectedOptions) {
+  const product = await Product.findById(productId).select("variantMode variants");
+  if (!product) return;
+
+  const mode = resolveVariantMode(product);
+  const hasOpts = selectedOptions && Object.keys(selectedOptions).length > 0;
+
+  if (mode === "advanced" && hasOpts) {
+    const targetKey = comboKey(selectedOptions);
+    const variant = product.variants.find((v) => comboKey(v.optionCombo) === targetKey);
+    if (variant) {
+      await Product.updateOne(
+        { _id: productId, "variants._id": variant._id },
+        { $inc: { "variants.$.stock": quantity } }
+      );
+      await recomputeProductStock(productId);
+      return;
+    }
+  } else if (mode === "simple" && hasOpts) {
+    const simpleVars = findSimpleVariants(product, selectedOptions);
+    for (const sv of simpleVars) {
+      await Product.updateOne(
+        { _id: productId, "variants._id": sv._id },
+        { $inc: { "variants.$.stock": quantity } }
+      );
+    }
+    if (simpleVars.length > 0) {
+      await recomputeProductStock(productId);
+      return;
+    }
+  }
+
+  // Fallback: global stock restore
+  await Product.findByIdAndUpdate(productId, { $inc: { stock: quantity } });
+}
 
 // ─── Order number generator ───────────────────────────────────────────────────
 // Format: ORD-YYYYMMDD-XXXX (sequential counter per day, zero-padded to 4 digits)
@@ -69,7 +156,7 @@ export const placeOrder = async (req, res) => {
     // Fetch cart with populated product data
     const cart = await Cart.findOne({ user: req.user._id }).populate({
       path: "items.product",
-      select: "name images stock price isActive",
+      select: "name images stock price tva isActive variantMode",
     });
 
     if (!cart || cart.items.length === 0) {
@@ -82,7 +169,12 @@ export const placeOrder = async (req, res) => {
       return res.status(404).json({ success: false, error: "Delivery address not found" });
     }
 
-    // Validate stock for all items before touching any product
+    // Validate stock for all items before touching any product (variant-aware)
+    // Fetch full product data (including variants) for stock validation
+    const productIds = cart.items.map((i) => i.product._id);
+    const fullProducts = await Product.find({ _id: { $in: productIds } }).select("variantMode variants stock isActive name").lean();
+    const fullProductMap = new Map(fullProducts.map((p) => [p._id.toString(), p]));
+
     const outOfStock = [];
     for (const item of cart.items) {
       const product = item.product;
@@ -90,7 +182,29 @@ export const placeOrder = async (req, res) => {
         outOfStock.push({ name: item.product?.name ?? "Unknown product", available: 0, requested: item.quantity });
         continue;
       }
-      if (item.quantity > product.stock) {
+
+      const fullProd = fullProductMap.get(product._id.toString());
+      const opts = item.selectedOptions instanceof Map ? Object.fromEntries(item.selectedOptions) : (item.selectedOptions || {});
+
+      const mode = fullProd ? resolveVariantMode(fullProd) : "none";
+      if (mode === "advanced" && Object.keys(opts).length > 0) {
+        const targetKey = comboKey(opts);
+        const variant = fullProd.variants.find((v) => v.enabled && comboKey(v.optionCombo) === targetKey);
+        if (!variant) {
+          outOfStock.push({ name: product.name, available: 0, requested: item.quantity });
+        } else if (item.quantity > variant.stock) {
+          outOfStock.push({ name: product.name, available: variant.stock, requested: item.quantity });
+        }
+      } else if (mode === "simple" && Object.keys(opts).length > 0) {
+        const simpleVars = findSimpleVariants(fullProd, opts);
+        for (const sv of simpleVars) {
+          if (item.quantity > sv.stock) {
+            const plain = sv.optionCombo instanceof Map ? Object.fromEntries(sv.optionCombo) : sv.optionCombo;
+            const [, val] = Object.entries(plain)[0];
+            outOfStock.push({ name: `${product.name} (${val})`, available: sv.stock, requested: item.quantity });
+          }
+        }
+      } else if (item.quantity > product.stock) {
         outOfStock.push({ name: product.name, available: product.stock, requested: item.quantity });
       }
     }
@@ -108,52 +222,73 @@ export const placeOrder = async (req, res) => {
       product: item.product._id,
       name:     item.product.name,
       quantity: item.quantity,
-      price:    item.price, // locked-in price from cart
+      price:    item.price, // locked-in HT price from cart
+      tva:      item.tva || 0, // TVA rate snapshot
       image:    item.product.images[0]?.thumbnail ?? "",
       selectedOptions: item.selectedOptions instanceof Map
         ? Object.fromEntries(item.selectedOptions)
         : (item.selectedOptions || {}),
     }));
 
-    // Calculate totals
-    const itemsTotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    // Calculate TTC totals: each item's TTC = price * (1 + tva/100) * quantity
+    const itemsTotal = orderItems.reduce((sum, i) => {
+      const ttc = i.price * (1 + (i.tva || 0) / 100);
+      return sum + ttc * i.quantity;
+    }, 0);
     const shippingCost = await computeShippingCost(itemsTotal);
 
-    const orderNumber = await generateOrderNumber();
+    // Create order + decrement stock in a transaction to prevent overselling
+    const session = await mongoose.startSession();
+    let order;
+    try {
+      await session.withTransaction(async () => {
+        // Create order with retry for duplicate orderNumber race condition
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const orderNumber = await generateOrderNumber();
+            const [created] = await Order.create([{
+              user: req.user._id,
+              orderNumber,
+              items: orderItems,
+              shippingAddress: {
+                fullName:   address.fullName,
+                phone:      address.phone,
+                street:     address.street,
+                city:       address.city,
+                state:      address.state,
+                postalCode: address.postalCode,
+                country:    address.country,
+                label:      address.label,
+              },
+              paymentMethod: "COD",
+              totalPrice:  itemsTotal + shippingCost,
+              shippingCost,
+              notes: notes || "",
+              statusHistory: [{ status: "pending", date: new Date(), note: "Order placed" }],
+            }], { session });
+            order = created;
+            break;
+          } catch (err) {
+            if (err.code === 11000 && attempt < 2) continue;
+            throw err;
+          }
+        }
 
-    // Create order BEFORE decrementing stock — if Order.create fails (e.g. duplicate
-    // order number race condition), no stock changes are made and the error bubbles cleanly.
-    const order = await Order.create({
-      user: req.user._id,
-      orderNumber,
-      items: orderItems,
-      shippingAddress: {
-        fullName:   address.fullName,
-        phone:      address.phone,
-        street:     address.street,
-        city:       address.city,
-        state:      address.state,
-        postalCode: address.postalCode,
-        country:    address.country,
-        label:      address.label,
-      },
-      paymentMethod: "COD",
-      totalPrice:  itemsTotal + shippingCost,
-      shippingCost,
-      notes: notes || "",
-      statusHistory: [{ status: "pending", date: new Date(), note: "Order placed" }],
-    });
+        // Decrement stock within the same transaction (variant-aware)
+        await Promise.all(
+          cart.items.map((item) => {
+            const opts = item.selectedOptions instanceof Map ? Object.fromEntries(item.selectedOptions) : (item.selectedOptions || {});
+            return decrementStock(item.product._id, item.quantity, opts);
+          })
+        );
 
-    // Decrement stock only after the order document is safely created
-    await Promise.all(
-      cart.items.map((item) =>
-        Product.findByIdAndUpdate(item.product._id, { $inc: { stock: -item.quantity } })
-      )
-    );
-
-    // Clear cart after successful order creation
-    cart.items = [];
-    await cart.save();
+        // Clear cart within transaction
+        cart.items = [];
+        await cart.save({ session });
+      });
+    } finally {
+      await session.endSession();
+    }
 
     // Send order confirmation email (non-blocking)
     sendOrderNotification("placed", order).catch(() => {});
@@ -205,18 +340,21 @@ export const buyNow = async (req, res) => {
       );
       return itemKey === optionsKey;
     });
+    // Track original state for rollback on failure
+    const prevQuantity = existingIdx >= 0 ? cart.items[existingIdx].quantity : null;
+
     if (existingIdx >= 0) {
       cart.items[existingIdx].quantity += qty;
       cart.items[existingIdx].price = product.price;
     } else {
-      cart.items.push({ product: product._id, quantity: qty, price: product.price, selectedOptions: opts });
+      cart.items.push({ product: product._id, quantity: qty, price: product.price, tva: product.tva || 0, selectedOptions: opts });
     }
     await cart.save();
 
     // ── Re-fetch cart with populated product data ──
     cart = await Cart.findOne({ user: req.user._id }).populate({
       path: "items.product",
-      select: "name images stock price isActive",
+      select: "name images stock price tva isActive variantMode",
     });
 
     // ── Remove excluded items from cart before ordering ──
@@ -231,7 +369,11 @@ export const buyNow = async (req, res) => {
       return res.status(400).json({ success: false, error: "Cart is empty" });
     }
 
-    // ── Validate stock for ALL items ──
+    // ── Validate stock for ALL items (variant-aware) ──
+    const buyNowProductIds = cart.items.map((i) => i.product._id);
+    const buyNowFullProducts = await Product.find({ _id: { $in: buyNowProductIds } }).select("variantMode variants stock isActive name").lean();
+    const buyNowProductMap = new Map(buyNowFullProducts.map((p) => [p._id.toString(), p]));
+
     const outOfStock = [];
     for (const item of cart.items) {
       const p = item.product;
@@ -239,11 +381,43 @@ export const buyNow = async (req, res) => {
         outOfStock.push({ name: p?.name ?? "Unknown product", available: 0, requested: item.quantity });
         continue;
       }
-      if (item.quantity > p.stock) {
+      const fullProd = buyNowProductMap.get(p._id.toString());
+      const itemOpts = item.selectedOptions instanceof Map ? Object.fromEntries(item.selectedOptions) : (item.selectedOptions || {});
+      const mode = fullProd ? resolveVariantMode(fullProd) : "none";
+
+      if (mode === "advanced" && Object.keys(itemOpts).length > 0) {
+        const targetKey = comboKey(itemOpts);
+        const variant = fullProd.variants.find((v) => v.enabled && comboKey(v.optionCombo) === targetKey);
+        if (!variant) {
+          outOfStock.push({ name: p.name, available: 0, requested: item.quantity });
+        } else if (item.quantity > variant.stock) {
+          outOfStock.push({ name: p.name, available: variant.stock, requested: item.quantity });
+        }
+      } else if (mode === "simple" && Object.keys(itemOpts).length > 0) {
+        const simpleVars = findSimpleVariants(fullProd, itemOpts);
+        for (const sv of simpleVars) {
+          if (item.quantity > sv.stock) {
+            const plain = sv.optionCombo instanceof Map ? Object.fromEntries(sv.optionCombo) : sv.optionCombo;
+            const [, val] = Object.entries(plain)[0];
+            outOfStock.push({ name: `${p.name} (${val})`, available: sv.stock, requested: item.quantity });
+          }
+        }
+      } else if (item.quantity > p.stock) {
         outOfStock.push({ name: p.name, available: p.stock, requested: item.quantity });
       }
     }
     if (outOfStock.length > 0) {
+      // Rollback the buyNow item we added to avoid cart pollution
+      const rollbackCart = await Cart.findOne({ user: req.user._id });
+      if (rollbackCart) {
+        if (prevQuantity !== null && existingIdx >= 0 && rollbackCart.items[existingIdx]) {
+          rollbackCart.items[existingIdx].quantity = prevQuantity;
+        } else if (prevQuantity === null) {
+          // Remove the newly added item
+          rollbackCart.items.pop();
+        }
+        await rollbackCart.save();
+      }
       return res.status(400).json({
         success: false,
         error: "Some items are out of stock",
@@ -257,15 +431,20 @@ export const buyNow = async (req, res) => {
       name: item.product.name,
       quantity: item.quantity,
       price: item.price,
+      tva: item.tva || 0,
       image: item.product.images?.[0]?.thumbnail ?? "",
       selectedOptions: item.selectedOptions instanceof Map
         ? Object.fromEntries(item.selectedOptions)
         : (item.selectedOptions || {}),
     }));
 
-    // ── Calculate totals ──
-    const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    // ── Calculate TTC totals ──
+    const subtotal = orderItems.reduce((sum, i) => {
+      const ttc = i.price * (1 + (i.tva || 0) / 100);
+      return sum + ttc * i.quantity;
+    }, 0);
     let discount = 0;
+    let validCoupon = null;
 
     if (couponCode) {
       const coupon = await Coupon.findOne({ code: couponCode.toUpperCase().trim(), isActive: true }).lean();
@@ -280,7 +459,7 @@ export const buyNow = async (req, res) => {
             }
             discount = Math.min(discount, subtotal);
             discount = Math.round(discount * 100) / 100;
-            await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
+            validCoupon = coupon;
           }
         }
       }
@@ -289,34 +468,49 @@ export const buyNow = async (req, res) => {
     const shippingCost = await computeShippingCost(subtotal);
     const totalPrice = subtotal + shippingCost - discount;
 
-    const orderNumber = await generateOrderNumber();
+    // Create order with retry for duplicate orderNumber race condition
+    let order;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const orderNumber = await generateOrderNumber();
+        order = await Order.create({
+          user: req.user._id,
+          orderNumber,
+          items: orderItems,
+          shippingAddress: {
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            street: address.trim(),
+            city: "-",
+            state: "-",
+            postalCode: "-",
+            country: "-",
+            label: "home",
+          },
+          paymentMethod: "COD",
+          totalPrice,
+          shippingCost,
+          notes: "",
+          statusHistory: [{ status: "pending", date: new Date(), note: "Buy Now order placed" }],
+        });
+        break;
+      } catch (err) {
+        if (err.code === 11000 && attempt < 2) continue;
+        throw err;
+      }
+    }
 
-    const order = await Order.create({
-      user: req.user._id,
-      orderNumber,
-      items: orderItems,
-      shippingAddress: {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        street: address.trim(),
-        city: "-",
-        state: "-",
-        postalCode: "-",
-        country: "-",
-        label: "home",
-      },
-      paymentMethod: "COD",
-      totalPrice,
-      shippingCost,
-      notes: "",
-      statusHistory: [{ status: "pending", date: new Date(), note: "Buy Now order placed" }],
-    });
+    // Increment coupon usage AFTER Order.create succeeds (prevents count drift on failure)
+    if (validCoupon) {
+      await Coupon.findByIdAndUpdate(validCoupon._id, { $inc: { usedCount: 1 } });
+    }
 
-    // ── Decrement stock for ALL items ──
+    // ── Decrement stock for ALL items (variant-aware) ──
     await Promise.all(
-      cart.items.map((item) =>
-        Product.findByIdAndUpdate(item.product._id, { $inc: { stock: -item.quantity } })
-      )
+      cart.items.map((item) => {
+        const itemOpts = item.selectedOptions instanceof Map ? Object.fromEntries(item.selectedOptions) : (item.selectedOptions || {});
+        return decrementStock(item.product._id, item.quantity, itemOpts);
+      })
     );
 
     // ── Clear cart ──
@@ -328,6 +522,346 @@ export const buyNow = async (req, res) => {
     res.status(201).json({ success: true, data: order });
   } catch (error) {
     logger.error("buyNow error:", error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};
+
+// ─── POST /api/orders/guest/buy-now ──────────────────────────────────────────
+// Guest Buy Now: creates an order from the submitted product + inline address.
+// No authentication required. Cart items come from the frontend (localStorage).
+export const guestBuyNow = async (req, res) => {
+  try {
+    const { items, fullName, phone, address, couponCode, guestEmail } = req.body;
+
+    if (!fullName || !phone || !address) {
+      return res.status(400).json({ success: false, error: "Missing required fields" });
+    }
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, error: "At least one item is required" });
+    }
+
+    // Validate all product IDs and quantities
+    for (const item of items) {
+      if (!item.productId || !isObjectId(item.productId)) {
+        return res.status(400).json({ success: false, error: "Each item must have a valid productId" });
+      }
+      if (!item.quantity || item.quantity < 1) {
+        return res.status(400).json({ success: false, error: "Each item must have a quantity >= 1" });
+      }
+    }
+
+    // Fetch all products
+    const productIds = items.map((i) => i.productId);
+    const products = await Product.find({ _id: { $in: productIds }, isActive: true }).lean();
+    const productMap = new Map(products.map((p) => [p._id.toString(), p]));
+
+    const outOfStock = [];
+    const orderItems = [];
+
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        return res.status(404).json({ success: false, error: `Product not found: ${item.productId}` });
+      }
+
+      const qty = Math.max(1, parseInt(item.quantity) || 1);
+      const itemOpts = item.selectedOptions && typeof item.selectedOptions === "object" ? item.selectedOptions : {};
+
+      // 3-way mode-aware stock check
+      const mode = resolveVariantMode(product);
+      if (mode === "advanced" && Object.keys(itemOpts).length > 0) {
+        const targetKey = comboKey(itemOpts);
+        const variant = product.variants.find((v) => v.enabled && comboKey(v.optionCombo) === targetKey);
+        if (!variant) {
+          outOfStock.push({ name: product.name, available: 0, requested: qty });
+          continue;
+        }
+        if (qty > variant.stock) {
+          outOfStock.push({ name: product.name, available: variant.stock, requested: qty });
+          continue;
+        }
+      } else if (mode === "simple" && Object.keys(itemOpts).length > 0) {
+        const simpleVars = findSimpleVariants(product, itemOpts);
+        let blocked = false;
+        for (const sv of simpleVars) {
+          if (qty > sv.stock) {
+            const plain = sv.optionCombo instanceof Map ? Object.fromEntries(sv.optionCombo) : sv.optionCombo;
+            const [, val] = Object.entries(plain)[0];
+            outOfStock.push({ name: `${product.name} (${val})`, available: sv.stock, requested: qty });
+            blocked = true;
+          }
+        }
+        if (blocked) continue;
+      } else if (qty > product.stock) {
+        outOfStock.push({ name: product.name, available: product.stock, requested: qty });
+        continue;
+      }
+
+      orderItems.push({
+        product: product._id,
+        name: product.name,
+        quantity: qty,
+        price: product.price,
+        tva: product.tva || 0,
+        image: product.images?.[0]?.thumbnail ?? "",
+        selectedOptions: itemOpts,
+      });
+    }
+
+    if (outOfStock.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Some items are out of stock",
+        data: { outOfStock },
+      });
+    }
+
+    if (orderItems.length === 0) {
+      return res.status(400).json({ success: false, error: "No valid items" });
+    }
+
+    // Calculate TTC totals
+    const subtotal = orderItems.reduce((sum, i) => {
+      const ttc = i.price * (1 + (i.tva || 0) / 100);
+      return sum + ttc * i.quantity;
+    }, 0);
+
+    let discount = 0;
+    let validCoupon = null;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase().trim(), isActive: true }).lean();
+      if (coupon && (!coupon.expiresAt || new Date(coupon.expiresAt) >= new Date())) {
+        if (!(coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses)) {
+          if (!(coupon.minOrderAmount > 0 && subtotal < coupon.minOrderAmount)) {
+            if (coupon.type === "percentage") {
+              discount = (subtotal * coupon.value) / 100;
+              if (coupon.maxDiscount > 0 && discount > coupon.maxDiscount) discount = coupon.maxDiscount;
+            } else {
+              discount = coupon.value;
+            }
+            discount = Math.min(discount, subtotal);
+            discount = Math.round(discount * 100) / 100;
+            validCoupon = coupon;
+          }
+        }
+      }
+    }
+
+    const shippingCost = await computeShippingCost(subtotal);
+    const totalPrice = subtotal + shippingCost - discount;
+
+    // Create guest order with retry for duplicate orderNumber
+    let order;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const orderNumber = await generateOrderNumber();
+        order = await Order.create({
+          user: null,
+          isGuest: true,
+          guestEmail: (guestEmail || "").trim(),
+          orderNumber,
+          items: orderItems,
+          shippingAddress: {
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            street: address.trim(),
+            city: "-",
+            state: "-",
+            postalCode: "-",
+            country: "-",
+            label: "home",
+          },
+          paymentMethod: "COD",
+          totalPrice,
+          shippingCost,
+          notes: "",
+          statusHistory: [{ status: "pending", date: new Date(), note: "Guest order placed" }],
+        });
+        break;
+      } catch (err) {
+        if (err.code === 11000 && attempt < 2) continue;
+        throw err;
+      }
+    }
+
+    // Increment coupon usage
+    if (validCoupon) {
+      await Coupon.findByIdAndUpdate(validCoupon._id, { $inc: { usedCount: 1 } });
+    }
+
+    // Decrement stock (variant-aware)
+    await Promise.all(
+      orderItems.map((item) => {
+        const opts = item.selectedOptions && typeof item.selectedOptions === "object" ? item.selectedOptions : {};
+        return decrementStock(item.product, item.quantity, opts);
+      })
+    );
+
+    // Non-blocking notification (uses guestEmail if provided)
+    sendOrderNotification("placed", order).catch(() => {});
+
+    res.status(201).json({ success: true, data: order });
+  } catch (error) {
+    logger.error("guestBuyNow error:", error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};
+
+// ─── POST /api/orders/guest ─────────────────────────────────────────────────
+// Guest checkout: creates an order from cart items (sent from localStorage).
+// No authentication required.
+export const guestCheckout = async (req, res) => {
+  try {
+    const { items, shippingAddress, notes, guestEmail } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, error: "Cart is empty" });
+    }
+    if (!shippingAddress) {
+      return res.status(400).json({ success: false, error: "Missing required field: shippingAddress" });
+    }
+
+    const { fullName, phone, street } = shippingAddress;
+    if (!fullName || !phone || !street) {
+      return res.status(400).json({ success: false, error: "Missing required address fields: fullName, phone, street" });
+    }
+
+    // Validate all items
+    for (const item of items) {
+      if (!item.productId || !isObjectId(item.productId)) {
+        return res.status(400).json({ success: false, error: "Each item must have a valid productId" });
+      }
+      if (!item.quantity || item.quantity < 1) {
+        return res.status(400).json({ success: false, error: "Each item must have a quantity >= 1" });
+      }
+    }
+
+    // Fetch all products
+    const productIds = items.map((i) => i.productId);
+    const products = await Product.find({ _id: { $in: productIds }, isActive: true }).lean();
+    const productMap = new Map(products.map((p) => [p._id.toString(), p]));
+
+    const outOfStock = [];
+    const orderItems = [];
+
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        return res.status(404).json({ success: false, error: `Product not found: ${item.productId}` });
+      }
+
+      const qty = Math.max(1, parseInt(item.quantity) || 1);
+      const itemOpts = item.selectedOptions && typeof item.selectedOptions === "object" ? item.selectedOptions : {};
+
+      // 3-way mode-aware stock check
+      const mode = resolveVariantMode(product);
+      if (mode === "advanced" && Object.keys(itemOpts).length > 0) {
+        const targetKey = comboKey(itemOpts);
+        const variant = product.variants.find((v) => v.enabled && comboKey(v.optionCombo) === targetKey);
+        if (!variant) {
+          outOfStock.push({ name: product.name, available: 0, requested: qty });
+          continue;
+        }
+        if (qty > variant.stock) {
+          outOfStock.push({ name: product.name, available: variant.stock, requested: qty });
+          continue;
+        }
+      } else if (mode === "simple" && Object.keys(itemOpts).length > 0) {
+        const simpleVars = findSimpleVariants(product, itemOpts);
+        let blocked = false;
+        for (const sv of simpleVars) {
+          if (qty > sv.stock) {
+            const plain = sv.optionCombo instanceof Map ? Object.fromEntries(sv.optionCombo) : sv.optionCombo;
+            const [, val] = Object.entries(plain)[0];
+            outOfStock.push({ name: `${product.name} (${val})`, available: sv.stock, requested: qty });
+            blocked = true;
+          }
+        }
+        if (blocked) continue;
+      } else if (qty > product.stock) {
+        outOfStock.push({ name: product.name, available: product.stock, requested: qty });
+        continue;
+      }
+
+      orderItems.push({
+        product: product._id,
+        name: product.name,
+        quantity: qty,
+        price: product.price,
+        tva: product.tva || 0,
+        image: product.images?.[0]?.thumbnail ?? "",
+        selectedOptions: itemOpts,
+      });
+    }
+
+    if (outOfStock.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Some items are out of stock",
+        data: { outOfStock },
+      });
+    }
+
+    if (orderItems.length === 0) {
+      return res.status(400).json({ success: false, error: "No valid items" });
+    }
+
+    // Calculate TTC totals
+    const itemsTotal = orderItems.reduce((sum, i) => {
+      const ttc = i.price * (1 + (i.tva || 0) / 100);
+      return sum + ttc * i.quantity;
+    }, 0);
+    const shippingCost = await computeShippingCost(itemsTotal);
+
+    // Create guest order with retry for duplicate orderNumber
+    let order;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const orderNumber = await generateOrderNumber();
+        order = await Order.create({
+          user: null,
+          isGuest: true,
+          guestEmail: (guestEmail || "").trim(),
+          orderNumber,
+          items: orderItems,
+          shippingAddress: {
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            street: street.trim(),
+            city: (shippingAddress.city || "-").trim(),
+            state: (shippingAddress.state || "-").trim(),
+            postalCode: (shippingAddress.postalCode || "-").trim(),
+            country: (shippingAddress.country || "-").trim(),
+            label: shippingAddress.label || "home",
+          },
+          paymentMethod: "COD",
+          totalPrice: itemsTotal + shippingCost,
+          shippingCost,
+          notes: notes || "",
+          statusHistory: [{ status: "pending", date: new Date(), note: "Guest order placed" }],
+        });
+        break;
+      } catch (err) {
+        if (err.code === 11000 && attempt < 2) continue;
+        throw err;
+      }
+    }
+
+    // Decrement stock (variant-aware)
+    await Promise.all(
+      orderItems.map((item) => {
+        const opts = item.selectedOptions && typeof item.selectedOptions === "object" ? item.selectedOptions : {};
+        return decrementStock(item.product, item.quantity, opts);
+      })
+    );
+
+    // Non-blocking notification
+    sendOrderNotification("placed", order).catch(() => {});
+
+    res.status(201).json({ success: true, data: order });
+  } catch (error) {
+    logger.error("guestCheckout error:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
   }
 };
@@ -407,11 +941,12 @@ export const cancelOrder = async (req, res) => {
       });
     }
 
-    // Restore stock for all order items
+    // Restore stock for all order items (variant-aware)
     await Promise.all(
-      order.items.map((item) =>
-        Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
-      )
+      order.items.map((item) => {
+        const opts = item.selectedOptions instanceof Map ? Object.fromEntries(item.selectedOptions) : (item.selectedOptions || {});
+        return restoreStock(item.product, item.quantity, opts);
+      })
     );
 
     order.status = "cancelled";
@@ -547,12 +1082,19 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
 
-// Restore stock if admin cancels
+    // Enforce valid status transitions
+    const allowed = VALID_TRANSITIONS[order.status];
+    if (!allowed || !allowed.includes(status)) {
+      return res.status(400).json({ success: false, error: `Cannot transition from "${order.status}" to "${status}"` });
+    }
+
+// Restore stock if admin cancels (variant-aware)
     if (status === "cancelled") {
       await Promise.all(
-        order.items.map((item) =>
-          Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
-        )
+        order.items.map((item) => {
+          const opts = item.selectedOptions instanceof Map ? Object.fromEntries(item.selectedOptions) : (item.selectedOptions || {});
+          return restoreStock(item.product, item.quantity, opts);
+        })
       );
     }
 
@@ -560,7 +1102,7 @@ export const updateOrderStatus = async (req, res) => {
     order.statusHistory.push({
       status,
       date: new Date(),
-      note: note.trim(),
+      note: (note || "").trim(),
     });
 
     await order.save();
@@ -666,7 +1208,7 @@ export const getOrderStats = async (req, res) => {
 // Order starts at "confirmed" status (admin-placed, skips pending).
 export const createOrderAdmin = async (req, res) => {
   try {
-    const { userId, items, shippingAddress, notes, notifyCustomer } = req.body;
+    const { userId, items, shippingAddress, notes, notifyCustomer, shippingCost: shippingCostOverride } = req.body;
 
     // ── Validate required fields ──────────────────────────────────────────
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -730,7 +1272,34 @@ export const createOrderAdmin = async (req, res) => {
       }
 
       const qty = Math.max(1, parseInt(item.quantity) || 1);
-      if (qty > product.stock) {
+      const itemOpts = item.selectedOptions && typeof item.selectedOptions === "object" ? item.selectedOptions : {};
+
+      // 3-way mode-aware stock check
+      const mode = resolveVariantMode(product);
+      if (mode === "advanced" && Object.keys(itemOpts).length > 0) {
+        const targetKey = comboKey(itemOpts);
+        const variant = product.variants.find((v) => v.enabled && comboKey(v.optionCombo) === targetKey);
+        if (!variant) {
+          outOfStock.push({ name: product.name, available: 0, requested: qty });
+          continue;
+        }
+        if (qty > variant.stock) {
+          outOfStock.push({ name: product.name, available: variant.stock, requested: qty });
+          continue;
+        }
+      } else if (mode === "simple" && Object.keys(itemOpts).length > 0) {
+        const simpleVars = findSimpleVariants(product, itemOpts);
+        let blocked = false;
+        for (const sv of simpleVars) {
+          if (qty > sv.stock) {
+            const plain = sv.optionCombo instanceof Map ? Object.fromEntries(sv.optionCombo) : sv.optionCombo;
+            const [, val] = Object.entries(plain)[0];
+            outOfStock.push({ name: `${product.name} (${val})`, available: sv.stock, requested: qty });
+            blocked = true;
+          }
+        }
+        if (blocked) continue;
+      } else if (mode === "none" && qty > product.stock) {
         outOfStock.push({ name: product.name, available: product.stock, requested: qty });
         continue;
       }
@@ -740,6 +1309,7 @@ export const createOrderAdmin = async (req, res) => {
         name: product.name,
         quantity: qty,
         price: product.price,
+        tva: product.tva || 0,
         image: product.images?.[0]?.thumbnail ?? "",
         selectedOptions: item.selectedOptions && typeof item.selectedOptions === "object"
           ? item.selectedOptions : {},
@@ -754,9 +1324,11 @@ export const createOrderAdmin = async (req, res) => {
       });
     }
 
-    // ── Calculate totals ──────────────────────────────────────────────────
-    const itemsTotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const shippingCost = await computeShippingCost(itemsTotal);
+    // ── Calculate totals (TTC = HT × (1 + tva/100)) ──────────────────────
+    const itemsTotal = orderItems.reduce((sum, i) => sum + i.price * (1 + (i.tva || 0) / 100) * i.quantity, 0);
+    const shippingCost = (shippingCostOverride !== undefined && shippingCostOverride !== null && !isNaN(parseFloat(shippingCostOverride)) && parseFloat(shippingCostOverride) >= 0)
+      ? parseFloat(shippingCostOverride)
+      : await computeShippingCost(itemsTotal);
 
     const orderNumber = await generateOrderNumber();
 
@@ -785,11 +1357,12 @@ export const createOrderAdmin = async (req, res) => {
       ],
     });
 
-    // ── Decrement stock ───────────────────────────────────────────────────
+    // ── Decrement stock (variant-aware) ──────────────────────────────────
     await Promise.all(
-      orderItems.map((item) =>
-        Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } })
-      )
+      orderItems.map((item) => {
+        const opts = item.selectedOptions && typeof item.selectedOptions === "object" ? item.selectedOptions : {};
+        return decrementStock(item.product, item.quantity, opts);
+      })
     );
 
     // ── Optionally notify customer (only if a real customer was selected) ─

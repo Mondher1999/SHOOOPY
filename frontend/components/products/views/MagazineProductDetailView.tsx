@@ -201,16 +201,16 @@ export default function MagazineProductDetailView({
                   {Object.entries(product.attributes).map(([key, val]) => (
                     <div key={key} className="flex items-center justify-between py-2">
                       <dt className="uppercase text-xs tracking-wider text-gray-500">
-                        {key}
+                        {t(`typeAttrs.${key}`, { defaultValue: key })}
                       </dt>
                       <dd className="text-black font-medium text-sm">
                         {Array.isArray(val)
-                          ? val.join(", ")
+                          ? val.map((v) => t(`typeAttrOptions.${v}`, { defaultValue: v })).join(", ")
                           : typeof val === "boolean"
                             ? val
                               ? t("catalog.booleanYes")
                               : t("catalog.booleanNo")
-                            : String(val)}
+                            : t(`typeAttrOptions.${String(val)}`, { defaultValue: String(val) })}
                       </dd>
                     </div>
                   ))}

@@ -11,7 +11,21 @@ import { ActiveFilterChips } from "@/components/products/ActiveFilterChips";
 import { ProductSort } from "@/components/products/ProductSort";
 import { Pagination } from "@/components/products/Pagination";
 import { cn } from "@/lib/utils";
+import type { ThemeStyles } from "@/hooks/useActiveTheme";
 import type { ProductListViewProps } from "@/types";
+
+/** Dark-background overrides for shared components rendered inside the bold dark layout */
+const BOLD_DARK_FILTER_OVERRIDES: Partial<ThemeStyles> = {
+  text: "text-white",
+  textMuted: "text-gray-400",
+  surface: "bg-[#2A2A2A]",
+  separator: "bg-white/10",
+};
+
+const BOLD_DARK_PAGINATION_OVERRIDES: Partial<ThemeStyles> = {
+  textMuted: "text-gray-400",
+  btnOutline: "border-2 border-gray-600 text-gray-300 font-bold uppercase tracking-wider hover:bg-gray-600 hover:text-white",
+};
 
 export default function BoldProductListView({
   products,
@@ -49,6 +63,7 @@ export default function BoldProductListView({
                 categories={categories}
                 filters={filters}
                 onFiltersChange={onFiltersChange}
+                themeOverrides={BOLD_DARK_FILTER_OVERRIDES}
               />
             </div>
           </aside>
@@ -154,7 +169,7 @@ export default function BoldProductListView({
                   ))}
                 </div>
                 {pagination && (
-                  <Pagination pagination={pagination} onPageChange={onPageChange} />
+                  <Pagination pagination={pagination} onPageChange={onPageChange} themeOverrides={BOLD_DARK_PAGINATION_OVERRIDES} />
                 )}
               </>
             )}

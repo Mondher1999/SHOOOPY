@@ -206,15 +206,15 @@ export default function TechProductDetailView({
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm font-mono">
                   {Object.entries(product.attributes).map(([key, val]) => (
                     <Fragment key={key}>
-                      <dt className="text-gray-500">{key}</dt>
+                      <dt className="text-gray-500">{t(`typeAttrs.${key}`, { defaultValue: key })}</dt>
                       <dd className="text-[#00FF88]">
                         {Array.isArray(val)
-                          ? val.join(", ")
+                          ? val.map((v) => t(`typeAttrOptions.${v}`, { defaultValue: v })).join(", ")
                           : typeof val === "boolean"
                             ? val
                               ? t("catalog.booleanYes")
                               : t("catalog.booleanNo")
-                            : String(val)}
+                            : t(`typeAttrOptions.${String(val)}`, { defaultValue: String(val) })}
                       </dd>
                     </Fragment>
                   ))}

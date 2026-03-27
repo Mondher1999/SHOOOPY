@@ -202,7 +202,7 @@ export default function AdminCouponsPage() {
                     </td>
                     <td className="px-4 py-3 text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(coupon)} aria-label={t("coupons.edit")}>
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-4 w-4 text-polaris-text" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(coupon.id)} aria-label={t("coupons.delete")}>
                         <Trash2 className="h-4 w-4 text-destructive" />

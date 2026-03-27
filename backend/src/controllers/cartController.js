@@ -1,5 +1,6 @@
 import Cart from "../models/cartModel.js";
 import Product from "../models/productModel.js";
+import { findVariant, findSimpleVariants, resolveVariantMode } from "../utils/variantHelpers.js";
 import logger from "../utils/logger.js";
 
 // Validate ObjectId format
@@ -9,7 +10,7 @@ const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 async function getPopulatedCart(userId) {
   return Cart.findOne({ user: userId }).populate({
     path: "items.product",
-    select: "name slug images stock price isActive",
+    select: "name slug images stock price tva isActive",
   });
 }
 
@@ -74,18 +75,35 @@ export const addItem = async (req, res) => {
 
     const requestedQty = existingItem ? existingItem.quantity + quantity : quantity;
 
-    if (requestedQty > product.stock) {
-      return res.status(400).json({
-        success: false,
-        error: `Only ${product.stock} unit(s) available in stock`,
-      });
+    // 3-way variant-aware stock check
+    const mode = resolveVariantMode(product);
+    if (mode === "advanced") {
+      const variant = findVariant(product, opts);
+      if (!variant) {
+        return res.status(400).json({ success: false, error: "This variant combination is not available" });
+      }
+      if (requestedQty > variant.stock) {
+        return res.status(400).json({ success: false, error: `Only ${variant.stock} unit(s) available for this variant` });
+      }
+    } else if (mode === "simple") {
+      const simpleVars = findSimpleVariants(product, opts);
+      for (const sv of simpleVars) {
+        const plain = sv.optionCombo instanceof Map ? Object.fromEntries(sv.optionCombo) : sv.optionCombo;
+        const [, val] = Object.entries(plain)[0];
+        if (requestedQty > sv.stock) {
+          return res.status(400).json({ success: false, error: `Only ${sv.stock} unit(s) available for ${val}` });
+        }
+      }
+    } else if (requestedQty > product.stock) {
+      return res.status(400).json({ success: false, error: `Only ${product.stock} unit(s) available in stock` });
     }
 
     if (existingItem) {
       existingItem.quantity = requestedQty;
       existingItem.price = product.price; // refresh snapshot
+      existingItem.tva = product.tva || 0;
     } else {
-      cart.items.push({ product: productId, quantity, price: product.price, selectedOptions: opts });
+      cart.items.push({ product: productId, quantity, price: product.price, tva: product.tva || 0, selectedOptions: opts });
     }
 
     await cart.save();
@@ -126,16 +144,31 @@ export const updateQuantity = async (req, res) => {
       return res.status(404).json({ success: false, error: "Item not found in cart" });
     }
 
-    // Stock check
-    const product = await Product.findById(productId).select("stock isActive").lean();
+    // 3-way stock check
+    const product = await Product.findById(productId).select("stock isActive variantMode variants").lean();
     if (!product || !product.isActive) {
       return res.status(404).json({ success: false, error: "Product not found" });
     }
-    if (quantity > product.stock) {
-      return res.status(400).json({
-        success: false,
-        error: `Only ${product.stock} unit(s) available in stock`,
-      });
+    const mode = resolveVariantMode(product);
+    if (mode === "advanced") {
+      const variant = findVariant(product, opts);
+      if (!variant) {
+        return res.status(400).json({ success: false, error: "This variant combination is not available" });
+      }
+      if (quantity > variant.stock) {
+        return res.status(400).json({ success: false, error: `Only ${variant.stock} unit(s) available for this variant` });
+      }
+    } else if (mode === "simple") {
+      const simpleVars = findSimpleVariants(product, opts);
+      for (const sv of simpleVars) {
+        const plain = sv.optionCombo instanceof Map ? Object.fromEntries(sv.optionCombo) : sv.optionCombo;
+        const [, val] = Object.entries(plain)[0];
+        if (quantity > sv.stock) {
+          return res.status(400).json({ success: false, error: `Only ${sv.stock} unit(s) available for ${val}` });
+        }
+      }
+    } else if (quantity > product.stock) {
+      return res.status(400).json({ success: false, error: `Only ${product.stock} unit(s) available in stock` });
     }
 
     item.quantity = quantity;
@@ -228,7 +261,7 @@ export const mergeCart = async (req, res) => {
       Cart.findOne({ user: req.user._id }),
       Promise.all(
         items.map((item) =>
-          Product.findById(item.productId).select("stock price isActive").lean()
+          Product.findById(item.productId).select("stock price tva isActive variantMode variants").lean()
         )
       ),
     ]);
@@ -246,15 +279,30 @@ export const mergeCart = async (req, res) => {
         (i) => cartItemMatches(i, guestItem.productId, opts)
       );
 
+      // Determine effective stock (3-way mode-aware)
+      let effectiveStock = product.stock;
+      const mode = resolveVariantMode(product);
+      if (mode === "advanced") {
+        const variant = findVariant(product, opts);
+        if (!variant) return; // skip combos that don't exist as variants
+        effectiveStock = variant.stock;
+      } else if (mode === "simple") {
+        const simpleVars = findSimpleVariants(product, opts);
+        if (simpleVars.length > 0) {
+          effectiveStock = Math.min(...simpleVars.map((sv) => sv.stock));
+        }
+      }
+
       if (existingItem) {
         // Keep the higher quantity, capped at available stock
         const merged = Math.max(existingItem.quantity, guestItem.quantity);
-        existingItem.quantity = Math.min(merged, product.stock);
+        existingItem.quantity = Math.min(merged, effectiveStock);
         existingItem.price = product.price;
+        existingItem.tva = product.tva || 0;
       } else {
-        const qty = Math.min(guestItem.quantity, product.stock);
+        const qty = Math.min(guestItem.quantity, effectiveStock);
         if (qty > 0) {
-          resolvedCart.items.push({ product: guestItem.productId, quantity: qty, price: product.price, selectedOptions: opts });
+          resolvedCart.items.push({ product: guestItem.productId, quantity: qty, price: product.price, tva: product.tva || 0, selectedOptions: opts });
         }
       }
     });

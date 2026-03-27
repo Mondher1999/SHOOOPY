@@ -21,13 +21,28 @@
     "loading": "Loading...",
     "saving": "Saving...",
     "deleting": "Deleting...",
-    "remove": "Remove"
+    "remove": "Remove",
+    "confirm": "Confirm",
+    "scrollToTop": "Scroll to top",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skipToContent": "Skip to main content"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "network": "Network error. Please check your connection.",
     "unauthorized": "Please sign in to continue.",
     "forbidden": "You don't have permission to do that."
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Please try again or return to the homepage.",
+    "backToAdmin": "Back to Dashboard"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "backHome": "Back to Homepage"
   },
   "nav": {
     "home": "Home",
@@ -96,7 +111,8 @@
     },
     "collections": {
       "heading": "Collections",
-      "empty": "No collections available yet."
+      "empty": "No collections available yet.",
+      "showMore": "Show more"
     },
     "brandStory": {
       "heading": "The Art of Thoughtful Curation",

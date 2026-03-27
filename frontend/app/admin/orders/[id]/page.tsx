@@ -50,7 +50,14 @@ import type { AdminOrder, OrderStatus } from "@/types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
-const ALL_STATUSES: OrderStatus[] = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending:    ["confirmed", "cancelled"],
+  confirmed:  ["processing", "cancelled"],
+  processing: ["shipped"],
+  shipped:    ["delivered"],
+  delivered:  ["cancelled"],
+  cancelled:  [],
+};
 
 export default function AdminOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -128,7 +135,7 @@ export default function AdminOrderDetailPage() {
     fetchOrder();
   }, [fetchOrder]);
 
-  const allowedTransitions = order ? ALL_STATUSES.filter((s) => s !== order.status) : [];
+  const allowedTransitions = order ? (VALID_TRANSITIONS[order.status] || []) : [];
 
   const handleStatusSubmit = () => {
     if (!newStatus) return;
@@ -193,7 +200,7 @@ export default function AdminOrderDetailPage() {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
+        <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2 text-polaris-text hover:bg-polaris-surface-hovered">
           <Link href="/admin/orders">
             <ArrowLeft className="h-4 w-4 mr-1" />
             {t("admin.backToOrders")}
@@ -206,7 +213,7 @@ export default function AdminOrderDetailPage() {
           </div>
           <div className="flex items-center gap-3">
             <p className="text-sm text-polaris-text-subdued">{formatDate(order.createdAt)}</p>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" asChild className="bg-polaris-surface text-polaris-text border-polaris-border hover:bg-polaris-surface-hovered">
               <Link href={`/admin/orders/${id}/invoice`}>
                 <Printer className="h-3.5 w-3.5 mr-1.5" />
                 {t("admin.printInvoice")}
@@ -400,8 +407,8 @@ export default function AdminOrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-1">
-              <p className="font-medium">{order.user.name}</p>
-              <p className="text-polaris-text-subdued">{order.user.email}</p>
+              <p className="font-medium">{order.user?.name || t("admin.guest")}</p>
+              <p className="text-polaris-text-subdued">{order.user?.email || order.shippingAddress?.phone || ""}</p>
             </CardContent>
           </Card>
 
@@ -417,11 +424,6 @@ export default function AdminOrderDetailPage() {
               <p className="font-medium">{order.shippingAddress.fullName}</p>
               <p className="text-polaris-text-subdued">{order.shippingAddress.phone}</p>
               <p className="text-polaris-text-subdued">{order.shippingAddress.street}</p>
-              <p className="text-polaris-text-subdued">
-                {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
-                {order.shippingAddress.postalCode}
-              </p>
-              <p className="text-polaris-text-subdued">{order.shippingAddress.country}</p>
             </CardContent>
           </Card>
 

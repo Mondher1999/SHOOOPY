@@ -15,8 +15,8 @@ interface CODConfirmationProps {
   onPlaceOrder: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
-  /** Formatted total amount, e.g. "$29.99" */
-  total: string;
+  /** Formatted total amount, e.g. "$29.99". If omitted, the amount line is hidden. */
+  total?: string;
 }
 
 export function CODConfirmation({ onPlaceOrder, isLoading, error, total }: CODConfirmationProps) {
@@ -52,10 +52,12 @@ export function CODConfirmation({ onPlaceOrder, isLoading, error, total }: CODCo
       </Card>
 
       {/* Order total reminder */}
-      <div className="flex justify-between items-center mb-4 px-1">
-        <span className={cn("font-medium", theme.text)}>{t("cod.amountDue")}</span>
-        <span className={cn("text-xl font-bold", theme.text)}>{total}</span>
-      </div>
+      {total && (
+        <div className="flex justify-between items-center mb-4 px-1">
+          <span className={cn("font-medium", theme.text)}>{t("cod.amountDue")}</span>
+          <span className={cn("text-xl font-bold", theme.text)}>{total}</span>
+        </div>
+      )}
 
       {/* Error */}
       {error && (

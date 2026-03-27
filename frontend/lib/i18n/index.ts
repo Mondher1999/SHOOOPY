@@ -25,9 +25,9 @@ import fr_reviews from "./locales/fr/reviews.json";
 import fr_wishlist from "./locales/fr/wishlist.json";
 import fr_admin from "./locales/fr/admin.json";
 
-// Guard against re-initialization in Next.js hot reload
-// Always start with "en" so SSR and initial client render match (no hydration mismatch).
-// ClientProviders switches to the stored language after mount.
+// Guard against re-initialization in Next.js hot reload.
+// Always init with "fr" for SSR. After init, the client syncs to the stored
+// language at module scope (before React renders) to avoid a language flash.
 if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
     resources: {
@@ -58,21 +58,36 @@ if (!i18n.isInitialized) {
         admin: fr_admin,
       },
     },
-    lng: "en",
-    fallbackLng: "en",
+    lng: "fr",
+    fallbackLng: "fr",
     defaultNS: "common",
+    initImmediate: false, // Forces synchronous init+changeLanguage for in-memory resources,
+    // ensuring ClientProviders' changeLanguage(lang) completes before children render.
     interpolation: {
       escapeValue: false, // React already escapes values
     },
   });
 
-  // Persist language changes to localStorage
+  // Persist language changes to localStorage + cookie (cookie lets layout.tsx
+  // set <html lang> on the server, reducing hydration mismatch surface).
   i18n.on("languageChanged", (lng: string) => {
     if (typeof window !== "undefined") {
       localStorage.setItem("shopflow_language", lng);
+      document.cookie = `shopflow_language=${lng};path=/;max-age=31536000;SameSite=Lax`;
       document.documentElement.lang = lng;
     }
   });
+}
+
+// Client: sync i18n to stored language BEFORE React renders.
+// With initImmediate:false, changeLanguage is synchronous for in-memory
+// resources. Combined with ClientProviders passing lang from the cookie,
+// both server and client render in the same language → no hydration mismatch.
+if (typeof window !== "undefined") {
+  const stored = localStorage.getItem("shopflow_language");
+  if (stored && stored !== i18n.language) {
+    i18n.changeLanguage(stored);
+  }
 }
 
 export default i18n;

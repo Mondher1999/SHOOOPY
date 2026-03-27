@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button
           onClick={() => setSidebarOpen(false)}
           className="lg:hidden p-1 rounded text-[#8C9196] hover:text-white transition-colors cursor-pointer"
-          aria-label="Close menu"
+          aria-label={t("common:actions.closeMenu")}
         >
           <X className="h-5 w-5" />
         </button>
@@ -171,7 +171,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 -ml-2 rounded text-polaris-icon hover:bg-polaris-surface-hovered transition-colors cursor-pointer"
-            aria-label="Open menu"
+            aria-label={t("common:actions.openMenu")}
           >
             <Menu className="h-5 w-5" />
           </button>

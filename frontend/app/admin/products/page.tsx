@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -199,7 +199,7 @@ export default function AdminProductsPage() {
 
   const handleExportCSV = async () => {
     try {
-      const res = await axiosInstance.get("/export/products", { responseType: "blob" });
+      const res = await axiosInstance.get("/api/export/products", { responseType: "blob" });
       const url = URL.createObjectURL(res.data);
       const a = document.createElement("a");
       a.href = url;
@@ -222,7 +222,7 @@ export default function AdminProductsPage() {
       const formData = new FormData();
       formData.append("file", file);
       try {
-        const res = await axiosInstance.post("/export/products", formData, {
+        const res = await axiosInstance.post("/api/export/products", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         toast({ title: t("products:importSuccess", { count: res.data.data.imported }) });
@@ -331,11 +331,11 @@ export default function AdminProductsPage() {
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
-          <h2 className="text-base font-semibold text-polaris-text mb-2">{t("products:actions.confirmDelete")}</h2>
+          <DialogTitle className="text-base font-semibold text-polaris-text mb-2">{t("products:actions.confirmDelete")}</DialogTitle>
           {deleteTarget && (
-            <p className="text-sm text-polaris-text-subdued mb-4">
+            <DialogDescription className="text-sm text-polaris-text-subdued mb-4">
               {t("products:actions.confirmDeleteMessage", { name: deleteTarget.name })}
-            </p>
+            </DialogDescription>
           )}
           <div className="flex gap-2 justify-end">
             <Button

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -21,10 +22,48 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
+}
+
+/** Mobile sidebar wrapper with Escape key + focus trap */
+function MobileSidebarOverlay({ onClose, children }: { onClose?: () => void; children: React.ReactNode }) {
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Focus the sidebar on open
+    sidebarRef.current?.focus();
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <>
+      <div
+        className="lg:hidden fixed inset-0 z-40 bg-black/50"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        ref={sidebarRef}
+        className="lg:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-polaris-nav-bg"
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+      >
+        {children}
+      </aside>
+    </>
+  );
 }
 
 interface AdminSidebarProps {
@@ -62,14 +101,16 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 
   const navContent = (
     <div className="flex flex-col h-full">
-      {/* Logo */}
+      {/* Sidebar header — ShopFlow branding */}
       <div className="flex items-center justify-between px-4 h-14 shrink-0">
         <Link
           href="/admin"
-          className="text-xl font-semibold text-white tracking-tight"
+          className="flex items-center gap-2"
           onClick={onClose}
         >
-          {settings?.store?.name || t("sidebar.appName")}
+          <span className="text-lg font-bold text-white tracking-tight">
+            Shop<span className="text-polaris-primary">Flow</span>
+          </span>
         </Link>
         {onClose && (
           <button
@@ -77,7 +118,7 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
             className="lg:hidden p-1 rounded text-polaris-icon-subdued hover:text-white transition-colors cursor-pointer"
             aria-label={t("sidebar.close")}
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -122,7 +163,7 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
           onClick={handleLogout}
           className="flex items-center gap-3 w-full rounded-md px-3 h-9 text-sm text-[#E3E5E7] hover:bg-polaris-nav-item-hover transition-colors cursor-pointer"
         >
-          <LogOut className="h-5 w-5 shrink-0 text-polaris-icon-subdued" />
+          <LogOut className="h-5 w-5 shrink-0 text-polaris-icon-subdued" aria-hidden="true" />
           <span>{t("sidebar.signOut")}</span>
         </button>
       </div>
@@ -136,18 +177,11 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
         {navContent}
       </aside>
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile sidebar overlay with focus trap + Escape handler */}
       {open && (
-        <>
-          <div
-            className="lg:hidden fixed inset-0 z-40 bg-black/50"
-            onClick={onClose}
-            aria-hidden="true"
-          />
-          <aside className="lg:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-polaris-nav-bg">
-            {navContent}
-          </aside>
-        </>
+        <MobileSidebarOverlay onClose={onClose}>
+          {navContent}
+        </MobileSidebarOverlay>
       )}
     </>
   );

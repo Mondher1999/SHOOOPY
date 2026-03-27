@@ -54,14 +54,13 @@ export default function CheckoutSuccessPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/auth/login");
-    }
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
-    if (!orderId) {
+    if (!orderNumber && !orderId) {
       router.replace("/");
+      return;
+    }
+    // Only fetch order details for authenticated users
+    if (!orderId || (!authLoading && !user)) {
+      setIsLoading(false);
       return;
     }
     const fetch = async () => {
@@ -74,11 +73,10 @@ export default function CheckoutSuccessPage() {
         setIsLoading(false);
       }
     };
-    fetch();
-  }, [orderId, router]);
+    if (user) fetch();
+  }, [orderId, orderNumber, user, authLoading, router]);
 
   if (authLoading || isLoading) return <SuccessSkeleton />;
-  if (!order) return null;
 
   return (
     <div className={cn("w-full", theme.pageBg, theme.bodyClass)}>
@@ -92,89 +90,110 @@ export default function CheckoutSuccessPage() {
           <p className={theme.textMuted}>{t("success.subtitle")}</p>
         </div>
 
-        {/* Order card */}
-        <Card className={cn("mb-6 border", theme.surface, theme.border)}>
-          <CardContent className="pt-6 space-y-4">
-            {/* Order number + status */}
-            <div className="flex items-center justify-between">
+        {order ? (
+          /* Authenticated user: full order details */
+          <Card className={cn("mb-6 border", theme.surface, theme.border)}>
+            <CardContent className="pt-6 space-y-4">
+              {/* Order number + status */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={cn("text-xs uppercase tracking-wide mb-1", theme.textMuted)}>
+                    {t("success.orderNumber")}
+                  </p>
+                  <p className={cn("font-bold text-lg", theme.text)}>{order.orderNumber}</p>
+                </div>
+                <Badge
+                  className={statusColors[order.status] ?? "bg-muted text-muted-foreground"}
+                  variant="outline"
+                >
+                  {t(`success.status.${order.status}`, order.status)}
+                </Badge>
+              </div>
+
+              <div className={cn("h-px w-full", theme.separator)} />
+
+              {/* Items */}
               <div>
+                <p className={cn("text-sm font-semibold mb-3 flex items-center gap-2", theme.text)}>
+                  <Package className="h-4 w-4" aria-hidden="true" />
+                  {t("success.items", { count: order.items.length })}
+                </p>
+                <ul className="space-y-2">
+                  {order.items.map((item, idx) => (
+                    <li key={idx} className="flex justify-between items-start text-sm">
+                      <div className="flex items-center gap-2">
+                        {item.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={`${BASE_URL}${item.image}`}
+                            alt={item.name}
+                            width={40}
+                            height={40}
+                            className={cn("h-10 w-10 rounded object-cover flex-shrink-0", theme.surface)}
+                          />
+                        )}
+                        <span className={cn("line-clamp-2", theme.text)}>{item.name}</span>
+                      </div>
+                      <span className={cn("flex-shrink-0 ml-2 font-medium", theme.text)}>
+                        ×{item.quantity}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className={cn("h-px w-full", theme.separator)} />
+
+              {/* Shipping address */}
+              <div>
+                <p className={cn("text-xs uppercase tracking-wide mb-1", theme.textMuted)}>
+                  {t("success.shippingTo")}
+                </p>
+                <p className={cn("text-sm font-medium", theme.text)}>{order.shippingAddress.fullName}</p>
+                <p className={cn("text-sm", theme.textMuted)}>{order.shippingAddress.phone}</p>
+                <p className={cn("text-sm", theme.textMuted)}>{order.shippingAddress.street}</p>
+              </div>
+
+              <div className={cn("h-px w-full", theme.separator)} />
+
+              {/* Totals */}
+              <div className={cn("flex justify-between font-semibold", theme.text)}>
+                <span>{t("success.total")}</span>
+                <span>{formatPrice(order.totalPrice)}</span>
+              </div>
+
+              <p className={cn("text-xs text-center", theme.textMuted)}>
+                {t("success.codNote")}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Guest user: basic order confirmation with order number */
+          <Card className={cn("mb-6 border", theme.surface, theme.border)}>
+            <CardContent className="pt-6 space-y-4">
+              <div className="text-center">
                 <p className={cn("text-xs uppercase tracking-wide mb-1", theme.textMuted)}>
                   {t("success.orderNumber")}
                 </p>
-                <p className={cn("font-bold text-lg", theme.text)}>{order.orderNumber}</p>
+                <p className={cn("font-bold text-lg", theme.text)}>{orderNumber}</p>
               </div>
-              <Badge
-                className={statusColors[order.status] ?? "bg-muted text-muted-foreground"}
-                variant="outline"
-              >
-                {t(`success.status.${order.status}`, order.status)}
-              </Badge>
-            </div>
 
-            <div className={cn("h-px w-full", theme.separator)} />
+              <div className={cn("h-px w-full", theme.separator)} />
 
-            {/* Items */}
-            <div>
-              <p className={cn("text-sm font-semibold mb-3 flex items-center gap-2", theme.text)}>
-                <Package className="h-4 w-4" aria-hidden="true" />
-                {t("success.items", { count: order.items.length })}
+              <p className={cn("text-xs text-center", theme.textMuted)}>
+                {t("success.codNote")}
               </p>
-              <ul className="space-y-2">
-                {order.items.map((item, idx) => (
-                  <li key={idx} className="flex justify-between items-start text-sm">
-                    <div className="flex items-center gap-2">
-                      {item.image && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={`${BASE_URL}${item.image}`}
-                          alt={item.name}
-                          className={cn("h-10 w-10 rounded object-cover flex-shrink-0", theme.surface)}
-                        />
-                      )}
-                      <span className={cn("line-clamp-2", theme.text)}>{item.name}</span>
-                    </div>
-                    <span className={cn("flex-shrink-0 ml-2 font-medium", theme.text)}>
-                      ×{item.quantity}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className={cn("h-px w-full", theme.separator)} />
-
-            {/* Shipping address */}
-            <div>
-              <p className={cn("text-xs uppercase tracking-wide mb-1", theme.textMuted)}>
-                {t("success.shippingTo")}
-              </p>
-              <p className={cn("text-sm font-medium", theme.text)}>{order.shippingAddress.fullName}</p>
-              <p className={cn("text-sm", theme.textMuted)}>{order.shippingAddress.phone}</p>
-              <p className={cn("text-sm", theme.textMuted)}>
-                {order.shippingAddress.street}, {order.shippingAddress.city},{" "}
-                {order.shippingAddress.state} {order.shippingAddress.postalCode}
-              </p>
-            </div>
-
-            <div className={cn("h-px w-full", theme.separator)} />
-
-            {/* Totals */}
-            <div className={cn("flex justify-between font-semibold", theme.text)}>
-              <span>{t("success.total")}</span>
-              <span>{formatPrice(order.totalPrice)}</span>
-            </div>
-
-            <p className={cn("text-xs text-center", theme.textMuted)}>
-              {t("success.codNote")}
-            </p>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button asChild className={cn("flex-1", theme.btnPrimary)}>
-            <Link href="/dashboard/orders">{t("success.viewOrders")}</Link>
-          </Button>
+          {user && (
+            <Button asChild className={cn("flex-1", theme.btnPrimary)}>
+              <Link href="/dashboard/orders">{t("success.viewOrders")}</Link>
+            </Button>
+          )}
           <Button variant="ghost" asChild className={cn("flex-1", theme.btnOutline)}>
             <Link href="/products">{t("success.continueShopping")}</Link>
           </Button>

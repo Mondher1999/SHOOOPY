@@ -85,7 +85,7 @@ export default function CustomerOrdersPage() {
             <Package className="h-6 w-6 text-polaris-icon-subdued" />
           </div>
           <p className="text-sm font-medium text-polaris-text mb-1">{t("myOrders.empty")}</p>
-          <p className="text-xs text-polaris-text-subdued mb-4">Your orders will appear here once you place one.</p>
+          <p className="text-xs text-polaris-text-subdued mb-4">{t("myOrders.emptyHint")}</p>
           <Link
             href="/products"
             className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-polaris-primary text-white hover:bg-polaris-primary-hovered transition-colors"

@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
+  // Admin route soft gate — redirect unauthenticated users before rendering
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    const hasAuth = request.cookies.get("shopflow_auth");
+    if (!hasAuth) {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+  }
+
   const response = NextResponse.next();
 
   // Prevent clickjacking
@@ -12,6 +20,12 @@ export function middleware(request: NextRequest) {
 
   // Control referrer information
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Enforce HTTPS
+  response.headers.set(
+    "Strict-Transport-Security",
+    "max-age=63072000; includeSubDomains; preload"
+  );
 
   // Restrict browser feature access
   response.headers.set(
@@ -24,11 +38,11 @@ export function middleware(request: NextRequest) {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Next.js dev mode
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: http://localhost:5001",
-      "font-src 'self'",
-      "connect-src 'self' http://localhost:5001",
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      `img-src 'self' data: blob: ${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001"}`,
+      "font-src 'self' https://fonts.gstatic.com",
+      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001"}`,
       "frame-ancestors 'none'",
     ].join("; ")
   );

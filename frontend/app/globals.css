@@ -54,7 +54,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
   }
 }
 
@@ -271,11 +271,12 @@
   font-size: 13px;                     /* bodyMd --p-font-size-325 */
   color: rgba(48,48,48,1);             /* --p-color-text */
 }
-/* Kill the green Tailwind focus-visible ring injected by shadcn Input */
+/* Override Tailwind ring with Polaris-style focus indicator — maintains visibility */
 .admin-polaris input:focus-visible,
 .admin-polaris select:focus-visible,
 .admin-polaris textarea:focus-visible {
-  outline: none !important;
+  outline: 2px solid rgba(26,26,26,1) !important;
+  outline-offset: 1px !important;
   box-shadow: none !important;
 }
 .admin-polaris input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
@@ -283,7 +284,6 @@
 .admin-polaris textarea:focus {
   border-color: rgba(26,26,26,1) !important;  /* --p-color-input-border-active */
   box-shadow: 0 0 0 2px rgba(26,26,26,0.08) !important;
-  outline: none !important;
 }
 
 /* Dialog: p-5 (20px), rounded-xl (12px), max-w-[620px] */

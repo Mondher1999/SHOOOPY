@@ -39,6 +39,9 @@ export const createFAQ = async (req, res) => {
     if (!question || !answer) {
       return res.status(400).json({ success: false, error: "Missing required fields: question, answer" });
     }
+    if (String(answer).length > 10000) {
+      return res.status(400).json({ success: false, error: "Answer must not exceed 10000 characters" });
+    }
 
     // Auto-assign order if not provided
     let orderNum = parseInt(faqOrder);
@@ -49,7 +52,7 @@ export const createFAQ = async (req, res) => {
 
     const faq = await FAQ.create({
       question: question.trim(),
-      answer,
+      answer: String(answer).trim(),
       order: orderNum,
     });
 
@@ -74,7 +77,12 @@ export const updateFAQ = async (req, res) => {
     }
 
     if (req.body.question !== undefined) faq.question = String(req.body.question).trim();
-    if (req.body.answer !== undefined) faq.answer = req.body.answer;
+    if (req.body.answer !== undefined) {
+      if (String(req.body.answer).length > 10000) {
+        return res.status(400).json({ success: false, error: "Answer must not exceed 10000 characters" });
+      }
+      faq.answer = String(req.body.answer).trim();
+    }
     if (req.body.order !== undefined) faq.order = parseInt(req.body.order) || 0;
     if (req.body.isActive !== undefined) faq.isActive = Boolean(req.body.isActive);
 

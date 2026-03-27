@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type DragEvent } from "react";
+import { useState, useRef, useMemo, type DragEvent } from "react";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import { Trash2, GripVertical, Tag } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { COLOR_MAP, isColorAttr } from "@/lib/colorMap";
 import logger from "@/lib/logger";
 import { deleteProductImageAPI, reorderProductImagesAPI } from "@/services/upload-service";
 import type { ProductImage } from "@/types";
@@ -53,6 +54,18 @@ export default function ImageSortable({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const hasTaggable = taggableAttributes && taggableAttributes.length > 0;
+
+  // Split taggable attributes into color (one-click dots) vs others (popover)
+  const colorAttrs = useMemo(
+    () => taggableAttributes?.filter((a) => isColorAttr(a.key)) ?? [],
+    [taggableAttributes]
+  );
+  const nonColorAttrs = useMemo(
+    () => taggableAttributes?.filter((a) => !isColorAttr(a.key)) ?? [],
+    [taggableAttributes]
+  );
+  const hasColorAttrs = colorAttrs.length > 0;
+  const hasNonColorAttrs = nonColorAttrs.length > 0;
 
   // ─── Drag-to-reorder ────────────────────────────────────────────────────────
   const dragIdx = useRef<number | null>(null);
@@ -173,102 +186,146 @@ export default function ImageSortable({
               onDrop={handleDrop}
               onDragEnd={handleDragEnd}
               className={cn(
-                "group relative aspect-square overflow-hidden rounded-md border bg-muted cursor-grab active:cursor-grabbing",
+                "group rounded-md border bg-muted overflow-hidden cursor-grab active:cursor-grabbing",
                 dragIdx.current === idx && "opacity-40 ring-2 ring-primary"
               )}
               aria-label={t("upload.imageAriaLabel", { idx: idx + 1 })}
             >
-              <Image
-                src={`${BASE_URL}${img.thumbnail}`}
-                alt={t("upload.imageAriaLabel", { idx: idx + 1 })}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                unoptimized
-              />
+              {/* Image container */}
+              <div className="relative aspect-square overflow-hidden">
+                <Image
+                  src={`${BASE_URL}${img.thumbnail}`}
+                  alt={t("upload.imageAriaLabel", { idx: idx + 1 })}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  unoptimized
+                />
 
-              {/* Drag handle + tag + delete — visible on hover */}
-              <div className="absolute inset-0 flex items-start justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="flex items-center gap-1">
-                  <div className="rounded bg-background/70 p-0.5">
-                    <GripVertical className="h-4 w-4 text-polaris-text-subdued" aria-hidden="true" />
-                  </div>
-                  {/* Tag button */}
-                  {hasTaggable && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className={cn(
-                            "rounded p-0.5 transition-colors cursor-pointer",
-                            tagCount > 0
-                              ? "bg-primary/90 text-primary-foreground"
-                              : "bg-background/70 text-polaris-text-subdued hover:bg-background"
-                          )}
-                          aria-label={t("upload.tagImageAriaLabel", { idx: idx + 1 })}
+                {/* Drag handle + tag popover (non-color attrs only) + delete — on hover */}
+                <div className="absolute inset-0 flex items-start justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
+                    <div className="rounded bg-background/70 p-0.5">
+                      <GripVertical className="h-4 w-4 text-polaris-text-subdued" aria-hidden="true" />
+                    </div>
+                    {/* Tag popover — only for non-color attributes (size, material, etc.) */}
+                    {hasNonColorAttrs && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "rounded p-0.5 transition-colors cursor-pointer",
+                              tagCount > 0
+                                ? "bg-primary/90 text-primary-foreground"
+                                : "bg-background/70 text-polaris-text-subdued hover:bg-background"
+                            )}
+                            aria-label={t("upload.tagImageAriaLabel", { idx: idx + 1 })}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Tag className="h-4 w-4" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-56 p-3 space-y-3"
+                          side="bottom"
+                          align="start"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Tag className="h-4 w-4" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-56 p-3 space-y-3"
-                        side="bottom"
-                        align="start"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <p className="text-xs font-semibold text-foreground">
-                          {t("upload.tagTitle")}
-                        </p>
-                        {taggableAttributes!.map((attr) => {
-                          const currentVal = img.variantMap?.[attr.key] ?? "";
-                          return (
-                            <div key={attr.key} className="space-y-1">
-                              <label className="text-[11px] font-medium text-polaris-text-subdued uppercase tracking-wider">
-                                {attr.label}
-                              </label>
-                              <select
-                                className="w-full h-8 px-2 text-xs rounded border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                                value={currentVal}
-                                onChange={(e) => handleTagChange(idx, attr.key, e.target.value)}
-                              >
-                                <option value="">—</option>
-                                {attr.options.map((opt) => (
-                                  <option key={opt} value={opt}>{opt}</option>
-                                ))}
-                              </select>
-                            </div>
-                          );
-                        })}
-                      </PopoverContent>
-                    </Popover>
-                  )}
+                          <p className="text-xs font-semibold text-foreground">
+                            {t("upload.tagTitle")}
+                          </p>
+                          {nonColorAttrs.map((attr) => {
+                            const currentVal = img.variantMap?.[attr.key] ?? "";
+                            return (
+                              <div key={attr.key} className="space-y-1">
+                                <label className="text-[11px] font-medium text-polaris-text-subdued uppercase tracking-wider">
+                                  {attr.label}
+                                </label>
+                                <select
+                                  className="w-full h-8 px-2 text-xs rounded border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                  value={currentVal}
+                                  onChange={(e) => handleTagChange(idx, attr.key, e.target.value)}
+                                >
+                                  <option value="">—</option>
+                                  {attr.options.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            );
+                          })}
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => { setDeleteTarget(img); setDeleteError(null); }}
+                    aria-label={t("upload.deleteImageAriaLabel", { idx: idx + 1 })}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => { setDeleteTarget(img); setDeleteError(null); }}
-                  aria-label={t("upload.deleteImageAriaLabel", { idx: idx + 1 })}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+
+                {/* Position badge */}
+                {idx === 0 && (
+                  <span className="absolute bottom-1 left-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                    {t("upload.primaryBadge")}
+                  </span>
+                )}
+
+                {/* Tag indicator badge */}
+                {tagCount > 0 && (
+                  <span className="absolute bottom-1 right-1 rounded bg-primary/90 text-primary-foreground px-1 py-0.5 text-[9px] font-bold flex items-center gap-0.5">
+                    <Tag className="h-2.5 w-2.5" aria-hidden="true" />
+                    {tagCount}
+                  </span>
+                )}
               </div>
 
-              {/* Position badge */}
-              {idx === 0 && (
-                <span className="absolute bottom-1 left-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                  {t("upload.primaryBadge")}
-                </span>
-              )}
+              {/* ─── One-click color tag strip (always visible) ───────────────── */}
+              {hasColorAttrs && (
+                <div className="flex gap-1.5 p-1.5 border-t border-border justify-center flex-wrap">
+                  {colorAttrs.flatMap((attr) =>
+                    attr.options.map((colorVal) => {
+                      const isTagged = img.variantMap?.[attr.key] === colorVal;
+                      const cssColor = COLOR_MAP[colorVal];
+                      const isGradient = cssColor?.includes("gradient") || cssColor?.includes("conic");
+                      const isLight = colorVal === "Clear" || colorVal === "White" || colorVal === "Beige" || colorVal === "Cream" || colorVal === "Ivory";
 
-              {/* Tag indicator badge — always visible if tagged */}
-              {tagCount > 0 && (
-                <span className="absolute bottom-1 right-1 rounded bg-primary/90 text-primary-foreground px-1 py-0.5 text-[9px] font-bold flex items-center gap-0.5">
-                  <Tag className="h-2.5 w-2.5" aria-hidden="true" />
-                  {tagCount}
-                </span>
+                      return (
+                        <button
+                          key={`${attr.key}-${colorVal}`}
+                          type="button"
+                          title={colorVal}
+                          className={cn(
+                            "h-5 w-5 rounded-full border-2 transition-all flex-shrink-0 cursor-pointer",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                            isTagged
+                              ? "border-primary ring-2 ring-primary/30 scale-110"
+                              : isLight
+                              ? "border-border hover:border-foreground/40"
+                              : "border-transparent hover:border-foreground/40"
+                          )}
+                          style={{
+                            background: isGradient ? cssColor : undefined,
+                            backgroundColor: !isGradient ? (cssColor ?? "#888") : undefined,
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTagChange(idx, attr.key, isTagged ? "" : colorVal);
+                          }}
+                          aria-label={`${colorVal}${isTagged ? " ✓" : ""}`}
+                          aria-pressed={isTagged}
+                        />
+                      );
+                    })
+                  )}
+                </div>
               )}
             </li>
           );

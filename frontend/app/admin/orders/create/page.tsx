@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getAllUsersAPI } from "@/services/user-service";
-import { searchProductsAPI } from "@/services/product-service";
+import { searchProductsAPI, getProductByIdAPI } from "@/services/product-service";
 import type { SlimProduct } from "@/services/product-service";
 import type { AuthUser } from "@/services/auth-service";
 import {
@@ -43,13 +43,20 @@ import {
   getUserAddressesAdminAPI,
 } from "@/services/order-service";
 import type { AddressItem } from "@/services/order-service";
+import { getProductTypeCatalogAPI } from "@/services/settings-service";
+import { VariantSelector } from "@/components/products/VariantSelector";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { useSettings } from "@/contexts/SettingsContext";
+import { calcTTC } from "@/lib/tva";
 import logger from "@/lib/logger";
+import type { Product } from "@/types";
+import type { ProductTypeCatalog } from "@/types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface OrderLineItem {
-  product: SlimProduct;
+  product: Product;
   quantity: number;
+  selectedOptions?: Record<string, string | string[]>;
 }
 
 interface ManualAddress {
@@ -76,6 +83,7 @@ export default function CreateOrderPage() {
   const { t } = useTranslation("admin");
   const router = useRouter();
   const formatPrice = useFormatPrice();
+  const { settings } = useSettings();
 
   // ── Customer selection ──────────────────────────────────────────────────
   const [customerSearch, setCustomerSearch] = useState("");
@@ -95,6 +103,13 @@ export default function CreateOrderPage() {
   const productRef = useRef<HTMLDivElement>(null);
   const productTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Pending product (variant config before adding) ─────────────────────
+  const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
+  const [pendingOptions, setPendingOptions] = useState<Record<string, string | string[]>>({});
+  const [pendingQty, setPendingQty] = useState(1);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [typeCatalog, setTypeCatalog] = useState<ProductTypeCatalog | null>(null);
+
   // ── Address selection ──────────────────────────────────────────────────
   const [savedAddresses, setSavedAddresses] = useState<AddressItem[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(false);
@@ -105,11 +120,28 @@ export default function CreateOrderPage() {
   // ── Order details ──────────────────────────────────────────────────────
   const [notes, setNotes] = useState("");
   const [notifyCustomer, setNotifyCustomer] = useState(true);
+  const [freeShipping, setFreeShipping] = useState(true);
+  const [shippingCostInput, setShippingCostInput] = useState("");
+  const [shippingInitialized, setShippingInitialized] = useState(false);
 
   // ── Submit state ──────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // ── Initialize shipping cost from settings ─────────────────────────────
+  useEffect(() => {
+    if (shippingInitialized || !settings) return;
+    const cost = settings?.orders?.defaultShippingCost ?? 0;
+    if (cost > 0) {
+      setFreeShipping(false);
+      setShippingCostInput(String(cost));
+    } else {
+      setFreeShipping(true);
+      setShippingCostInput("");
+    }
+    setShippingInitialized(true);
+  }, [settings, shippingInitialized]);
 
   // ── Close dropdowns on outside click ───────────────────────────────────
   useEffect(() => {
@@ -173,6 +205,18 @@ export default function CreateOrderPage() {
     return () => { if (productTimer.current) clearTimeout(productTimer.current); };
   }, [productSearch, orderItems]);
 
+  // ── Fetch product type catalog once on mount ──────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getProductTypeCatalogAPI();
+        setTypeCatalog(res.data);
+      } catch (err) {
+        logger.error("Failed to load product type catalog:", err);
+      }
+    })();
+  }, []);
+
   // ── Fetch customer addresses when customer changes ─────────────────────
   useEffect(() => {
     if (!selectedCustomer) {
@@ -206,12 +250,58 @@ export default function CreateOrderPage() {
     setManualAddress(EMPTY_ADDRESS);
   }, []);
 
-  // ── Add product to order ───────────────────────────────────────────────
-  const handleAddProduct = useCallback((product: SlimProduct) => {
-    setOrderItems((prev) => [...prev, { product, quantity: 1 }]);
+  // ── Add product to order (fetch full product for variant config) ────────
+  const handleAddProduct = useCallback(async (slim: SlimProduct) => {
     setProductSearch("");
     setShowProductDropdown(false);
-  }, []);
+    setPendingLoading(true);
+    try {
+      const res = await getProductByIdAPI(slim.id);
+      const full = res.data;
+      // Check if product has any selectable attributes
+      const hasSelectableAttrs =
+        full.productType && typeCatalog && typeCatalog[full.productType]
+          ? typeCatalog[full.productType].attributes.some(
+              (attr) =>
+                (attr.type === "multi-select" || attr.type === "select") &&
+                full.attributes?.[attr.key] !== undefined &&
+                full.attributes?.[attr.key] !== null
+            )
+          : false;
+      if (!hasSelectableAttrs) {
+        setOrderItems((prev) => [...prev, { product: full, quantity: 1 }]);
+      } else {
+        setPendingProduct(full);
+        setPendingOptions({});
+        setPendingQty(1);
+      }
+    } catch (err) {
+      logger.error("Failed to fetch product:", err);
+    } finally {
+      setPendingLoading(false);
+    }
+  }, [typeCatalog]);
+
+  // ── Confirm pending product (add with selected options) ─────────────────
+  const handleConfirmPending = useCallback(() => {
+    if (!pendingProduct) return;
+    const opts = Object.fromEntries(
+      Object.entries(pendingOptions).filter(([, v]) =>
+        Array.isArray(v) ? v.length > 0 : v !== ""
+      )
+    );
+    setOrderItems((prev) => [
+      ...prev,
+      {
+        product: pendingProduct,
+        quantity: pendingQty,
+        selectedOptions: Object.keys(opts).length > 0 ? opts : undefined,
+      },
+    ]);
+    setPendingProduct(null);
+    setPendingOptions({});
+    setPendingQty(1);
+  }, [pendingProduct, pendingOptions, pendingQty]);
 
   // ── Update quantity ────────────────────────────────────────────────────
   const updateQuantity = useCallback((productId: string, delta: number) => {
@@ -231,13 +321,15 @@ export default function CreateOrderPage() {
 
   // ── Computed totals ────────────────────────────────────────────────────
   const subtotal = useMemo(
-    () => orderItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+    () => orderItems.reduce((sum, item) => sum + calcTTC(item.product.price, item.product.tva ?? 0) * item.quantity, 0),
     [orderItems]
   );
   const totalItems = useMemo(
     () => orderItems.reduce((sum, item) => sum + item.quantity, 0),
     [orderItems]
   );
+  const shippingCostValue = freeShipping ? 0 : (parseFloat(shippingCostInput) || 0);
+  const grandTotal = subtotal + shippingCostValue;
 
   // ── Resolve final address ──────────────────────────────────────────────
   const resolvedAddress = useMemo(() => {
@@ -275,6 +367,7 @@ export default function CreateOrderPage() {
         items: orderItems.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
+          ...(item.selectedOptions ? { selectedOptions: item.selectedOptions } : {}),
         })),
         shippingAddress: {
           fullName: resolvedAddress.fullName.trim(),
@@ -288,6 +381,7 @@ export default function CreateOrderPage() {
         },
         notes: notes.trim() || undefined,
         notifyCustomer: selectedCustomer ? notifyCustomer : false,
+        shippingCost: shippingCostValue,
       });
 
       router.push(`/admin/orders/${res.data.id}`);
@@ -304,11 +398,12 @@ export default function CreateOrderPage() {
   };
 
   // ── Thumbnail helper ──────────────────────────────────────────────────
-  const getThumb = (product: SlimProduct) => {
+  const getThumb = (product: { images?: Array<{ thumbnail?: string; original?: string }> }) => {
     const img = product.images?.[0];
     if (!img) return "";
     const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
     const src = img.thumbnail || img.original;
+    if (!src) return "";
     return src.startsWith("http") ? src : `${base}${src}`;
   };
 
@@ -486,6 +581,82 @@ export default function CreateOrderPage() {
                 )}
               </div>
 
+              {/* Pending product loading */}
+              {pendingLoading && (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin shrink-0" />
+                  <span className="text-sm text-muted-foreground">{t("manualOrder.loadingProduct")}</span>
+                </div>
+              )}
+
+              {/* Pending product — variant selection before adding to order */}
+              {pendingProduct && (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-3">
+                  <div className="flex items-center gap-3">
+                    {pendingProduct.images?.[0] ? (
+                      <img
+                        src={getThumb(pendingProduct)}
+                        alt=""
+                        className="w-12 h-12 rounded object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded bg-muted flex items-center justify-center shrink-0">
+                        <Package className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{pendingProduct.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatPrice(pendingProduct.price)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPendingProduct(null)}
+                      className="w-7 h-7 rounded flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+                      aria-label={t("actions.cancel")}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <VariantSelector
+                    product={pendingProduct}
+                    typeCatalog={typeCatalog}
+                    selectedOptions={pendingOptions}
+                    onOptionChange={(key, val) =>
+                      setPendingOptions((prev) => ({ ...prev, [key]: val }))
+                    }
+                  />
+
+                  <div className="flex items-center gap-3 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPendingQty((q) => Math.max(1, q - 1))}
+                        disabled={pendingQty <= 1}
+                        className="w-7 h-7 rounded border border-border flex items-center justify-center hover:bg-accent transition-colors disabled:opacity-50"
+                        aria-label={t("manualOrder.decreaseQty")}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-8 text-center text-sm font-medium tabular-nums">
+                        {pendingQty}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingQty((q) => q + 1)}
+                        className="w-7 h-7 rounded border border-border flex items-center justify-center hover:bg-accent transition-colors"
+                        aria-label={t("manualOrder.increaseQty")}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <Button size="sm" className="flex-1" onClick={handleConfirmPending}>
+                      {t("manualOrder.addToOrder")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Selected items list */}
               {orderItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -509,7 +680,15 @@ export default function CreateOrderPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{item.product.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatPrice(item.product.price)}</p>
+                        {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {Object.entries(item.selectedOptions)
+                              .filter(([, v]) => v !== "" && !(Array.isArray(v) && v.length === 0))
+                              .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+                              .join(" · ")}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">{formatPrice(calcTTC(item.product.price, item.product.tva ?? 0))}</p>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <button
@@ -534,7 +713,7 @@ export default function CreateOrderPage() {
                         </button>
                       </div>
                       <p className="text-sm font-medium w-20 text-right tabular-nums">
-                        {formatPrice(item.product.price * item.quantity)}
+                        {formatPrice(calcTTC(item.product.price, item.product.tva ?? 0) * item.quantity)}
                       </p>
                       <button
                         type="button"
@@ -685,7 +864,7 @@ export default function CreateOrderPage() {
                         {item.product.name} x{item.quantity}
                       </span>
                       <span className="font-medium tabular-nums shrink-0">
-                        {formatPrice(item.product.price * item.quantity)}
+                        {formatPrice(calcTTC(item.product.price, item.product.tva ?? 0) * item.quantity)}
                       </span>
                     </div>
                   ))}
@@ -699,13 +878,48 @@ export default function CreateOrderPage() {
                   </span>
                   <span className="font-medium tabular-nums">{formatPrice(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("manualOrder.shipping")}</span>
-                  <span className="text-muted-foreground">{t("manualOrder.free")}</span>
+
+                {/* Shipping row */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{t("manualOrder.shipping")}</span>
+                    <div className="flex items-center gap-1.5">
+                      <Checkbox
+                        id="free-shipping"
+                        checked={freeShipping}
+                        onCheckedChange={(v) => {
+                          setFreeShipping(!!v);
+                          if (v) setShippingCostInput("");
+                        }}
+                      />
+                      <label htmlFor="free-shipping" className="text-xs text-muted-foreground cursor-pointer select-none">
+                        {t("manualOrder.free")}
+                      </label>
+                    </div>
+                  </div>
+                  {!freeShipping && (
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      value={shippingCostInput}
+                      onChange={(e) => setShippingCostInput(e.target.value)}
+                      placeholder="0.000"
+                      className="h-8 text-sm"
+                      aria-label={t("manualOrder.shipping")}
+                    />
+                  )}
+                  {freeShipping && (
+                    <p className="text-right text-sm text-muted-foreground tabular-nums">{t("manualOrder.free")}</p>
+                  )}
+                  {!freeShipping && shippingCostValue > 0 && (
+                    <p className="text-right text-sm tabular-nums">{formatPrice(shippingCostValue)}</p>
+                  )}
                 </div>
+
                 <div className="flex justify-between text-base font-semibold pt-1 border-t border-border">
                   <span>{t("manualOrder.total")}</span>
-                  <span className="tabular-nums">{formatPrice(subtotal)}</span>
+                  <span className="tabular-nums">{formatPrice(grandTotal)}</span>
                 </div>
               </div>
 
@@ -780,7 +994,7 @@ export default function CreateOrderPage() {
             </p>
             <p>
               <span className="text-muted-foreground">{t("manualOrder.total")}:</span>{" "}
-              <span className="font-semibold">{formatPrice(subtotal)}</span>
+              <span className="font-semibold">{formatPrice(grandTotal)}</span>
             </p>
             <p className="text-xs text-muted-foreground">
               {t("manualOrder.confirmDesc")}

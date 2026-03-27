@@ -1,6 +1,6 @@
 # frontend/CLAUDE.md
 
-Frontend coding conventions for ShopFlow's Next.js 14 application.
+Frontend coding conventions for ShopFlow's Next.js 15 application.
 
 ## Component Conventions
 - Functional components only with TypeScript props interfaces (no `any`)

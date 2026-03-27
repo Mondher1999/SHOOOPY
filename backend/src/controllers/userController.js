@@ -2,12 +2,13 @@ import path from "path";
 import fs from "fs";
 import User from "../models/userModel.js";
 import logger from "../utils/logger.js";
-import { escapeRegex } from "../utils/sanitize.js";
+import { escapeRegex, assertWithin } from "../utils/sanitize.js";
 import { AVATARS_DIR } from "../config/multer.js";
+import cache from "../utils/cache.js";
 
 const VALID_OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 const VALID_ROLES = ["customer", "admin"];
-const VALID_LANGUAGES = ["en"];
+const VALID_LANGUAGES = ["en", "fr"];
 
 // ─── Self: Get my profile ────────────────────────────────────────────────────
 export const getProfile = async (req, res) => {
@@ -43,6 +44,7 @@ export const updateProfile = async (req, res) => {
         try {
           const filename = path.basename(current.avatar);
           const oldPath = path.join(AVATARS_DIR, filename);
+          assertWithin(oldPath, AVATARS_DIR);
           if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         } catch (unlinkErr) {
           logger.warn("Could not delete old avatar:", unlinkErr.message);
@@ -99,6 +101,9 @@ export const changePassword = async (req, res) => {
     user.password = newPassword;
     await user.save();
 
+    // Invalidate cached auth lookup so new password takes effect immediately
+    cache.del(`auth:user:${req.user._id}`);
+
     res.status(200).json({ success: true, data: { message: "Password changed successfully" } });
   } catch (error) {
     logger.error("changePassword error:", error);
@@ -114,6 +119,10 @@ export const deleteAccount = async (req, res) => {
       isActive: false,
       refreshToken: null,
     });
+
+    // Invalidate cached auth lookup so deactivation takes effect immediately
+    cache.del(`auth:user:${req.user._id}`);
+
     res.status(200).json({ success: true, data: { message: "Account deleted successfully" } });
   } catch (error) {
     logger.error("deleteAccount error:", error);
@@ -139,6 +148,7 @@ export const getAllUsers = async (req, res) => {
 
     const [users, total] = await Promise.all([
       User.find(query)
+        .select("-password -refreshToken -passwordResetTokenHash -passwordResetExpiresAt -emailVerificationToken -emailVerificationExpiresAt -loginAttempts -lockUntil")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -146,10 +156,12 @@ export const getAllUsers = async (req, res) => {
       User.countDocuments(query),
     ]);
 
+    const mapped = users.map(({ _id, __v, ...rest }) => ({ ...rest, id: _id.toString() }));
+
     res.status(200).json({
       success: true,
       data: {
-        users,
+        users: mapped,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       },
     });
@@ -193,6 +205,9 @@ export const updateUserRole = async (req, res) => {
     const user = await User.findByIdAndUpdate(id, { role }, { new: true, runValidators: true });
     if (!user) return res.status(404).json({ success: false, error: "User not found" });
 
+    // Invalidate cached auth lookup so role change takes effect immediately
+    cache.del(`auth:user:${id}`);
+
     res.status(200).json({ success: true, data: user });
   } catch (error) {
     logger.error("updateUserRole error:", error);
@@ -222,6 +237,9 @@ export const banUser = async (req, res) => {
     if (willBan) updateFields.refreshToken = null;
 
     const user = await User.findByIdAndUpdate(id, updateFields, { new: true });
+
+    // Invalidate cached auth lookup so ban/unban takes effect immediately
+    cache.del(`auth:user:${id}`);
 
     res.status(200).json({ success: true, data: user });
   } catch (error) {

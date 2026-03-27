@@ -1,4 +1,7 @@
 {
+  "showcaseTitle": "Showcase Mode",
+  "showcaseMessage": "This store is currently in showcase mode. Checkout is temporarily unavailable.",
+  "browseProducts": "Browse products",
   "checkout": {
     "title": "Checkout",
     "stepsLabel": "Checkout steps",
@@ -10,7 +13,14 @@
     "continue": "Continue",
     "back": "Back",
     "errorPlacing": "Failed to place order. Please try again.",
-    "errorOutOfStock": "Some items are out of stock: {{names}}. Please update your cart."
+    "errorOutOfStock": "Some items are out of stock: {{names}}. Please update your cart.",
+    "guestNameLabel": "Full name",
+    "guestNamePlaceholder": "Your full name",
+    "guestPhoneLabel": "Phone number",
+    "guestPhonePlaceholder": "Your phone number",
+    "guestAddressLabel": "Delivery address",
+    "guestAddressPlaceholder": "Your delivery address",
+    "guestItemLabel": "Product #{{id}}"
   },
   "addressSelector": {
     "title": "Select delivery address",
@@ -48,9 +58,15 @@
     "productImageAlt": "{{name}} product image",
     "qty": "Qty: {{count}}",
     "subtotal": "Subtotal",
+    "tvaTotal": "Incl. VAT",
     "shipping": "Shipping",
     "freeShipping": "Free",
-    "total": "Total"
+    "total": "Total",
+    "discount": "Discount",
+    "couponPlaceholder": "Coupon code",
+    "applyCoupon": "Apply",
+    "removeCoupon": "Remove",
+    "couponInvalid": "Invalid or expired coupon code"
   },
   "cod": {
     "methodTitle": "Cash on Delivery",

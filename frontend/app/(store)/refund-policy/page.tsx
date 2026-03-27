@@ -1,28 +1,12 @@
-"use client";
+import type { Metadata } from "next";
+import RefundPolicyClient from "./RefundPolicyClient";
 
-import { useTranslation } from "react-i18next";
-import { useSettings } from "@/contexts/SettingsContext";
-import { Skeleton } from "@/components/ui/skeleton";
+export const metadata: Metadata = {
+  title: "Refund Policy",
+  description: "Learn about our return and refund policies, including eligibility and process.",
+  alternates: { canonical: "/refund-policy" },
+};
 
 export default function RefundPolicyPage() {
-  const { t } = useTranslation("common");
-  const { settings, isLoading } = useSettings();
-  const content = settings?.legal?.returnPolicy || "";
-
-  return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-3xl font-bold mb-8">{t("legal.returnPolicy")}</h1>
-      {isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-4 w-4/6" />
-        </div>
-      ) : content ? (
-        <div className="prose prose-gray max-w-none whitespace-pre-wrap">{content}</div>
-      ) : (
-        <p className="text-muted-foreground">{t("legal.noContent")}</p>
-      )}
-    </div>
-  );
+  return <RefundPolicyClient />;
 }

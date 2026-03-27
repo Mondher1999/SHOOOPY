@@ -201,15 +201,15 @@ export default function ZenProductDetailView({
                   <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     {Object.entries(product.attributes).map(([key, val]) => (
                       <Fragment key={key}>
-                        <dt className="text-gray-500 font-light">{key}</dt>
+                        <dt className="text-gray-500 font-light">{t(`typeAttrs.${key}`, { defaultValue: key })}</dt>
                         <dd className="text-[#111]">
                           {Array.isArray(val)
-                            ? val.join(", ")
+                            ? val.map((v) => t(`typeAttrOptions.${v}`, { defaultValue: v })).join(", ")
                             : typeof val === "boolean"
                               ? val
                                 ? t("catalog.booleanYes")
                                 : t("catalog.booleanNo")
-                              : String(val)}
+                              : t(`typeAttrOptions.${String(val)}`, { defaultValue: String(val) })}
                         </dd>
                       </Fragment>
                     ))}

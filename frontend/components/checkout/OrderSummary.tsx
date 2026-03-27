@@ -8,7 +8,9 @@ import { useCart } from "@/contexts/CartContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useActiveTheme } from "@/hooks/useActiveTheme";
+import { calcTTC, calcTotalTVA } from "@/lib/tva";
 import { cn } from "@/lib/utils";
+import { cartItemKey } from "@/lib/cartUtils";
 import type { CartItem } from "@/types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
@@ -30,7 +32,7 @@ function OrderLineItem({ item }: { item: CartItem }) {
             fill
             className="object-cover"
             sizes="56px"
-            unoptimized
+
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center">
@@ -47,7 +49,7 @@ function OrderLineItem({ item }: { item: CartItem }) {
       </div>
 
       <span className={cn("text-sm font-semibold flex-shrink-0", theme.text)}>
-        {formatPrice(item.price * item.quantity)}
+        {formatPrice(calcTTC(item.price, item.tva ?? 0) * item.quantity)}
       </span>
     </li>
   );
@@ -59,10 +61,14 @@ export function OrderSummary() {
   const { settings } = useSettings();
   const formatPrice = useFormatPrice();
   const theme = useActiveTheme();
-  const shippingCost = settings?.orders?.defaultShippingCost ?? 0;
   const items = cart?.items ?? [];
   const subtotal = cart?.totalPrice ?? 0;
+  let shippingCost = settings?.orders?.defaultShippingCost ?? 0;
+  const freeThreshold = settings?.orders?.freeShippingThreshold ?? 0;
+  if (freeThreshold > 0 && subtotal >= freeThreshold) shippingCost = 0;
   const total = subtotal + shippingCost;
+  const totalTVA = calcTotalTVA(items.map((i) => ({ price: i.price, tva: i.tva ?? 0, quantity: i.quantity })));
+  const hasTVA = totalTVA > 0;
 
   return (
     <Card className={cn("border", theme.surface, theme.border)}>
@@ -73,7 +79,7 @@ export function OrderSummary() {
         {/* Items list */}
         <ul aria-label={t("orderSummary.itemsLabel")} className="divide-y">
           {items.map((item) => (
-            <OrderLineItem key={item.product.id} item={item} />
+            <OrderLineItem key={cartItemKey(item)} item={item} />
           ))}
         </ul>
 
@@ -85,6 +91,12 @@ export function OrderSummary() {
             <span className={theme.textMuted}>{t("orderSummary.subtotal")}</span>
             <span className={theme.text}>{formatPrice(subtotal)}</span>
           </div>
+          {hasTVA && (
+            <div className="flex justify-between text-xs">
+              <span className={theme.textMuted}>{t("orderSummary.tvaTotal")}</span>
+              <span className={theme.textMuted}>{formatPrice(totalTVA)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className={theme.textMuted}>{t("orderSummary.shipping")}</span>
             <span className="text-green-600 font-medium">

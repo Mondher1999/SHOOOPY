@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Menu, X, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { CartIcon } from "@/components/cart/CartIcon";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { useAuth } from "@/contexts/AuthContext";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
+
 import { StoreLogo } from "@/components/layout/StoreLogo";
+import { NavDropdown } from "@/components/layout/NavDropdown";
 import { cn } from "@/lib/utils";
 import { useNavigation } from "@/hooks/useNavigation";
 
@@ -20,6 +21,16 @@ export function Header() {
   const { user } = useAuth();
   const navItems = useNavigation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on Escape key
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileMenuOpen]);
 
   return (
     <>
@@ -38,24 +49,21 @@ export function Header() {
             <nav className="hidden md:flex items-center gap-1 ml-2" aria-label={t("nav.mainNav")} suppressHydrationWarning>
               {navItems.map((item) =>
                 item.children.length > 0 ? (
-                  <div key={item.id} className="relative group">
-                    <button className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted flex items-center gap-1 cursor-pointer">
+                  <NavDropdown
+                    key={item.id}
+                    buttonContent={<>{item.label} <ChevronDown className="w-3 h-3" /></>}
+                    buttonClassName="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted flex items-center gap-1 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    menuClassName="bg-background border border-border shadow-md rounded-md py-2 min-w-[180px]"
+                  >
+                    <Link href={item.href} className="block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:bg-muted" role="menuitem" tabIndex={-1} {...(item.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
                       {item.label}
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                    <div className="absolute left-0 top-full pt-1 hidden group-hover:block z-50">
-                      <div className="bg-background border border-border shadow-md rounded-md py-2 min-w-[180px]">
-                        <Link href={item.href} className="block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors" {...(item.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
-                          {item.label}
-                        </Link>
-                        {item.children.map((child) => (
-                          <Link key={child.id} href={child.href} className="block px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" {...(child.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
-                            {child.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                    </Link>
+                    {item.children.map((child) => (
+                      <Link key={child.id} href={child.href} className="block px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:bg-muted" role="menuitem" tabIndex={-1} {...(child.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                        {child.label}
+                      </Link>
+                    ))}
+                  </NavDropdown>
                 ) : (
                   <Link
                     key={item.id}
@@ -79,9 +87,6 @@ export function Header() {
             <div className="flex items-center gap-2 ml-auto">
               {/* Language switcher */}
               <LanguageSwitcher />
-
-              {/* Dark mode toggle */}
-              <ThemeToggle />
 
               {/* Cart icon — opens drawer */}
               <CartIcon />

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useSettings } from "@/contexts/SettingsContext";
-// Dynamic template components
+// Dynamic (editable) template components — always loaded (shared section library)
 import { HeroSlideshow } from "./HeroSlideshow";
 import { ValuePropositions } from "./ValuePropositions";
 import { CollectionGrid } from "./CollectionGrid";
@@ -16,127 +16,153 @@ import { TrustBar } from "./TrustBar";
 import { Newsletter } from "./Newsletter";
 import { PartnersBar } from "./PartnersBar";
 import { RecentlyViewed } from "./RecentlyViewed";
-// Classic template components
-import {
-  HCHero,
-  HCTrustBadges,
-  HCSEOHeadline,
-  HCTrendingCategories,
-  HCTopSelling,
-  HCPromoBanner,
-  HCNewArrivals,
-  HCWelcome,
-  HCAboutUs,
-  HCBrand,
-  HCGallery,
-  HCPartnersBar,
-} from "./HardcodedHomepage";
-// Bold template components
-import {
-  BDHero,
-  BDCategories,
-  BDFeaturedProducts,
-  BDPromoBanner,
-  BDNewArrivals,
-  BDSocialProof,
-  BDNewsletter,
-} from "./BoldHomepage";
-// Elegant template components
-import {
-  ELHero,
-  ELCollections,
-  ELFeaturedProducts,
-  ELPromoBanner,
-  ELNewArrivals,
-  ELBrandStory,
-  ELNewsletter,
-} from "./ElegantHomepage";
-// Minimal template components
-import {
-  MNHero,
-  MNFeaturedProducts,
-  MNNewArrivals,
-  MNCategories,
-  MNNewsletter,
-} from "./MinimalHomepage";
-// Playful template components
-import {
-  PLHero,
-  PLCategories,
-  PLFeaturedProducts,
-  PLPromoBanner,
-  PLNewArrivals,
-  PLTestimonials,
-  PLNewsletter,
-} from "./PlayfulHomepage";
-// Tech template components
-import {
-  TKHero,
-  TKCategories,
-  TKFeaturedProducts,
-  TKPromoBanner,
-  TKNewArrivals,
-  TKSocialProof,
-  TKNewsletter,
-} from "./TechHomepage";
-// Artisan template components
-import {
-  ARHero,
-  ARCategories,
-  ARFeaturedProducts,
-  ARPromoBanner,
-  ARNewArrivals,
-  ARCraftStory,
-  ARNewsletter,
-} from "./ArtisanHomepage";
-// Magazine template components
-import {
-  MGHero,
-  MGCategories,
-  MGFeaturedProducts,
-  MGPromoBanner,
-  MGNewArrivals,
-  MGEditorial,
-  MGNewsletter,
-} from "./MagazineHomepage";
-// Noir (single-product premium) template components
-import {
-  NRCinematicHero,
-  NRBrandStatement,
-  NRProductGallery,
-  NRBenefitsTriptych,
-  NRStorySection,
-  NRTestimonials,
-  NRProductDetails,
-  NRPurchaseSection,
-  NRTrustFooter,
-} from "./NoirHomepage";
-// Surge (single-product high-energy) template components
-import {
-  SGAnnouncementBar,
-  SGHeroWithCta,
-  SGSocialProofBar,
-  SGProblemSolution,
-  SGVideoDemo,
-  SGBenefitsCarousel,
-  SGComparison,
-  SGTestimonialsGrid,
-  SGMidPageCta,
-  SGHowItWorks,
-  SGFaqSection,
-  SGFinalCta,
-  SGGuaranteeBadge,
-} from "./SurgeHomepage";
 import { LandingProductProvider } from "@/hooks/useLandingProduct";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { HomepageSectionKey, ThemeConfig } from "@/types";
+
+type ComponentMap = Partial<Record<HomepageSectionKey, React.ComponentType>>;
+
+/* ─── Lazy theme loaders ─────────────────────────────────────────────── */
+/* Each returns a Promise<ComponentMap> — only the active theme is loaded */
+
+const THEME_LOADERS: Record<string, () => Promise<ComponentMap>> = {
+  classic: () =>
+    import("./HardcodedHomepage").then((m) => ({
+      hero: m.HCHero,
+      trustBadges: m.HCTrustBadges,
+      trendingCategories: m.HCTrendingCategories,
+      topSelling: m.HCTopSelling,
+      promoBanner: m.HCPromoBanner,
+      newArrivals: m.HCNewArrivals,
+      welcome: m.HCWelcome,
+      aboutUs: m.HCAboutUs,
+      brand: m.HCBrand,
+      gallery: m.HCGallery,
+      seoHeadline: m.HCSEOHeadline,
+      partners: m.HCPartnersBar,
+    })),
+  bold: () =>
+    import("./BoldHomepage").then((m) => ({
+      hero: m.BDHero,
+      categories: m.BDCategories,
+      featuredProducts: m.BDFeaturedProducts,
+      promoBanner: m.BDPromoBanner,
+      newArrivals: m.BDNewArrivals,
+      socialProof: m.BDSocialProof,
+      newsletter: m.BDNewsletter,
+    })),
+  elegant: () =>
+    import("./ElegantHomepage").then((m) => ({
+      hero: m.ELHero,
+      collections: m.ELCollections,
+      featuredProducts: m.ELFeaturedProducts,
+      promoBanner: m.ELPromoBanner,
+      newArrivals: m.ELNewArrivals,
+      brandStory: m.ELBrandStory,
+      newsletter: m.ELNewsletter,
+    })),
+  minimal: () =>
+    import("./MinimalHomepage").then((m) => ({
+      hero: m.MNHero,
+      featuredProducts: m.MNFeaturedProducts,
+      newArrivals: m.MNNewArrivals,
+      categories: m.MNCategories,
+      newsletter: m.MNNewsletter,
+    })),
+  playful: () =>
+    import("./PlayfulHomepage").then((m) => ({
+      hero: m.PLHero,
+      categories: m.PLCategories,
+      featuredProducts: m.PLFeaturedProducts,
+      promoBanner: m.PLPromoBanner,
+      newArrivals: m.PLNewArrivals,
+      testimonials: m.PLTestimonials,
+      newsletter: m.PLNewsletter,
+    })),
+  tech: () =>
+    import("./TechHomepage").then((m) => ({
+      hero: m.TKHero,
+      categories: m.TKCategories,
+      featuredProducts: m.TKFeaturedProducts,
+      promoBanner: m.TKPromoBanner,
+      newArrivals: m.TKNewArrivals,
+      socialProof: m.TKSocialProof,
+      newsletter: m.TKNewsletter,
+    })),
+  artisan: () =>
+    import("./ArtisanHomepage").then((m) => ({
+      hero: m.ARHero,
+      categories: m.ARCategories,
+      featuredProducts: m.ARFeaturedProducts,
+      promoBanner: m.ARPromoBanner,
+      newArrivals: m.ARNewArrivals,
+      craftStory: m.ARCraftStory,
+      newsletter: m.ARNewsletter,
+    })),
+  magazine: () =>
+    import("./MagazineHomepage").then((m) => ({
+      hero: m.MGHero,
+      categories: m.MGCategories,
+      featuredProducts: m.MGFeaturedProducts,
+      promoBanner: m.MGPromoBanner,
+      newArrivals: m.MGNewArrivals,
+      editorial: m.MGEditorial,
+      newsletter: m.MGNewsletter,
+    })),
+  noir: () =>
+    import("./NoirHomepage").then((m) => ({
+      noirCinematicHero: m.NRCinematicHero,
+      noirBrandStatement: m.NRBrandStatement,
+      noirProductGallery: m.NRProductGallery,
+      noirBenefitsTriptych: m.NRBenefitsTriptych,
+      noirStorySection: m.NRStorySection,
+      noirTestimonials: m.NRTestimonials,
+      noirProductDetails: m.NRProductDetails,
+      noirPurchaseSection: m.NRPurchaseSection,
+      noirTrustFooter: m.NRTrustFooter,
+    })),
+  surge: () =>
+    import("./SurgeHomepage").then((m) => ({
+      surgeAnnouncementBar: m.SGAnnouncementBar,
+      surgeHeroWithCta: m.SGHeroWithCta,
+      surgeSocialProofBar: m.SGSocialProofBar,
+      surgeProblemSolution: m.SGProblemSolution,
+      surgeVideoDemo: m.SGVideoDemo,
+      surgeBenefitsCarousel: m.SGBenefitsCarousel,
+      surgeComparison: m.SGComparison,
+      surgeTestimonialsGrid: m.SGTestimonialsGrid,
+      surgeMidPageCta: m.SGMidPageCta,
+      surgeHowItWorks: m.SGHowItWorks,
+      surgeFaqSection: m.SGFaqSection,
+      surgeFinalCta: m.SGFinalCta,
+      surgeGuaranteeBadge: m.SGGuaranteeBadge,
+    })),
+};
+
+/* ─── Dynamic template components (always available) ─────────────────── */
+const DYNAMIC_COMPONENTS: ComponentMap = {
+  hero: HeroSlideshow,
+  valuePropositions: ValuePropositions,
+  collections: CollectionGrid,
+  featuredProducts: FeaturedProducts,
+  promoBanner: ParallaxBanner,
+  newArrivals: NewArrivals,
+  testimonials: Testimonials,
+  brandStory: ImageWithText,
+  instagram: InstagramFeed,
+  trustBar: TrustBar,
+  newsletter: Newsletter,
+  partners: PartnersBar,
+  recentlyViewed: RecentlyViewed,
+};
 
 /* ─── Theme Registry ──────────────────────────────────────────────────── */
 /*
  * To add a new hardcoded theme:
  * 1. Code your sections in a new file (e.g., MinimalHomepage.tsx)
  * 2. Export each section component
- * 3. Import them here
- * 4. Add an entry to THEMES below
+ * 3. Add a loader in THEME_LOADERS above
+ * 4. Add an entry to THEMES below (components: {} — loaded lazily)
  * 5. The admin gallery will automatically show the new theme
  */
 
@@ -153,20 +179,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "brand", "partners", "seoHeadline", "gallery",
     ],
     defaultHidden: ["seoHeadline", "gallery"],
-    components: {
-      hero: HCHero,
-      trustBadges: HCTrustBadges,
-      trendingCategories: HCTrendingCategories,
-      topSelling: HCTopSelling,
-      promoBanner: HCPromoBanner,
-      newArrivals: HCNewArrivals,
-      welcome: HCWelcome,
-      aboutUs: HCAboutUs,
-      brand: HCBrand,
-      gallery: HCGallery,
-      seoHeadline: HCSEOHeadline,
-      partners: HCPartnersBar,
-    },
+    components: {},
   },
   bold: {
     label: "templateBold",
@@ -178,15 +191,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "hero", "categories", "featuredProducts", "promoBanner",
       "newArrivals", "socialProof", "newsletter",
     ],
-    components: {
-      hero: BDHero,
-      categories: BDCategories,
-      featuredProducts: BDFeaturedProducts,
-      promoBanner: BDPromoBanner,
-      newArrivals: BDNewArrivals,
-      socialProof: BDSocialProof,
-      newsletter: BDNewsletter,
-    },
+    components: {},
   },
   elegant: {
     label: "templateElegant",
@@ -198,15 +203,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "hero", "collections", "featuredProducts", "promoBanner",
       "newArrivals", "brandStory", "newsletter",
     ],
-    components: {
-      hero: ELHero,
-      collections: ELCollections,
-      featuredProducts: ELFeaturedProducts,
-      promoBanner: ELPromoBanner,
-      newArrivals: ELNewArrivals,
-      brandStory: ELBrandStory,
-      newsletter: ELNewsletter,
-    },
+    components: {},
   },
   minimal: {
     label: "templateMinimal",
@@ -217,13 +214,7 @@ const THEMES: Record<string, ThemeConfig> = {
     defaultOrder: [
       "hero", "featuredProducts", "newArrivals", "categories", "newsletter",
     ],
-    components: {
-      hero: MNHero,
-      featuredProducts: MNFeaturedProducts,
-      newArrivals: MNNewArrivals,
-      categories: MNCategories,
-      newsletter: MNNewsletter,
-    },
+    components: {},
   },
   playful: {
     label: "templatePlayful",
@@ -235,15 +226,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "hero", "categories", "featuredProducts", "promoBanner",
       "newArrivals", "testimonials", "newsletter",
     ],
-    components: {
-      hero: PLHero,
-      categories: PLCategories,
-      featuredProducts: PLFeaturedProducts,
-      promoBanner: PLPromoBanner,
-      newArrivals: PLNewArrivals,
-      testimonials: PLTestimonials,
-      newsletter: PLNewsletter,
-    },
+    components: {},
   },
   tech: {
     label: "templateTech",
@@ -255,15 +238,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "hero", "categories", "featuredProducts", "promoBanner",
       "newArrivals", "socialProof", "newsletter",
     ],
-    components: {
-      hero: TKHero,
-      categories: TKCategories,
-      featuredProducts: TKFeaturedProducts,
-      promoBanner: TKPromoBanner,
-      newArrivals: TKNewArrivals,
-      socialProof: TKSocialProof,
-      newsletter: TKNewsletter,
-    },
+    components: {},
   },
   artisan: {
     label: "templateArtisan",
@@ -275,15 +250,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "hero", "categories", "featuredProducts", "promoBanner",
       "newArrivals", "craftStory", "newsletter",
     ],
-    components: {
-      hero: ARHero,
-      categories: ARCategories,
-      featuredProducts: ARFeaturedProducts,
-      promoBanner: ARPromoBanner,
-      newArrivals: ARNewArrivals,
-      craftStory: ARCraftStory,
-      newsletter: ARNewsletter,
-    },
+    components: {},
   },
   magazine: {
     label: "templateMagazine",
@@ -295,15 +262,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "hero", "categories", "featuredProducts", "promoBanner",
       "newArrivals", "editorial", "newsletter",
     ],
-    components: {
-      hero: MGHero,
-      categories: MGCategories,
-      featuredProducts: MGFeaturedProducts,
-      promoBanner: MGPromoBanner,
-      newArrivals: MGNewArrivals,
-      editorial: MGEditorial,
-      newsletter: MGNewsletter,
-    },
+    components: {},
   },
   noir: {
     label: "templateNoir",
@@ -316,17 +275,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "noirBenefitsTriptych", "noirStorySection", "noirTestimonials",
       "noirProductDetails", "noirPurchaseSection", "noirTrustFooter",
     ] as HomepageSectionKey[],
-    components: {
-      noirCinematicHero: NRCinematicHero,
-      noirBrandStatement: NRBrandStatement,
-      noirProductGallery: NRProductGallery,
-      noirBenefitsTriptych: NRBenefitsTriptych,
-      noirStorySection: NRStorySection,
-      noirTestimonials: NRTestimonials,
-      noirProductDetails: NRProductDetails,
-      noirPurchaseSection: NRPurchaseSection,
-      noirTrustFooter: NRTrustFooter,
-    },
+    components: {},
   },
   surge: {
     label: "templateSurge",
@@ -341,21 +290,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "surgeHowItWorks", "surgeFaqSection", "surgeFinalCta",
       "surgeGuaranteeBadge",
     ] as HomepageSectionKey[],
-    components: {
-      surgeAnnouncementBar: SGAnnouncementBar,
-      surgeHeroWithCta: SGHeroWithCta,
-      surgeSocialProofBar: SGSocialProofBar,
-      surgeProblemSolution: SGProblemSolution,
-      surgeVideoDemo: SGVideoDemo,
-      surgeBenefitsCarousel: SGBenefitsCarousel,
-      surgeComparison: SGComparison,
-      surgeTestimonialsGrid: SGTestimonialsGrid,
-      surgeMidPageCta: SGMidPageCta,
-      surgeHowItWorks: SGHowItWorks,
-      surgeFaqSection: SGFaqSection,
-      surgeFinalCta: SGFinalCta,
-      surgeGuaranteeBadge: SGGuaranteeBadge,
-    },
+    components: {},
   },
   dynamic: {
     label: "templateDynamic",
@@ -368,21 +303,7 @@ const THEMES: Record<string, ThemeConfig> = {
       "promoBanner", "newArrivals", "testimonials", "brandStory",
       "instagram", "trustBar", "newsletter", "partners", "recentlyViewed",
     ],
-    components: {
-      hero: HeroSlideshow,
-      valuePropositions: ValuePropositions,
-      collections: CollectionGrid,
-      featuredProducts: FeaturedProducts,
-      promoBanner: ParallaxBanner,
-      newArrivals: NewArrivals,
-      testimonials: Testimonials,
-      brandStory: ImageWithText,
-      instagram: InstagramFeed,
-      trustBar: TrustBar,
-      newsletter: Newsletter,
-      partners: PartnersBar,
-      recentlyViewed: RecentlyViewed,
-    },
+    components: DYNAMIC_COMPONENTS,
   },
 };
 
@@ -410,6 +331,21 @@ function resolveTemplate(hp: { template?: string; mode?: string } | undefined): 
   return "classic";
 }
 
+/* ─── Loading skeleton ─────────────────────────────────────────────────── */
+function HomepageSkeleton() {
+  return (
+    <div className="space-y-8 p-4">
+      <Skeleton className="h-[400px] w-full rounded-lg" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-48 w-full rounded-lg" />
+        ))}
+      </div>
+      <Skeleton className="h-64 w-full rounded-lg" />
+    </div>
+  );
+}
+
 /* ─── Main Component ───────────────────────────────────────────────────── */
 
 export function HomepageSections() {
@@ -418,6 +354,26 @@ export function HomepageSections() {
 
   const themeId = resolveTemplate(hp);
   const themeConfig = getTheme(themeId);
+
+  // Lazy-load theme components (only for non-dynamic themes)
+  const [loadedComponents, setLoadedComponents] = useState<ComponentMap | null>(
+    themeId === "dynamic" ? DYNAMIC_COMPONENTS : null
+  );
+
+  useEffect(() => {
+    if (themeId === "dynamic") {
+      setLoadedComponents(DYNAMIC_COMPONENTS);
+      return;
+    }
+    const loader = THEME_LOADERS[themeId];
+    if (!loader) return;
+
+    let cancelled = false;
+    loader().then((comps) => {
+      if (!cancelled) setLoadedComponents(comps);
+    });
+    return () => { cancelled = true; };
+  }, [themeId]);
 
   const order = useMemo(() => {
     const stored = hp?.sectionOrder;
@@ -436,6 +392,9 @@ export function HomepageSections() {
 
   const sections: Partial<Record<HomepageSectionKey, boolean>> = hp?.sections ?? {};
 
+  // Show skeleton while theme components are loading
+  if (!loadedComponents) return <HomepageSkeleton />;
+
   const isLandingTemplate = themeId === "noir" || themeId === "surge";
 
   const content = (
@@ -444,7 +403,7 @@ export function HomepageSections() {
         const isVisible = sections[key] !== false;
         if (!isVisible) return null;
 
-        const Component = themeConfig.components[key];
+        const Component = loadedComponents[key];
         if (!Component) return null;
 
         return <Component key={key} />;

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useShowcase } from "@/hooks/useShowcase";
+import { useFormatPrice } from "@/hooks/useFormatPrice";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { fetchAPI } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,10 +31,6 @@ const AR = {
 const ARPX = "px-6 md:px-16 lg:px-24";
 
 /* ──────────────────────────── HELPERS ──────────────────────────── */
-
-function formatPrice(price: number): string {
-  return `${price.toLocaleString()} DT`;
-}
 
 function getProductImage(product: Product, size: "thumbnail" | "medium" | "large" | "original" = "medium"): string {
   const img = product.images?.[0];
@@ -252,6 +249,7 @@ export function ARFeaturedProducts() {
   const { t } = useTranslation("common");
   const sectionRef = useScrollReveal<HTMLElement>();
   const isShowcase = useShowcase();
+  const formatPrice = useFormatPrice();
   const { addItem } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -436,6 +434,7 @@ export function ARNewArrivals() {
   const { t } = useTranslation("common");
   const sectionRef = useScrollReveal<HTMLElement>();
   const isShowcase = useShowcase();
+  const formatPrice = useFormatPrice();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Search, User, Heart, ShoppingBag, Menu, X, ChevronDown } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
@@ -9,9 +9,10 @@ import { SearchBar } from "@/components/layout/SearchBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
+
 import { useShowcase } from "@/hooks/useShowcase";
 import { StoreLogo } from "@/components/layout/StoreLogo";
+import { NavDropdown } from "@/components/layout/NavDropdown";
 import { useNavigation } from "@/hooks/useNavigation";
 
 export function PlayfulHeader() {
@@ -23,6 +24,16 @@ export function PlayfulHeader() {
   const navItems = useNavigation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Close mobile menu on Escape
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [mobileOpen]);
 
   return (
     <>
@@ -37,7 +48,7 @@ export function PlayfulHeader() {
             {/* LEFT -- logo */}
             <Link
               href="/"
-              className="text-[18px] font-semibold tracking-[0.1em] uppercase whitespace-nowrap text-[#7C3AED] hover:text-[#6D28D9] transition-colors duration-200 focus:outline-none mr-10"
+              className="text-[18px] font-semibold tracking-[0.1em] uppercase whitespace-nowrap text-[#7C3AED] hover:text-[#6D28D9] transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded mr-10"
             >
               <StoreLogo imgHeight="h-8" />
             </Link>
@@ -49,33 +60,21 @@ export function PlayfulHeader() {
             >
               {navItems.map((item) =>
                 item.children.length > 0 ? (
-                  <div key={item.id} className="relative group">
-                    <button className="text-[11px] font-medium tracking-[0.12em] uppercase whitespace-nowrap text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 flex items-center gap-1 cursor-pointer">
+                  <NavDropdown
+                    key={item.id}
+                    buttonContent={<>{item.label} <ChevronDown className="w-3 h-3" /></>}
+                    buttonClassName="text-[11px] font-medium tracking-[0.12em] uppercase whitespace-nowrap text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 flex items-center gap-1 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                    menuClassName="bg-white border border-purple-100 shadow-md rounded-lg py-2 min-w-[180px]"
+                  >
+                    <Link href={item.href} className="block px-4 py-2 text-sm text-[#1c1c1c] hover:bg-purple-50 transition-colors focus:outline-none focus-visible:bg-purple-50" role="menuitem" tabIndex={-1} {...(item.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
                       {item.label}
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                    <div className="absolute left-0 top-full pt-1 hidden group-hover:block z-50">
-                      <div className="bg-white border border-purple-100 shadow-md rounded-lg py-2 min-w-[180px]">
-                        <Link
-                          href={item.href}
-                          className="block px-4 py-2 text-sm text-[#1c1c1c] hover:bg-purple-50 transition-colors"
-                          {...(item.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                        >
-                          {item.label}
-                        </Link>
-                        {item.children.map((child) => (
-                          <Link
-                            key={child.id}
-                            href={child.href}
-                            className="block px-4 py-2 text-sm text-[#1c1c1c] hover:bg-purple-50 transition-colors"
-                            {...(child.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                    </Link>
+                    {item.children.map((child) => (
+                      <Link key={child.id} href={child.href} className="block px-4 py-2 text-sm text-[#1c1c1c] hover:bg-purple-50 transition-colors focus:outline-none focus-visible:bg-purple-50" role="menuitem" tabIndex={-1} {...(child.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                        {child.label}
+                      </Link>
+                    ))}
+                  </NavDropdown>
                 ) : (
                   <Link
                     key={item.id}
@@ -92,11 +91,10 @@ export function PlayfulHeader() {
             {/* RIGHT -- icons */}
             <div className="flex items-center gap-5 ml-auto">
               <LanguageSwitcher />
-              <ThemeToggle />
 
               <button
                 onClick={() => setSearchOpen((v) => !v)}
-                className="text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 cursor-pointer focus:outline-none"
+                className="text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
                 aria-label={t("search.ariaLabel")}
               >
                 {searchOpen
@@ -107,7 +105,7 @@ export function PlayfulHeader() {
 
               <Link
                 href="/wishlist"
-                className="relative text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 cursor-pointer focus:outline-none"
+                className="relative text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
                 aria-label={t("nav.wishlist")}
               >
                 <Heart className="w-[18px] h-[18px]" strokeWidth={1.5} />
@@ -121,7 +119,7 @@ export function PlayfulHeader() {
               {!isShowcase && (
                 <button
                   onClick={openDrawer}
-                  className="relative text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 cursor-pointer focus:outline-none"
+                  className="relative text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
                   aria-label={t("nav.cart")}
                 >
                   <ShoppingBag className="w-[18px] h-[18px]" strokeWidth={1.5} />
@@ -136,7 +134,7 @@ export function PlayfulHeader() {
               {user ? (
                 <Link
                   href="/dashboard/profile"
-                  className="text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 cursor-pointer focus:outline-none"
+                  className="text-[#4B4869] hover:text-[#7C3AED] transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
                   aria-label={t("nav.account")}
                 >
                   <User className="w-[18px] h-[18px]" strokeWidth={1.5} />
@@ -151,7 +149,7 @@ export function PlayfulHeader() {
               )}
 
               <button
-                className="lg:hidden text-[#4B4869] hover:text-[#7C3AED] transition-colors cursor-pointer focus:outline-none ml-1"
+                className="lg:hidden text-[#4B4869] hover:text-[#7C3AED] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded ml-1"
                 onClick={() => setMobileOpen((v) => !v)}
                 aria-expanded={mobileOpen}
                 aria-label={mobileOpen ? t("nav.closeMenu") : t("nav.openMenu")}

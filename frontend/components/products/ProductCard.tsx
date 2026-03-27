@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import React, { useState, useCallback, memo } from "react";
 import { ShoppingCart, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { WishlistButton } from "@/components/products/WishlistButton";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { useFormatPrice } from "@/hooks/useFormatPrice";
+import { calcTTC } from "@/lib/tva";
 import logger from "@/lib/logger";
 import type { Product } from "@/types";
 
@@ -68,7 +69,7 @@ export function ProductCardSkeleton({ view = "grid" }: { view?: "grid" | "list" 
   );
 }
 
-export function ProductCard({ product, view = "grid", className }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, view = "grid", className }: ProductCardProps) {
   const { t } = useTranslation("products");
   const { t: tCart } = useTranslation("cart");
   const { addItem, openDrawer } = useCart();
@@ -77,10 +78,12 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
   const [adding, setAdding] = useState(false);
 
   const inStock = product.stock > 0;
-  const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
+  const displayPrice = calcTTC(product.price, product.tva ?? 0);
+  const displayCompareAt = product.compareAtPrice ? calcTTC(product.compareAtPrice, product.tva ?? 0) : null;
+  const hasDiscount = displayCompareAt && displayCompareAt > displayPrice;
   const primaryImage = product.images[0] ?? null;
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = useCallback(async () => {
     setAdding(true);
     try {
       await addItem(product.id, 1);
@@ -97,7 +100,7 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
     } finally {
       setAdding(false);
     }
-  };
+  }, [addItem, product.id, product.name, openDrawer, toast, tCart]);
 
   if (view === "list") {
     return (
@@ -118,7 +121,6 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
                     fill
                     className="object-cover"
                     sizes="96px"
-                    unoptimized
                   />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
@@ -142,10 +144,10 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
               )}
               <StarRating average={product.ratings.average} count={product.ratings.count} />
               <div className="flex items-center gap-2 mt-1">
-                <span className="font-semibold text-sm">{formatPrice(product.price)}</span>
+                <span className="font-semibold text-sm">{formatPrice(displayPrice)}</span>
                 {hasDiscount && (
                   <span className="text-xs text-muted-foreground line-through">
-                    {formatPrice(product.compareAtPrice!)}
+                    {formatPrice(displayCompareAt!)}
                   </span>
                 )}
                 <Badge variant={inStock ? "default" : "secondary"} className="text-xs py-0">
@@ -189,7 +191,6 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              unoptimized
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
@@ -217,10 +218,10 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
         <StarRating average={product.ratings.average} count={product.ratings.count} />
 
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="font-semibold">{formatPrice(product.price)}</span>
+          <span className="font-semibold">{formatPrice(displayPrice)}</span>
           {hasDiscount && (
             <span className="text-xs text-muted-foreground line-through">
-              {formatPrice(product.compareAtPrice!)}
+              {formatPrice(displayCompareAt!)}
             </span>
           )}
         </div>
@@ -244,4 +245,4 @@ export function ProductCard({ product, view = "grid", className }: ProductCardPr
       </CardContent>
     </Card>
   );
-}
+});

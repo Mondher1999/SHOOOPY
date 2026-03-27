@@ -7,7 +7,10 @@ const orderItemSchema = new Schema(
     product:  { type: Schema.Types.ObjectId, ref: "Product", required: true },
     name:     { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
+    // HT price snapshot at order time
     price:    { type: Number, required: true, min: 0 },
+    // TVA rate snapshot (%) — preserved for invoice/breakdown display
+    tva:      { type: Number, default: 0, min: 0, max: 100 },
     // First image URL (thumbnail) captured at order time
     image:    { type: String, default: "" },
     // Snapshot of selected variant options at order time (e.g., { color: "Blue", size: "M" })
@@ -43,7 +46,9 @@ const statusHistorySchema = new Schema(
 
 const orderSchema = new Schema(
   {
-    user:            { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user:            { type: Schema.Types.ObjectId, ref: "User", default: null },
+    isGuest:         { type: Boolean, default: false },
+    guestEmail:      { type: String, default: "" },
     orderNumber:     { type: String, required: true, unique: true },
     items:           { type: [orderItemSchema], required: true },
     shippingAddress: { type: shippingAddressSchema, required: true },
@@ -64,8 +69,8 @@ const orderSchema = new Schema(
 // User's order history — paginated and sorted by newest
 orderSchema.index({ user: 1, createdAt: -1 });
 
-// Admin filtering by status
-orderSchema.index({ status: 1 });
+// Admin filtering by status + sort by newest (compound covers both)
+orderSchema.index({ status: 1, createdAt: -1 });
 
 // Date-range filtering (admin analytics)
 orderSchema.index({ createdAt: -1 });

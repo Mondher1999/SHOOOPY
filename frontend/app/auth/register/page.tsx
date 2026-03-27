@@ -49,6 +49,14 @@ function getPasswordStrength(password: string): {
   return { score: 100, label: "strengthStrong", color: "bg-green-500" };
 }
 
+// Static class map for Tailwind — dynamic string interpolation breaks purging
+const strengthProgressClass: Record<string, string> = {
+  "bg-destructive": "[&>div]:bg-destructive",
+  "bg-yellow-500": "[&>div]:bg-yellow-500",
+  "bg-blue-500": "[&>div]:bg-blue-500",
+  "bg-green-500": "[&>div]:bg-green-500",
+};
+
 export default function RegisterPage() {
   const { t } = useTranslation("auth");
   const { register: registerUser } = useAuth();
@@ -175,7 +183,7 @@ export default function RegisterPage() {
                   <span className="text-xs text-muted-foreground">{t("register.passwordStrength")}</span>
                   <span className="text-xs font-medium">{t(`register.${strength.label}`)}</span>
                 </div>
-                <Progress value={strength.score} className={`h-1.5 [&>div]:${strength.color}`} />
+                <Progress value={strength.score} className={`h-1.5 ${strengthProgressClass[strength.color] ?? ""}`} />
               </div>
             )}
             {errors.password && (

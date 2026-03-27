@@ -42,7 +42,7 @@ export function VariantSelector({
   if (selectableAttrs.length === 0) return null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {outOfStock && (
         <div className="flex items-center gap-2 text-sm text-destructive font-medium" role="alert">
           <Ban className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
@@ -77,6 +77,7 @@ interface AttributeSelectorProps {
 
 function AttributeSelector({ attr, availableValues, selectedValue, onChange, disabled, t }: AttributeSelectorProps) {
   const label = t(`typeAttrs.${attr.key}`, { defaultValue: attr.label });
+  const tOpt = (v: string) => t(`typeAttrOptions.${v}`, { defaultValue: v });
 
   // Normalize available options
   const options: string[] = Array.isArray(availableValues)
@@ -92,19 +93,20 @@ function AttributeSelector({ attr, availableValues, selectedValue, onChange, dis
     const current = typeof selectedValue === "string" ? selectedValue : "";
     return (
       <div className={cn(disabled && "opacity-60")}>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
-          {label}
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+          {label}{current ? ": " : ""}
           {current && (
-            <span className="ml-2 font-normal normal-case tracking-normal text-foreground">
-              {current}
+            <span className="font-normal normal-case tracking-normal text-foreground">
+              {tOpt(current)}
             </span>
           )}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {options.map((opt) => (
             <OptionChip
               key={opt}
-              label={opt}
+              label={tOpt(opt)}
+              rawValue={opt}
               isSelected={current === opt}
               isColor={isColorAttr(attr.key)}
               disabled={disabled}
@@ -121,19 +123,20 @@ function AttributeSelector({ attr, availableValues, selectedValue, onChange, dis
     const current = typeof selectedValue === "string" ? selectedValue : "";
     return (
       <div className={cn(disabled && "opacity-60")}>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
-          {label}
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+          {label}{current ? ": " : ""}
           {current && (
-            <span className="ml-2 font-normal normal-case tracking-normal text-foreground">
-              {current}
+            <span className="font-normal normal-case tracking-normal text-foreground">
+              {tOpt(current)}
             </span>
           )}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {options.map((opt) => (
             <OptionChip
               key={opt}
-              label={opt}
+              label={tOpt(opt)}
+              rawValue={opt}
               isSelected={current === opt}
               isColor={isColorAttr(attr.key)}
               disabled={disabled}
@@ -152,16 +155,17 @@ function AttributeSelector({ attr, availableValues, selectedValue, onChange, dis
 
 interface OptionChipProps {
   label: string;
+  rawValue: string;
   isSelected: boolean;
   isColor: boolean;
   disabled?: boolean;
   onClick: () => void;
 }
 
-function OptionChip({ label, isSelected, isColor, disabled, onClick }: OptionChipProps) {
-  const colorValue = isColor ? COLOR_MAP[label] : null;
+function OptionChip({ label, rawValue, isSelected, isColor, disabled, onClick }: OptionChipProps) {
+  const colorValue = isColor ? COLOR_MAP[rawValue] : null;
   const isGradient = colorValue?.includes("gradient") || colorValue?.includes("conic");
-  const isClear = label === "Clear" || label === "White";
+  const isClear = rawValue === "Clear" || rawValue === "White";
 
   return (
     <button
@@ -169,14 +173,14 @@ function OptionChip({ label, isSelected, isColor, disabled, onClick }: OptionChi
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "relative flex items-center gap-2 rounded-lg border-2 px-3.5 py-2.5 text-sm font-medium transition-all",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        "min-h-[44px]",
+        "relative flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm font-medium transition-all",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "min-h-[36px]",
         disabled
           ? "cursor-not-allowed opacity-50 border-border bg-muted"
-          : "cursor-pointer hover:border-foreground/40",
+          : "cursor-pointer hover:border-foreground/30 hover:shadow-sm",
         !disabled && isSelected
-          ? "border-foreground bg-foreground/5 ring-1 ring-foreground/10"
+          ? "border-foreground bg-foreground/5 shadow-sm"
           : !disabled
           ? "border-border bg-background"
           : ""
@@ -189,7 +193,7 @@ function OptionChip({ label, isSelected, isColor, disabled, onClick }: OptionChi
       {isColor && colorValue && (
         <span
           className={cn(
-            "h-5 w-5 rounded-full flex-shrink-0 border",
+            "h-4 w-4 rounded-full flex-shrink-0 border",
             isClear ? "border-border" : "border-transparent",
             disabled && "grayscale"
           )}

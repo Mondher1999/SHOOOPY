@@ -26,10 +26,6 @@ export const createAddress = async (req, res) => {
     if (!fullName) return res.status(400).json({ success: false, error: "Missing required field: fullName" });
     if (!phone)    return res.status(400).json({ success: false, error: "Missing required field: phone" });
     if (!street)   return res.status(400).json({ success: false, error: "Missing required field: street" });
-    if (!city)     return res.status(400).json({ success: false, error: "Missing required field: city" });
-    if (!state)    return res.status(400).json({ success: false, error: "Missing required field: state" });
-    if (!postalCode) return res.status(400).json({ success: false, error: "Missing required field: postalCode" });
-    if (!country)  return res.status(400).json({ success: false, error: "Missing required field: country" });
 
     const existingCount = await Address.countDocuments({ user: req.user._id });
     if (existingCount >= MAX_ADDRESSES) {

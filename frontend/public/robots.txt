@@ -6,5 +6,8 @@ Disallow: /dashboard
 Disallow: /admin
 Disallow: /checkout
 Disallow: /auth
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /api/
 
-Sitemap: https://shopflow.com/sitemap.xml
+Sitemap: https://omegadistribution.tn/sitemap.xml

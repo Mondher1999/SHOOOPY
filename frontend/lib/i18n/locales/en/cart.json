@@ -1,4 +1,6 @@
 {
+  "showcaseTitle": "Showcase Mode",
+  "showcaseMessage": "This store is currently in showcase mode. Shopping features are temporarily unavailable.",
   "title": "Shopping Cart",
   "empty": "Your cart is empty",
   "emptyHint": "Browse our products and add something you love.",
@@ -37,5 +39,6 @@
   "cartIconAriaLabel": "Shopping cart, {{count}} items",
   "drawerTitle": "Your cart",
   "productImageAlt": "{{name}} product image",
-  "itemsInCart": "Items in cart"
+  "itemsInCart": "Items in cart",
+  "tvaTotal": "Incl. VAT"
 }
